@@ -67,6 +67,18 @@ fn range_minimum_is_err() {
 }
 
 #[test]
+fn range_minimum_minus_is_err() {
+    #[derive(Validate)]
+    struct TestStruct {
+        #[validate(minimum = -1)]
+        val: i32,
+    }
+
+    let s = TestStruct { val: -2 };
+    assert!(s.validate().is_err());
+}
+
+#[test]
 fn range_exclusive_minimum_is_ok() {
     #[derive(Validate)]
     struct TestStruct {
