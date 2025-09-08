@@ -44,7 +44,9 @@ fn inner_extract_generic_enumerate_validator(
     ))
 }
 
-fn get_enumerate_from_name_value(name_value: &syn::MetaNameValue) -> Result<Lits, crate::Errors> {
+fn get_enumerate_from_name_value(
+    name_value: &syn::MetaNameValue,
+) -> Result<Lits<'_>, crate::Errors> {
     if let syn::Expr::Array(array) = &name_value.value {
         let mut enumerate = Lits::new();
         for item in &array.elems {

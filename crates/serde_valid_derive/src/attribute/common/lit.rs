@@ -22,7 +22,7 @@ pub fn get_lit(expr: &syn::Expr) -> Result<&syn::Lit, crate::Errors> {
     }
 }
 
-pub fn get_numeric(lit: &syn::Lit) -> Result<LitNumeric, crate::Errors> {
+pub fn get_numeric(lit: &syn::Lit) -> Result<LitNumeric<'_>, crate::Errors> {
     match lit {
         syn::Lit::Int(int) => Ok(LitNumeric::Int(int)),
         syn::Lit::Float(float) => Ok(LitNumeric::Float(float)),
