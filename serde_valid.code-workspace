@@ -7,9 +7,9 @@
 		{
 			"path": "docs"
 		},
-        {
-            "path": "xtask",
-        }
+		{
+			"path": "xtask"
+		},
 		{
 			"path": "crates/serde_valid_derive"
 		},
