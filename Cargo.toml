@@ -14,8 +14,13 @@ keywords = ["json_schema", "serde", "validation"]
 [workspace.dependencies]
 itertools = "^0.14.0"
 paste = "^1.0"
-regex = "^1.6"
+proc-macro-error2 = { version = "^2.0", default-features = false }
+proc-macro2 = "^1.0"
+quote = "^1.0"
+regex = "^1.12"
 serde = "^1.0"
 serde_json = "^1.0"
 serde_valid_derive = { path = "crates/serde_valid_derive" }
 serde_valid_literal = { path = "crates/serde_valid_literal" }
+strsim = "^0.11"
+syn = { version = "^2.0", features = ["extra-traits", "full"] }
