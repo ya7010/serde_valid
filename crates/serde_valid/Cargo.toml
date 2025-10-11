@@ -11,7 +11,7 @@ categories = ["encoding"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-fluent = { version = "^0.16.0", optional = true, package = "fluent" }
+fluent = { package = "fluent", version = "^0.16.0", optional = true }
 indexmap = { version = "^2.0", features = ["serde"] }
 itertools.workspace = true
 num-traits = "^0.2"
@@ -20,7 +20,7 @@ paste.workspace = true
 regex.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-serde_toml = { version = "^0.8", optional = true, package = "toml" }
+serde_toml = { package = "toml", version = "^0.8", optional = true }
 serde_valid_derive = { workspace = true }
 serde_valid_literal = { workspace = true }
 serde_yaml = { version = "^0.9", optional = true }

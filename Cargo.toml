@@ -4,9 +4,10 @@ members = ["crates/*", "xtask"]
 
 [workspace.package]
 version = "1.0.5"
-authors = ["yassun7010 <yassun7010@outlook.com>"]
+# tombi: lint.rules.deprecated.disabled = true
+authors = ["ya7010 <ya7010@outlook.com>"]
 edition = "2021"
-repository = "https://github.com/yassun7010/serde_valid.git"
+repository = "https://github.com/ya7010/serde_valid.git"
 license = "MIT"
 keywords = ["json_schema", "serde", "validation"]
 
