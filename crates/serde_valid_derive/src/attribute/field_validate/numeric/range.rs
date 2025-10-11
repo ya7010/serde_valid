@@ -1,4 +1,3 @@
-use crate::attribute::common::lit::get_numeric;
 use crate::attribute::common::message_format::MessageFormat;
 use crate::attribute::Validator;
 use crate::serde::rename::RenameMap;
@@ -14,7 +13,7 @@ macro_rules! extract_numeric_range_validator{
         paste::paste! {
             pub fn [<extract_numeric_ $ErrorType:snake _validator>](
                 field: &impl Field,
-                validation_value: &syn::Lit,
+                validation_value: &syn::Expr,
                 message_format: MessageFormat,
                 rename_map: &RenameMap,
             ) -> Result<Validator, crate::Errors> {
@@ -23,7 +22,7 @@ macro_rules! extract_numeric_range_validator{
 
             fn [<inner_extract_numeric_ $ErrorType:snake _validator>](
                 field: &impl Field,
-                validation_value: &syn::Lit,
+                validation_value: &syn::Expr,
                 message_format: MessageFormat,
                 rename_map: &RenameMap,
             ) -> Result<TokenStream, crate::Errors> {
@@ -32,12 +31,11 @@ macro_rules! extract_numeric_range_validator{
                 let field_key = field.key();
                 let rename = rename_map.get(field_name).unwrap_or(&field_key);
                 let errors = field.errors_variable();
-                let [<$ErrorType:snake>] = get_numeric(validation_value)?;
 
                 Ok(quote!(
                     if let Err(__composited_error_params) = ::serde_valid::validation::[<ValidateComposited $ErrorType>]::[<validate_composited_ $ErrorType:snake>](
                         #field_ident,
-                        #[<$ErrorType:snake>],
+                        #validation_value,
                     ) {
                         use ::serde_valid::validation::IntoError;
                         use ::serde_valid::validation::error::FormatDefault;
