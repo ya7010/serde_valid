@@ -1,5 +1,5 @@
 # Overview
-[![GitHub](/img/github.svg)](https://github.com/yassun7010/serde_valid)
+[![GitHub](/img/github.svg)](https://github.com/ya7010/serde_valid)
 [![Documentation](/img/rustdoc.svg)](https://docs.rs/serde_valid)
 [![Latest Version](https://img.shields.io/crates/v/serde_valid.svg?style=social)](https://crates.io/crates/serde_valid)
 
