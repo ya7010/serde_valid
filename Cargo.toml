@@ -12,7 +12,7 @@ license = "MIT"
 keywords = ["json_schema", "serde", "validation"]
 
 [workspace.dependencies]
-itertools = "0.13.0"
+itertools = "^0.14.0"
 paste = "^1.0"
 regex = "^1.6"
 serde = "^1.0"
