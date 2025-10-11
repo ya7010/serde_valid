@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*", "xtask"]
 
 [workspace.package]
-version = "1.0.5"
+version = "2.0.0"
 # tombi: lint.rules.deprecated.disabled = true
 authors = ["ya7010 <ya7010@outlook.com>"]
 edition = "2021"
