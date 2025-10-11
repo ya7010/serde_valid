@@ -32,28 +32,23 @@ pub fn extract_field_validator_from_meta_name_value(
 ) -> Result<Validator, crate::Errors> {
     match validation_type {
         MetaNameValueFieldValidation::Minimum => {
-            let validation_value = get_lit(&validation.value)?;
-
-            extract_numeric_minimum_validator(field, validation_value, message_format, rename_map)
+            extract_numeric_minimum_validator(field, &validation.value, message_format, rename_map)
         }
         MetaNameValueFieldValidation::Maximum => {
-            let validation_value = get_lit(&validation.value)?;
-            extract_numeric_maximum_validator(field, validation_value, message_format, rename_map)
+            extract_numeric_maximum_validator(field, &validation.value, message_format, rename_map)
         }
         MetaNameValueFieldValidation::ExclusiveMinimum => {
-            let validation_value = get_lit(&validation.value)?;
             extract_numeric_exclusive_minimum_validator(
                 field,
-                validation_value,
+                &validation.value,
                 message_format,
                 rename_map,
             )
         }
         MetaNameValueFieldValidation::ExclusiveMaximum => {
-            let validation_value = get_lit(&validation.value)?;
             extract_numeric_exclusive_maximum_validator(
                 field,
-                validation_value,
+                &validation.value,
                 message_format,
                 rename_map,
             )

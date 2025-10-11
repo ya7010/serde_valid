@@ -76,6 +76,9 @@ fn range_minimum_minus_is_err() {
 
     let s = TestStruct { val: -2 };
     assert!(s.validate().is_err());
+
+    let s = TestStruct { val: -1 };
+    assert!(s.validate().is_ok());
 }
 
 #[test]
@@ -265,6 +268,21 @@ fn range_inclusive_err_message() {
         })
         .to_string()
     );
+}
+
+#[test]
+fn range_minimum_minus_with_message_is_err() {
+    #[derive(Validate)]
+    struct TestStruct {
+        #[validate(minimum = -1, message = "foo")]
+        val: i32,
+    }
+
+    let s = TestStruct { val: -2 };
+    assert!(s.validate().is_err());
+
+    let s = TestStruct { val: -1 };
+    assert!(s.validate().is_ok());
 }
 
 #[test]
