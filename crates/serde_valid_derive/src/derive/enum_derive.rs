@@ -117,7 +117,9 @@ fn expand_enum_variant_named_fields_validation(
                     fields_idents.push(quote!(#field_ident));
                     quote!(#token)
                 } else {
-                    fields_idents.push(quote!(#field_ident));
+                    let field_ident_with_underscore =
+                        syn::Ident::new(&format!("_{}", field_ident), field_ident.span());
+                    fields_idents.push(quote!(#field_ident: #field_ident_with_underscore));
                     quote!()
                 }
             }))
@@ -184,7 +186,9 @@ fn expand_enum_variant_unnamed_fields_varidation(
                     fields_idents.push(quote!(#field_ident));
                     quote!(#token)
                 } else {
-                    fields_idents.push(quote!(#field_ident));
+                    let field_ident_with_underscore =
+                        syn::Ident::new(&format!("_{}", field_ident), field_ident.span());
+                    fields_idents.push(quote!(#field_ident_with_underscore));
                     quote!()
                 }
             }))
