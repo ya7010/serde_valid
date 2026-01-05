@@ -10,7 +10,7 @@ use quote::quote;
 /// See <https://json-schema.org/understanding-json-schema/reference/numeric.html#range>
 macro_rules! extract_numeric_range_validator{
     ($ErrorType:ident) => {
-        paste::paste! {
+        pastey::paste! {
             pub fn [<extract_numeric_ $ErrorType:snake _validator>](
                 field: &impl Field,
                 validation_value: &syn::Expr,

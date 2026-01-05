@@ -10,7 +10,7 @@ use crate::{MaxItemsError, MinItemsError};
 
 macro_rules! impl_validate_array_length_items {
     ($ErrorType:ident) => {
-        paste::paste! {
+        pastey::paste! {
             impl<T> [<Validate $ErrorType>] for Option<T>
             where
                 T: [<Validate $ErrorType>],

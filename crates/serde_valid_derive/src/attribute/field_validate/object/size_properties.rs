@@ -11,7 +11,7 @@ use quote::quote;
 /// See <https://json-schema.org/understanding-json-schema/reference/object.html#size>
 macro_rules! extract_object_size_validator {
     ($ErrorType:ident) => {
-        paste::paste! {
+        pastey::paste! {
             pub fn [<extract_object_ $ErrorType:snake _validator>](
                 field: &impl Field,
                 validation_value: &syn::Lit,

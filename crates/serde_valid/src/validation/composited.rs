@@ -30,7 +30,7 @@ pub enum Composited<Error> {
 
 macro_rules! impl_into_error {
     ($ErrorType:ident) => {
-        paste::paste! {
+        pastey::paste! {
             impl IntoError<[<$ErrorType Error>]> for Composited<[<$ErrorType Error>]> {
                 fn into_error_by(self, format: crate::validation::error::Format<[<$ErrorType Error>]>) -> crate::validation::error::Error {
                     match self {

@@ -16,7 +16,7 @@ indexmap = { version = "^2.0", features = ["serde"] }
 itertools.workspace = true
 num-traits = "^0.2"
 once_cell = "^1.7"
-paste.workspace = true
+pastey.workspace = true
 regex.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

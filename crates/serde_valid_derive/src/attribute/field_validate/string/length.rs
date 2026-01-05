@@ -11,7 +11,7 @@ use quote::quote;
 /// See <https://json-schema.org/understanding-json-schema/reference/string.html#length>
 macro_rules! extract_string_length_validator{
     ($ErrorType:ident) => {
-        paste::paste! {
+        pastey::paste! {
             pub fn [<extract_string_ $ErrorType:snake _validator>](
                 field: &impl Field,
                 validation_value: &syn::Lit,

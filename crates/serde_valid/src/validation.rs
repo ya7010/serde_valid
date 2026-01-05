@@ -38,7 +38,7 @@ macro_rules! impl_composited_validation_1args {
             ) -> Result<(), Composited<$Error:ty>>;
         }
     ) => {
-        paste::paste! {
+        pastey::paste! {
             pub trait $ValidateCompositedTrait {
                 fn $validate_composited_method(
                     &self,
@@ -149,7 +149,7 @@ macro_rules! impl_composited_validation_1args {
                 ) -> Result<(), Composited<$Error>>;
             }
         );
-        paste::paste! {
+        pastey::paste! {
             impl<K, V> $ValidateCompositedTrait2 for std::collections::HashMap<K, V>
             where
                 V: $ValidateCompositedTrait3,
@@ -297,7 +297,7 @@ macro_rules! impl_generic_composited_validation_1args {
         $ErrorType:ident,
         $type:ty
     ) => {
-        paste::paste! {
+        pastey::paste! {
             impl<T> [<ValidateComposited $ErrorType >]<$type> for T
             where
                 T: [<Validate $ErrorType >]<$type>,

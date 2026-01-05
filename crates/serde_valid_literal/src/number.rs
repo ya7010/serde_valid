@@ -78,7 +78,7 @@ impl std::fmt::Display for Number {
 
 macro_rules! impl_from_trait {
     ($type:ty) => {
-        paste::paste! {
+        pastey::paste! {
             impl From<$type> for Number {
                 fn from(item: $type) -> Self {
                     Number::[<$type:camel>](item)
