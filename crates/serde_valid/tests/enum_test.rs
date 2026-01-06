@@ -220,8 +220,8 @@ fn enum_numeric_trait() {
     }
 
     impl ValidateEnum<i32> for MyType {
-        fn validate_enum(&self, enumerate: &[i32]) -> Result<(), serde_valid::EnumError> {
-            self.0.validate_enum(enumerate)
+        fn validate_enum(&self, candidates: &[i32]) -> Result<(), serde_valid::EnumError> {
+            self.0.validate_enum(candidates)
         }
     }
 

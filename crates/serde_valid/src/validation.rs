@@ -417,6 +417,6 @@ impl_composited_validation_1args!(
 // Generic
 impl_composited_validation_1args!(
     pub trait ValidateCompositedEnum<T> {
-        fn validate_composited_enum(&self, enumerate: T) -> Result<(), Composited<EnumError>>;
+        fn validate_composited_enum(&self, candidates: T) -> Result<(), Composited<EnumError>>;
     }
 );

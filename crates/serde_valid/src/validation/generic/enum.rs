@@ -16,9 +16,9 @@ use crate::EnumError;
 /// impl ValidateEnum<&'static str> for MyType {
 ///     fn validate_enum(
 ///         &self,
-///         enumerate: &[&'static str],
+///         candidates: &[&'static str],
 ///     ) -> Result<(), serde_valid::EnumError> {
-///         self.0.validate_enum(enumerate)
+///         self.0.validate_enum(candidates)
 ///     }
 /// }
 ///
@@ -131,14 +131,14 @@ impl_validate_generic_enumerate_str!(std::ffi::OsString);
 macro_rules! impl_validate_generic_enumerate_path {
     ($type:ty) => {
         impl ValidateEnum<&'static str> for $type {
-            fn validate_enum(&self, enumerate: &[&'static str]) -> Result<(), EnumError> {
-                if enumerate
+            fn validate_enum(&self, candidates: &[&'static str]) -> Result<(), EnumError> {
+                if candidates
                     .iter()
                     .any(|candidate| &std::path::Path::new(candidate) == self)
                 {
                     Ok(())
                 } else {
-                    Err(EnumError::new(enumerate))
+                    Err(EnumError::new(candidates))
                 }
             }
         }

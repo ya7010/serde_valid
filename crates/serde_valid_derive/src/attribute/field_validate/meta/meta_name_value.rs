@@ -125,7 +125,7 @@ pub fn extract_field_validator_from_meta_name_value(
         MetaNameValueFieldValidation::Enumerate => {
             let warnings = vec![Warning::Deprecated {
                 ident: validation.path.segments.first().unwrap().ident.clone(),
-                note: "🚧 use #[validate(r#enum = ...)] instead of #[validate(enumerate = ...)] 🚧"
+                note: "🚧 Please use `#[validate(r#enum = ...)]` instead of `#[validate(enumerate = ...)]` 🚧"
                     .to_string(),
                 span: validation.path.span(),
             }];
