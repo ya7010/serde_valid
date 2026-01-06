@@ -55,7 +55,7 @@ macro_rules! impl_into_error {
 }
 
 // Global
-impl_into_error!(Enumerate);
+impl_into_error!(Enum);
 
 // Numeric
 impl_into_error!(Maximum);

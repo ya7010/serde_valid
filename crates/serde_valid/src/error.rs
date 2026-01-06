@@ -240,6 +240,6 @@ struct_error_params!(
     #[derive(Debug, Clone)]
     #[default_message = "The value must be in [{:}]."]
     pub struct EnumError {
-        pub enumerate: Vec<Literal>,
+        pub candidates: Vec<Literal>,
     }
 );

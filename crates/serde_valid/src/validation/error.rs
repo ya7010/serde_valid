@@ -77,7 +77,7 @@ pub enum Error {
 
     #[error("{0}")]
     #[serde(serialize_with = "serialize_error_message")]
-    Enumerate(Message<EnumError>),
+    Enum(Message<EnumError>),
 
     #[error("{0}")]
     #[serde(serialize_with = "serialize_error_message")]
