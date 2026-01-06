@@ -251,7 +251,11 @@ impl Error {
     pub fn field_validation_type_unknown(path: &syn::Path, unknown: &str) -> Self {
         let candidates = &(MetaPathFieldValidation::iter().map(|x| x.name()))
             .chain(MetaListFieldValidation::iter().map(|x| x.name()))
-            .chain(MetaNameValueFieldValidation::iter().map(|x| x.name()))
+            .chain(
+                MetaNameValueFieldValidation::iter()
+                    .filter(|v| v != &MetaNameValueFieldValidation::Enumerate)
+                    .map(|x| x.name()),
+            )
             .unique()
             .sorted()
             .collect::<Vec<_>>();
@@ -309,10 +313,10 @@ impl Error {
         )
     }
 
-    pub fn validate_enumerate_need_array(path: impl Spanned) -> Self {
+    pub fn validate_enum_need_array(path: impl Spanned) -> Self {
         Self::new(
             path.span(),
-            "#[validate(enumerate = ???)] needs literal array only.",
+            "#[validate(r#enum = ???)] needs literal array only.",
         )
     }
 

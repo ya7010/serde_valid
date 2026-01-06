@@ -1,5 +1,7 @@
+#![allow(deprecated)]
+
 use serde_json::json;
-use serde_valid::{Validate, ValidateEnumerate};
+use serde_valid::{Validate, ValidateEnum};
 
 #[test]
 fn enumerate_integer_type() {
@@ -219,9 +221,9 @@ fn enumerate_numeric_trait() {
         }
     }
 
-    impl ValidateEnumerate<i32> for MyType {
-        fn validate_enumerate(&self, enumerate: &[i32]) -> Result<(), serde_valid::EnumerateError> {
-            self.0.validate_enumerate(enumerate)
+    impl ValidateEnum<i32> for MyType {
+        fn validate_enum(&self, enumerate: &[i32]) -> Result<(), serde_valid::EnumerateError> {
+            self.0.validate_enum(enumerate)
         }
     }
 

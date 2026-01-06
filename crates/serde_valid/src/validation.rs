@@ -19,7 +19,7 @@ pub use error::{
     ArrayErrors, Error, Errors, IntoError, ItemErrorsMap, ItemVecErrorsMap, ObjectErrors,
     PropertyErrorsMap, PropertyVecErrorsMap, VecErrors,
 };
-pub use generic::ValidateEnumerate;
+pub use generic::{ValidateEnum, ValidateEnumerate};
 use indexmap::IndexMap;
 pub use numeric::{
     ValidateExclusiveMaximum, ValidateExclusiveMinimum, ValidateMaximum, ValidateMinimum,
@@ -417,10 +417,7 @@ impl_composited_validation_1args!(
 
 // Generic
 impl_composited_validation_1args!(
-    pub trait ValidateCompositedEnumerate<T> {
-        fn validate_composited_enumerate(
-            &self,
-            enumerate: T,
-        ) -> Result<(), Composited<EnumerateError>>;
+    pub trait ValidateCompositedEnum<T> {
+        fn validate_composited_enum(&self, enumerate: T) -> Result<(), Composited<EnumerateError>>;
     }
 );

@@ -1,28 +1,30 @@
-use crate::validation::ValidateCompositedEnumerate;
+use crate::validation::ValidateCompositedEnum;
 use crate::EnumerateError;
 
 /// Enumerate validation.
 ///
 /// See <https://json-schema.org/understanding-json-schema/reference/generic.html#enumerated-values>
 ///
+/// Note: `#[validate(enumerate = ...)]` is deprecated; use `#[validate(r#enum = ...)]`.
+///
 /// ```rust
 /// use serde_json::json;
-/// use serde_valid::{Validate, ValidateEnumerate};
+/// use serde_valid::{Validate, ValidateEnum};
 ///
 /// struct MyType(String);
 ///
-/// impl ValidateEnumerate<&'static str> for MyType {
-///     fn validate_enumerate(
+/// impl ValidateEnum<&'static str> for MyType {
+///     fn validate_enum(
 ///         &self,
 ///         enumerate: &[&'static str],
 ///     ) -> Result<(), serde_valid::EnumerateError> {
-///         self.0.validate_enumerate(enumerate)
+///         self.0.validate_enum(enumerate)
 ///     }
 /// }
 ///
 /// #[derive(Validate)]
 /// struct TestStruct {
-///     #[validate(enumerate = ["1", "2", "3"])]
+///     #[validate(r#enum = ["1", "2", "3"])]
 ///     val: MyType,
 /// }
 ///
@@ -43,14 +45,19 @@ use crate::EnumerateError;
 ///     .to_string()
 /// );
 /// ```
-pub trait ValidateEnumerate<T> {
-    fn validate_enumerate(&self, enumerate: &[T]) -> Result<(), EnumerateError>;
+pub trait ValidateEnum<T> {
+    fn validate_enum(&self, enumerate: &[T]) -> Result<(), EnumerateError>;
+
+    #[deprecated(since = "0.1.0", note = "use `validate_enum` instead")]
+    fn validate_enumerate(&self, enumerate: &[T]) -> Result<(), EnumerateError> {
+        self.validate_enum(enumerate)
+    }
 }
 
 macro_rules! impl_validate_generic_enumerate_literal {
     ($type:ty) => {
-        impl ValidateEnumerate<$type> for $type {
-            fn validate_enumerate(&self, enumerate: &[$type]) -> Result<(), EnumerateError> {
+        impl ValidateEnum<$type> for $type {
+            fn validate_enum(&self, enumerate: &[$type]) -> Result<(), EnumerateError> {
                 if enumerate.iter().any(|candidate| candidate == self) {
                     Ok(())
                 } else {
@@ -59,15 +66,15 @@ macro_rules! impl_validate_generic_enumerate_literal {
             }
         }
 
-        impl<T> ValidateCompositedEnumerate<&[$type]> for T
+        impl<T> ValidateCompositedEnum<&[$type]> for T
         where
-            T: ValidateEnumerate<$type>,
+            T: ValidateEnum<$type>,
         {
-            fn validate_composited_enumerate(
+            fn validate_composited_enum(
                 &self,
                 limit: &[$type],
             ) -> Result<(), crate::validation::Composited<EnumerateError>> {
-                self.validate_enumerate(limit)
+                self.validate_enum(limit)
                     .map_err(|error| crate::validation::Composited::Single(error))
             }
         }
@@ -108,8 +115,8 @@ impl_validate_generic_enumerate_literal!(char);
 
 macro_rules! impl_validate_generic_enumerate_str {
     ($type:ty) => {
-        impl ValidateEnumerate<&'static str> for $type {
-            fn validate_enumerate(&self, enumerate: &[&'static str]) -> Result<(), EnumerateError> {
+        impl ValidateEnum<&'static str> for $type {
+            fn validate_enum(&self, enumerate: &[&'static str]) -> Result<(), EnumerateError> {
                 if enumerate.iter().any(|candidate| candidate == self) {
                     Ok(())
                 } else {
@@ -128,8 +135,8 @@ impl_validate_generic_enumerate_str!(std::ffi::OsString);
 
 macro_rules! impl_validate_generic_enumerate_path {
     ($type:ty) => {
-        impl ValidateEnumerate<&'static str> for $type {
-            fn validate_enumerate(&self, enumerate: &[&'static str]) -> Result<(), EnumerateError> {
+        impl ValidateEnum<&'static str> for $type {
+            fn validate_enum(&self, enumerate: &[&'static str]) -> Result<(), EnumerateError> {
                 if enumerate
                     .iter()
                     .any(|candidate| &std::path::Path::new(candidate) == self)
@@ -146,15 +153,15 @@ macro_rules! impl_validate_generic_enumerate_path {
 impl_validate_generic_enumerate_path!(&std::path::Path);
 impl_validate_generic_enumerate_path!(std::path::PathBuf);
 
-impl<T> ValidateCompositedEnumerate<&[&'static str]> for T
+impl<T> ValidateCompositedEnum<&[&'static str]> for T
 where
-    T: ValidateEnumerate<&'static str>,
+    T: ValidateEnum<&'static str>,
 {
-    fn validate_composited_enumerate(
+    fn validate_composited_enum(
         &self,
         limit: &[&'static str],
     ) -> Result<(), crate::validation::Composited<EnumerateError>> {
-        self.validate_enumerate(limit)
+        self.validate_enum(limit)
             .map_err(crate::validation::Composited::Single)
     }
 }
@@ -165,72 +172,60 @@ mod tests {
 
     #[test]
     fn test_validate_integer_vec_type_is_true() {
-        assert!(ValidateEnumerate::validate_enumerate(&1, &[1, 2, 3]).is_ok());
+        assert!(ValidateEnum::validate_enum(&1, &[1, 2, 3]).is_ok());
     }
 
     #[test]
     fn test_validate_integer_vec_type_is_false() {
-        assert!(ValidateEnumerate::validate_enumerate(&1, &[2, 3, 4]).is_err());
+        assert!(ValidateEnum::validate_enum(&1, &[2, 3, 4]).is_err());
     }
 
     #[test]
     fn test_validate_float_type_is_true() {
-        assert!(ValidateEnumerate::validate_enumerate(&0.9, &[0.9, 2.3, -3.0]).is_ok());
+        assert!(ValidateEnum::validate_enum(&0.9, &[0.9, 2.3, -3.0]).is_ok());
     }
 
     #[test]
     fn test_validate_float_type_is_false() {
-        assert!(ValidateEnumerate::validate_enumerate(&0.9, &[0.8, 2.3, -3.0]).is_err());
+        assert!(ValidateEnum::validate_enum(&0.9, &[0.8, 2.3, -3.0]).is_err());
     }
 
     #[test]
     fn test_validate_unsigned_int_type() {
-        assert!(ValidateEnumerate::validate_enumerate(&1, &[-1, 0, 1, 2, 3]).is_ok());
+        assert!(ValidateEnum::validate_enum(&1, &[-1, 0, 1, 2, 3]).is_ok());
     }
 
     #[test]
     fn test_validate_str_type() {
-        assert!(ValidateEnumerate::validate_enumerate(&'a', &['a', 'b', 'c']).is_ok());
+        assert!(ValidateEnum::validate_enum(&'a', &['a', 'b', 'c']).is_ok());
     }
 
     #[test]
     fn test_validate_string_type() {
-        assert!(ValidateEnumerate::validate_enumerate(&'a', &['a', 'b', 'c']).is_ok());
+        assert!(ValidateEnum::validate_enum(&'a', &['a', 'b', 'c']).is_ok());
     }
 
     #[test]
     fn test_validate_os_str_type() {
-        assert!(ValidateEnumerate::validate_enumerate(
-            &std::ffi::OsStr::new("a"),
-            &["a", "b", "c"]
-        )
-        .is_ok());
+        assert!(ValidateEnum::validate_enum(&std::ffi::OsStr::new("a"), &["a", "b", "c"]).is_ok());
     }
 
     #[test]
     fn test_validate_os_string_type() {
-        assert!(ValidateEnumerate::validate_enumerate(
-            &std::ffi::OsString::from("a"),
-            &["a", "b", "c"]
-        )
-        .is_ok());
+        assert!(
+            ValidateEnum::validate_enum(&std::ffi::OsString::from("a"), &["a", "b", "c"]).is_ok()
+        );
     }
 
     #[test]
     fn test_validate_path_type() {
-        assert!(ValidateEnumerate::validate_enumerate(
-            &std::path::Path::new("a"),
-            &["a", "b", "c"]
-        )
-        .is_ok());
+        assert!(ValidateEnum::validate_enum(&std::path::Path::new("a"), &["a", "b", "c"]).is_ok());
     }
 
     #[test]
     fn test_validate_path_buf_type() {
-        assert!(ValidateEnumerate::validate_enumerate(
-            &std::path::PathBuf::from("a"),
-            &["a", "b", "c"]
-        )
-        .is_ok());
+        assert!(
+            ValidateEnum::validate_enum(&std::path::PathBuf::from("a"), &["a", "b", "c"]).is_ok()
+        );
     }
 }

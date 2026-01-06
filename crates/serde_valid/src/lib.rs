@@ -61,7 +61,7 @@
 //! | Array   | `#[validate(max_items = 5)]`           | [`ValidateMaxItems`]         | [maxItems](https://json-schema.org/understanding-json-schema/reference/array#length)          |
 //! | Array   | `#[validate(min_items = 5)]`           | [`ValidateMinItems`]         | [minItems](https://json-schema.org/understanding-json-schema/reference/array#length)          |
 //! | Array   | `#[validate(unique_items)]`            | [`ValidateUniqueItems`]      | [uniqueItems](https://json-schema.org/understanding-json-schema/reference/array#uniqueItems)  |
-//! | Generic | `#[validate(enumerate = [5, 10, 15])]` | [`ValidateEnumerate`]        | [enum](https://json-schema.org/understanding-json-schema/reference/enum)                      |
+//! | Generic | `#[validate(r#enum = [5, 10, 15])]`    | [`ValidateEnum`]             | [enum](https://json-schema.org/understanding-json-schema/reference/enum)                      |
 //!
 //! In addition, [serde_valid::utils][module@crate::utils] provides a type of validation not described in the JSON schema specification.
 //!
@@ -588,9 +588,9 @@ pub use features::*;
 use indexmap::IndexMap;
 use std::{borrow::Cow, collections::HashMap};
 pub use validation::{
-    ValidateEnumerate, ValidateExclusiveMaximum, ValidateExclusiveMinimum, ValidateMaxItems,
-    ValidateMaxLength, ValidateMaxProperties, ValidateMaximum, ValidateMinItems, ValidateMinLength,
-    ValidateMinProperties, ValidateMinimum, ValidateMultipleOf, ValidatePattern,
+    ValidateEnum, ValidateEnumerate, ValidateExclusiveMaximum, ValidateExclusiveMinimum,
+    ValidateMaxItems, ValidateMaxLength, ValidateMaxProperties, ValidateMaximum, ValidateMinItems,
+    ValidateMinLength, ValidateMinProperties, ValidateMinimum, ValidateMultipleOf, ValidatePattern,
     ValidateUniqueItems,
 };
 

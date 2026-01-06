@@ -8,7 +8,7 @@ fn sample_rule(_val: i32) -> Result<(), serde_valid::validation::Error> {
 #[validate(custom = |s| sample_rule(s.int_value))]
 struct TestStruct<'a> {
     // Generic validator
-    #[validate(enumerate = [5, 10, 15])]
+    #[validate(r#enum = [5, 10, 15])]
     // Numeric validator
     #[validate(multiple_of = 5)]
     #[validate(minimum = 5)]
@@ -18,7 +18,7 @@ struct TestStruct<'a> {
     int_value: i32,
 
     // Generic validator
-    #[validate(enumerate = [5.0, 10.0, 15.0])]
+    #[validate(r#enum = [5.0, 10.0, 15.0])]
     // Numeric validator
     #[validate(multiple_of = 5.0)]
     #[validate(minimum = 5.0)]
@@ -28,7 +28,7 @@ struct TestStruct<'a> {
     float_value: f32,
 
     // Generic validator
-    #[validate(enumerate = ["12345", "67890"])]
+    #[validate(r#enum = ["12345", "67890"])]
     // String validator
     #[validate(min_length = 5)]
     #[validate(max_length = 5)]
@@ -36,7 +36,7 @@ struct TestStruct<'a> {
     string_value: String,
 
     // Generic validator
-    #[validate(enumerate = ["12345", "67890"])]
+    #[validate(r#enum = ["12345", "67890"])]
     // String validator
     #[validate(min_length = 5)]
     #[validate(max_length = 5)]
@@ -44,7 +44,7 @@ struct TestStruct<'a> {
     str_value: &'a str,
 
     // Generic validator
-    #[validate(enumerate = [5, 10, 15])]
+    #[validate(r#enum = [5, 10, 15])]
     // Numeric validator
     #[validate(multiple_of = 5)]
     #[validate(minimum = 5)]
@@ -52,7 +52,7 @@ struct TestStruct<'a> {
     optional_value: Option<i32>,
 
     // Generic validator
-    #[validate(enumerate = [5, 10, 15])]
+    #[validate(r#enum = [5, 10, 15])]
     // Array validator
     #[validate(unique_items)]
     #[validate(min_items = 3)]
@@ -78,7 +78,7 @@ struct TestStruct<'a> {
 #[derive(Debug, Validate)]
 struct TestInnerStruct<'a> {
     // Generic validator
-    #[validate(enumerate = [5, 10, 15])]
+    #[validate(r#enum = [5, 10, 15])]
     // Numeric validator
     #[validate(multiple_of = 5)]
     #[validate(minimum = 5)]
@@ -88,7 +88,7 @@ struct TestInnerStruct<'a> {
     inner_int_value: i32,
 
     // Generic validator
-    #[validate(enumerate = [5.0, 10.0, 15.0])]
+    #[validate(r#enum = [5.0, 10.0, 15.0])]
     // Numeric validator
     #[validate(multiple_of = 5.0)]
     #[validate(minimum = 5.0)]
@@ -98,7 +98,7 @@ struct TestInnerStruct<'a> {
     inner_float_value: f32,
 
     // Generic validator
-    #[validate(enumerate = ["12345", "67890"])]
+    #[validate(r#enum = ["12345", "67890"])]
     // String validator
     #[validate(min_length = 5)]
     #[validate(max_length = 5)]
@@ -106,7 +106,7 @@ struct TestInnerStruct<'a> {
     inner_string_value: String,
 
     // Generic validator
-    #[validate(enumerate = ["12345", "67890"])]
+    #[validate(r#enum = ["12345", "67890"])]
     // String validator
     #[validate(min_length = 5)]
     #[validate(max_length = 5)]
@@ -114,7 +114,7 @@ struct TestInnerStruct<'a> {
     inner_str_value: &'a str,
 
     // Generic validator
-    #[validate(enumerate = [5, 10, 15])]
+    #[validate(r#enum = [5, 10, 15])]
     // Numeric validator
     #[validate(multiple_of = 5)]
     #[validate(minimum = 5)]
@@ -122,7 +122,7 @@ struct TestInnerStruct<'a> {
     inner_optional_value: Option<i32>,
 
     // Generic validator
-    #[validate(enumerate = [5, 10, 15])]
+    #[validate(r#enum = [5, 10, 15])]
     // Array validator
     #[validate(unique_items)]
     #[validate(min_items = 3)]

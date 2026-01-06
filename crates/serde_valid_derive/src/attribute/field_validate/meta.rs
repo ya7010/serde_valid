@@ -127,7 +127,6 @@ fn inner_extract_field_validator(
                 message_format,
                 rename_map,
             )
-            .map(WithWarnings::new)
         }
 
         (Ok(_), _, _, _) => Err(vec![crate::Error::meta_path_validation_need_value(
