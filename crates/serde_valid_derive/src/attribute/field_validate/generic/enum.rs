@@ -6,17 +6,17 @@ use quote::quote;
 
 type Lits<'a> = syn::punctuated::Punctuated<syn::Lit, syn::token::Comma>;
 
-pub fn extract_generic_enumerate_validator_from_name_value(
+pub fn extract_generic_enum_validator_from_name_value(
     field: &impl Field,
     name_value: &syn::MetaNameValue,
     message_format: MessageFormat,
     rename_map: &RenameMap,
 ) -> Result<Validator, crate::Errors> {
-    let lits = get_enumerate_from_name_value(name_value)?;
-    inner_extract_generic_enumerate_validator(field, &lits, message_format, rename_map)
+    let lits = get_enum_from_name_value(name_value)?;
+    inner_extract_generic_enum_validator(field, &lits, message_format, rename_map)
 }
 
-fn inner_extract_generic_enumerate_validator(
+fn inner_extract_generic_enum_validator(
     field: &impl Field,
     lits: &Lits,
     message_format: MessageFormat,
@@ -29,7 +29,7 @@ fn inner_extract_generic_enumerate_validator(
     let errors = field.errors_variable();
 
     Ok(quote!(
-        if let Err(__composited_error_params) = ::serde_valid::validation::ValidateCompositedEnumerate::validate_composited_enumerate(
+        if let Err(__composited_error_params) = ::serde_valid::validation::ValidateCompositedEnum::validate_composited_enum(
             #field_ident,
             &[#lits],
         ) {
@@ -44,20 +44,18 @@ fn inner_extract_generic_enumerate_validator(
     ))
 }
 
-fn get_enumerate_from_name_value(
-    name_value: &syn::MetaNameValue,
-) -> Result<Lits<'_>, crate::Errors> {
+fn get_enum_from_name_value(name_value: &syn::MetaNameValue) -> Result<Lits<'_>, crate::Errors> {
     if let syn::Expr::Array(array) = &name_value.value {
-        let mut enumerate = Lits::new();
+        let mut items = Lits::new();
         for item in &array.elems {
             match item {
-                syn::Expr::Lit(lit) => enumerate.push(lit.lit.clone()),
+                syn::Expr::Lit(lit) => items.push(lit.lit.clone()),
                 _ => return Err(vec![crate::Error::literal_only(item)]),
             }
         }
-        Ok(enumerate)
+        Ok(items)
     } else {
-        Err(vec![crate::Error::validate_enumerate_need_array(
+        Err(vec![crate::Error::validate_enum_need_array(
             &name_value.value,
         )])
     }

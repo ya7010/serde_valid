@@ -8,7 +8,7 @@ mod object_errors;
 use std::borrow::Cow;
 
 pub use crate::error::{
-    EnumerateError, ExclusiveMaximumError, ExclusiveMinimumError, MaxItemsError, MaxLengthError,
+    EnumError, ExclusiveMaximumError, ExclusiveMinimumError, MaxItemsError, MaxLengthError,
     MaxPropertiesError, MaximumError, MinItemsError, MinLengthError, MinPropertiesError,
     MinimumError, MultipleOfError, PatternError, UniqueItemsError,
 };
@@ -77,7 +77,7 @@ pub enum Error {
 
     #[error("{0}")]
     #[serde(serialize_with = "serialize_error_message")]
-    Enumerate(Message<EnumerateError>),
+    Enum(Message<EnumError>),
 
     #[error("{0}")]
     #[serde(serialize_with = "serialize_error_message")]

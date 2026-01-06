@@ -14,6 +14,7 @@ macro_rules! count {
 
 macro_rules! enum_str {
     (pub enum $name:ident {}) => {
+        #[derive(PartialEq, Eq)]
         pub enum $name {
         }
 
@@ -41,6 +42,7 @@ macro_rules! enum_str {
     (pub enum $name:ident {
         $($variant:ident = $val:literal),*,
     }) => {
+        #[derive(PartialEq, Eq)]
         pub enum $name {
             $($variant,)*
         }
@@ -116,6 +118,7 @@ enum_str! {
         MaxProperties = "max_properties",
         MultipleOf = "multiple_of",
         Pattern = "pattern",
+        Enum = "r#enum",
         Enumerate = "enumerate",
         Custom = "custom",
     }

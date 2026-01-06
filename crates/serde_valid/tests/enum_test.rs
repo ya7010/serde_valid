@@ -1,124 +1,151 @@
 use serde_json::json;
-use serde_valid::Validate;
+use serde_valid::{Validate, ValidateEnum};
 
 #[test]
-fn enum_named_enum_validation_is_ok() {
-    fn ok_enum(_value: &TestEnum) -> Result<(), serde_valid::validation::Error> {
-        Ok(())
-    }
-    #[derive(Validate)]
-    #[validate(custom = ok_enum)]
-    enum TestEnum {
-        Named {
-            #[validate]
-            a: TestStruct,
-            #[validate]
-            b: TestStruct,
-        },
-    }
-
+fn enum_integer_type() {
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(minimum = 0)]
-        #[validate(maximum = 10)]
+        #[validate(r#enum = [1, 2, 3])]
         val: i32,
     }
 
-    let s = TestEnum::Named {
-        a: TestStruct { val: 5 },
-        b: TestStruct { val: 5 },
+    let s = TestStruct { val: 1 };
+    assert!(s.validate().is_ok());
+}
+
+#[test]
+fn enum_float_type() {
+    #[derive(Validate)]
+    struct TestStruct {
+        #[validate(r#enum = [0.3, 1.2, 1.5])]
+        val: f32,
+    }
+
+    let s = TestStruct { val: 0.3 };
+    assert!(s.validate().is_ok());
+}
+
+#[test]
+fn enum_str_type() {
+    #[derive(Validate)]
+    struct TestStruct<'a> {
+        #[validate(r#enum = ["a", "b"])]
+        val: &'a str,
+    }
+
+    let s = TestStruct { val: "a" };
+    assert!(s.validate().is_ok());
+}
+
+#[test]
+fn enum_string_type() {
+    #[derive(Validate)]
+    struct TestStruct {
+        #[validate(r#enum = ["a", "b"])]
+        val: String,
+    }
+
+    let s = TestStruct {
+        val: "a".to_string(),
     };
     assert!(s.validate().is_ok());
 }
 
 #[test]
-fn enum_unnamed_variant_validation_is_ok() {
-    #[derive(Validate)]
-    enum TestEnum {
-        UnNamed(
-            #[validate(minimum = 0)]
-            #[validate(maximum = 10)]
-            i32,
-            #[validate] TestStruct,
-        ),
-    }
-
+fn enum_vec_type() {
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(minimum = 0)]
-        #[validate(maximum = 10)]
-        val: i32,
+        #[validate(r#enum = [1, 2, 3, 4, 5])]
+        val: Vec<i32>,
     }
 
-    let s = TestEnum::UnNamed(5, TestStruct { val: 5 });
+    let s = TestStruct { val: vec![3, 4] };
     assert!(s.validate().is_ok());
 }
 
 #[test]
-fn enum_newtype_variant_validation_is_ok() {
+fn enum_vec_str_type() {
     #[derive(Validate)]
-    enum TestEnum {
-        NewType(
-            #[validate(minimum = 0)]
-            #[validate(maximum = 10)]
-            i32,
-        ),
+    struct TestStruct {
+        #[validate(r#enum = ["1", "2", "3", "4", "5"])]
+        val: Vec<&'static str>,
     }
 
-    let s = TestEnum::NewType(15);
+    let s = TestStruct {
+        val: vec!["3", "4"],
+    };
+    assert!(s.validate().is_ok());
+}
+
+#[test]
+fn enum_vec_string_type() {
+    #[derive(Validate)]
+    struct TestStruct {
+        #[validate(r#enum = ["1", "2", "3", "4", "5"])]
+        val: Vec<String>,
+    }
+
+    let s = TestStruct {
+        val: vec!["3".to_owned(), "4".to_owned()],
+    };
+    assert!(s.validate().is_ok());
+}
+
+#[test]
+fn enum_option_type() {
+    #[derive(Validate)]
+    struct TestStruct {
+        #[validate(r#enum = [1, 2, 3])]
+        val: Option<i32>,
+    }
+
+    let s = TestStruct { val: Some(3) };
+    assert!(s.validate().is_ok());
+}
+
+#[test]
+fn enum_vec_option_type() {
+    #[derive(Validate)]
+    struct TestStruct {
+        #[validate(r#enum = [3])]
+        val: Vec<Option<i32>>,
+    }
+
+    let s = TestStruct { val: vec![Some(3)] };
+    assert!(s.validate().is_ok());
+}
+
+#[test]
+fn enum_is_err() {
+    #[derive(Validate)]
+    struct TestStruct {
+        #[validate(r#enum = [0.3, 1.2, 1.5])]
+        val: f32,
+    }
+
+    let s = TestStruct { val: 0.1 };
     assert!(s.validate().is_err());
 }
 
 #[test]
-fn enum_named_enum_validation_is_err() {
-    fn err_rule(_data: &TestEnum) -> Result<(), serde_valid::validation::Error> {
-        Err(serde_valid::validation::Error::Custom(
-            "Rule error.".to_owned(),
-        ))
-    }
-
-    #[derive(Validate)]
-    #[validate(custom = err_rule)]
-    enum TestEnum {
-        Named {
-            #[validate]
-            a: TestStruct,
-            #[validate]
-            b: TestStruct,
-        },
-    }
-
+fn enum_err_message() {
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(minimum = 0)]
-        #[validate(maximum = 10)]
+        #[validate(r#enum = [1, 2, 3])]
         val: i32,
     }
 
-    let s = TestEnum::Named {
-        a: TestStruct { val: 12 },
-        b: TestStruct { val: 12 },
-    };
+    let s = TestStruct { val: 4 };
+
     assert_eq!(
         s.validate().unwrap_err().to_string(),
         json!({
-            "errors": ["Rule error."],
+            "errors": [],
             "properties": {
-                "a": {
-                    "errors": [],
-                    "properties": {
-                        "val": {
-                            "errors": ["The number must be `<= 10`."]
-                        }
-                    }
-                },
-                "b": {
-                    "errors": [],
-                    "properties": {
-                        "val": {
-                            "errors": ["The number must be `<= 10`."]
-                        }
-                    }
+                "val": {
+                    "errors": [
+                        "The value must be in [1, 2, 3]."
+                    ]
                 }
             }
         })
@@ -127,48 +154,28 @@ fn enum_named_enum_validation_is_err() {
 }
 
 #[test]
-fn enum_unnamed_enum_validation_is_err() {
-    fn err_rule(_: &TestEnum) -> Result<(), serde_valid::validation::Error> {
-        Err(serde_valid::validation::Error::Custom(
-            "Rule error.".to_owned(),
-        ))
-    }
-
-    #[derive(Validate)]
-    #[validate(custom = err_rule)]
-    enum TestEnum {
-        Named(#[validate] TestStruct, #[validate] TestStruct),
+fn enum_custom_err_message_fn() {
+    fn error_message(_params: &serde_valid::error::EnumError) -> String {
+        "this is custom message.".to_string()
     }
 
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(minimum = 0)]
-        #[validate(maximum = 10)]
+        #[validate(r#enum = [1, 2, 3], message_fn = error_message)]
         val: i32,
     }
 
-    let s = TestEnum::Named(TestStruct { val: 12 }, TestStruct { val: 12 });
+    let s = TestStruct { val: 4 };
 
     assert_eq!(
         s.validate().unwrap_err().to_string(),
         json!({
-            "errors": ["Rule error."],
-            "items": {
-                "0": {
-                    "errors": [],
-                    "properties": {
-                        "val": {
-                            "errors": ["The number must be `<= 10`."]
-                        }
-                    }
-                },
-                "1": {
-                    "errors": [],
-                    "properties": {
-                        "val": {
-                            "errors": ["The number must be `<= 10`."]
-                        }
-                    }
+            "errors": [],
+            "properties": {
+                "val": {
+                    "errors": [
+                    "this is custom message."
+                    ]
                 }
             }
         })
@@ -177,25 +184,66 @@ fn enum_unnamed_enum_validation_is_err() {
 }
 
 #[test]
-fn enum_newtype_variant_validation_is_err() {
-    fn err_rule(_: &TestEnum) -> Result<(), serde_valid::validation::Error> {
-        Err(serde_valid::validation::Error::Custom(
-            "Rule error.".to_owned(),
-        ))
-    }
-
+fn enum_custom_err_message() {
     #[derive(Validate)]
-    #[validate(custom = err_rule)]
-    enum TestEnum {
-        NewType(#[validate(minimum = 5)] u32),
+    struct TestStruct {
+        #[validate(r#enum = [1, 2, 3], message = "this is custom message.")]
+        val: i32,
     }
 
-    let s = TestEnum::NewType(4);
+    let s = TestStruct { val: 4 };
 
     assert_eq!(
         s.validate().unwrap_err().to_string(),
         json!({
-            "errors": ["Rule error.", "The number must be `>= 5`."]
+            "errors": [],
+            "properties": {
+                "val": {
+                    "errors": [
+                    "this is custom message."
+                    ]
+                }
+            }
+        })
+        .to_string()
+    );
+}
+
+#[test]
+fn enum_numeric_trait() {
+    struct MyType(i32);
+
+    impl PartialEq<i32> for MyType {
+        fn eq(&self, other: &i32) -> bool {
+            self.0.eq(other)
+        }
+    }
+
+    impl ValidateEnum<i32> for MyType {
+        fn validate_enum(&self, candidates: &[i32]) -> Result<(), serde_valid::EnumError> {
+            self.0.validate_enum(candidates)
+        }
+    }
+
+    #[derive(Validate)]
+    struct TestStruct {
+        #[validate(r#enum = [1, 2, 3], message = "this is custom message.")]
+        val: MyType,
+    }
+
+    let s = TestStruct { val: MyType(4) };
+
+    assert_eq!(
+        s.validate().unwrap_err().to_string(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": {
+                    "errors": [
+                    "this is custom message."
+                    ]
+                }
+            }
         })
         .to_string()
     );

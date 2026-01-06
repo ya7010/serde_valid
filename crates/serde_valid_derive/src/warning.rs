@@ -107,14 +107,12 @@ impl ToTokens for Warning {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
             Self::Deprecated { ident, note, span } => {
-                let func_name = TokenStream::from_str(&format!(
-                    "__{}_warning",
-                    ident.to_string().to_lowercase()
-                ))
-                .unwrap();
+                let func_name =
+                    TokenStream::from_str(&format!("__{}", ident.to_string().to_lowercase()))
+                        .unwrap();
 
                 quote_spanned!(*span =>
-                    #[deprecated(note = #note)]
+                    #[allow(dead_code)]
                     #[allow(clippy::let_unit_value)]
                     fn #func_name() {
                         #[deprecated(note = #note)]

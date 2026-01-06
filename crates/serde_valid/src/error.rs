@@ -239,7 +239,7 @@ struct_error_params!(
 struct_error_params!(
     #[derive(Debug, Clone)]
     #[default_message = "The value must be in [{:}]."]
-    pub struct EnumerateError {
-        pub enumerate: Vec<Literal>,
+    pub struct EnumError {
+        pub candidates: Vec<Literal>,
     }
 );

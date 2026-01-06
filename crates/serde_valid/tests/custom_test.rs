@@ -310,7 +310,7 @@ fn filed_custom_validation_using_self() {
 
     #[derive(Validate)]
     struct Pet {
-        #[validate(enumerate = ["Cat", "Dog"])]
+        #[validate(r#enum = ["Cat", "Dog"])]
         kind: String,
 
         #[validate(custom = |food| food_validation(&self.kind, food))]

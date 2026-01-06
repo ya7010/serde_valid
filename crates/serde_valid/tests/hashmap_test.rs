@@ -17,7 +17,7 @@ struct TestStruct {
     hashmap_of_hashmap: HashMap<&'static str, HashMap<String, i32>>,
 
     // Generic validator
-    #[validate(enumerate = [5, 10, 15])]
+    #[validate(r#enum = [5, 10, 15])]
     // Numeric validator
     #[validate(multiple_of = 5)]
     #[validate(minimum = 5)]

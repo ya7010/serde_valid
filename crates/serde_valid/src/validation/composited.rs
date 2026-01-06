@@ -1,7 +1,7 @@
 use crate::validation::error::IntoError;
 
 use crate::error::{
-    EnumerateError, ExclusiveMaximumError, ExclusiveMinimumError, MaxItemsError, MaxLengthError,
+    EnumError, ExclusiveMaximumError, ExclusiveMinimumError, MaxItemsError, MaxLengthError,
     MaxPropertiesError, MaximumError, MinItemsError, MinLengthError, MinPropertiesError,
     MinimumError, MultipleOfError, PatternError, UniqueItemsError,
 };
@@ -55,7 +55,7 @@ macro_rules! impl_into_error {
 }
 
 // Global
-impl_into_error!(Enumerate);
+impl_into_error!(Enum);
 
 // Numeric
 impl_into_error!(Maximum);
