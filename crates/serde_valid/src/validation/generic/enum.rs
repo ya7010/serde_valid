@@ -47,11 +47,6 @@ use crate::EnumerateError;
 /// ```
 pub trait ValidateEnum<T> {
     fn validate_enum(&self, enumerate: &[T]) -> Result<(), EnumerateError>;
-
-    #[deprecated(since = "0.1.0", note = "use `validate_enum` instead")]
-    fn validate_enumerate(&self, enumerate: &[T]) -> Result<(), EnumerateError> {
-        self.validate_enum(enumerate)
-    }
 }
 
 macro_rules! impl_validate_generic_enumerate_literal {
