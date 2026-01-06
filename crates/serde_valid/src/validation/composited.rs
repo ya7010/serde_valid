@@ -1,7 +1,7 @@
 use crate::validation::error::IntoError;
 
 use crate::error::{
-    EnumerateError, ExclusiveMaximumError, ExclusiveMinimumError, MaxItemsError, MaxLengthError,
+    EnumError, ExclusiveMaximumError, ExclusiveMinimumError, MaxItemsError, MaxLengthError,
     MaxPropertiesError, MaximumError, MinItemsError, MinLengthError, MinPropertiesError,
     MinimumError, MultipleOfError, PatternError, UniqueItemsError,
 };

@@ -157,7 +157,7 @@ fn enumerate_err_message() {
 
 #[test]
 fn enumerate_custom_err_message_fn() {
-    fn error_message(_params: &serde_valid::error::EnumerateError) -> String {
+    fn error_message(_params: &serde_valid::error::EnumError) -> String {
         "this is custom message.".to_string()
     }
 
@@ -222,8 +222,8 @@ fn enumerate_numeric_trait() {
     }
 
     impl ValidateEnumerate<i32> for MyType {
-        fn validate_enum(&self, enumerate: &[i32]) -> Result<(), serde_valid::EnumerateError> {
-            self.0.validate_enum(enumerate)
+        fn validate_enum(&self, items: &[i32]) -> Result<(), serde_valid::EnumError> {
+            self.0.validate_enum(items)
         }
     }
 

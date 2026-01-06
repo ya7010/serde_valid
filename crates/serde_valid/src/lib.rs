@@ -579,9 +579,9 @@ pub mod utils;
 pub mod validation;
 
 pub use error::{
-    EnumerateError, Error, ExclusiveMaximumError, ExclusiveMinimumError, MaxItemsError,
-    MaxLengthError, MaxPropertiesError, MaximumError, MinItemsError, MinLengthError,
-    MinPropertiesError, MinimumError, MultipleOfError, PatternError, UniqueItemsError,
+    EnumError, Error, ExclusiveMaximumError, ExclusiveMinimumError, MaxItemsError, MaxLengthError,
+    MaxPropertiesError, MaximumError, MinItemsError, MinLengthError, MinPropertiesError,
+    MinimumError, MultipleOfError, PatternError, UniqueItemsError,
 };
 #[allow(unused_imports)]
 pub use features::*;

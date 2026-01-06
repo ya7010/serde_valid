@@ -8,9 +8,8 @@ mod object;
 mod string;
 
 use crate::{
-    EnumerateError, ExclusiveMaximumError, ExclusiveMinimumError, MaxLengthError,
-    MaxPropertiesError, MaximumError, MinLengthError, MinPropertiesError, MinimumError,
-    MultipleOfError, PatternError,
+    EnumError, ExclusiveMaximumError, ExclusiveMinimumError, MaxLengthError, MaxPropertiesError,
+    MaximumError, MinLengthError, MinPropertiesError, MinimumError, MultipleOfError, PatternError,
 };
 pub use composited::Composited;
 
@@ -418,6 +417,6 @@ impl_composited_validation_1args!(
 // Generic
 impl_composited_validation_1args!(
     pub trait ValidateCompositedEnum<T> {
-        fn validate_composited_enum(&self, enumerate: T) -> Result<(), Composited<EnumerateError>>;
+        fn validate_composited_enum(&self, enumerate: T) -> Result<(), Composited<EnumError>>;
     }
 );
