@@ -588,9 +588,9 @@ pub use features::*;
 use indexmap::IndexMap;
 use std::{borrow::Cow, collections::HashMap};
 pub use validation::{
-    ValidateEnum, ValidateEnumerate, ValidateExclusiveMaximum, ValidateExclusiveMinimum,
-    ValidateMaxItems, ValidateMaxLength, ValidateMaxProperties, ValidateMaximum, ValidateMinItems,
-    ValidateMinLength, ValidateMinProperties, ValidateMinimum, ValidateMultipleOf, ValidatePattern,
+    ValidateEnum, ValidateExclusiveMaximum, ValidateExclusiveMinimum, ValidateMaxItems,
+    ValidateMaxLength, ValidateMaxProperties, ValidateMaximum, ValidateMinItems, ValidateMinLength,
+    ValidateMinProperties, ValidateMinimum, ValidateMultipleOf, ValidatePattern,
     ValidateUniqueItems,
 };
 

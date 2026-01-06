@@ -1,2 +1,2 @@
 mod r#enum;
-pub use r#enum::{ValidateEnum, ValidateEnum as ValidateEnumerate};
+pub use r#enum::ValidateEnum;

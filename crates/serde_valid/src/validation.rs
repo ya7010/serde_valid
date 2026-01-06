@@ -18,7 +18,7 @@ pub use error::{
     ArrayErrors, Error, Errors, IntoError, ItemErrorsMap, ItemVecErrorsMap, ObjectErrors,
     PropertyErrorsMap, PropertyVecErrorsMap, VecErrors,
 };
-pub use generic::{ValidateEnum, ValidateEnumerate};
+pub use generic::ValidateEnum;
 use indexmap::IndexMap;
 pub use numeric::{
     ValidateExclusiveMaximum, ValidateExclusiveMinimum, ValidateMaximum, ValidateMinimum,
