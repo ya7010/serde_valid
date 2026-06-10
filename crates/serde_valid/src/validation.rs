@@ -36,94 +36,93 @@ macro_rules! impl_composited_validation_1args {
                 $limit:ident: $limit_type:ty$(,)*
             ) -> Result<(), Composited<$Error:ty>>;
         }
+        via $ValidateTrait:ident::$validate_method:ident;
     ) => {
-        paste::paste! {
-            pub trait $ValidateCompositedTrait {
-                fn $validate_composited_method(
-                    &self,
-                    $limit: $limit_type
-                ) -> Result<(), Composited<$Error>>;
-            }
+        pub trait $ValidateCompositedTrait {
+            fn $validate_composited_method(
+                &self,
+                $limit: $limit_type
+            ) -> Result<(), Composited<$Error>>;
+        }
 
-            impl<T> $ValidateCompositedTrait for T
-            where
-                T: [<Validate $limit:camel>],
-            {
-                fn $validate_composited_method(
-                    &self,
-                    $limit: $limit_type,
-                ) -> Result<(), Composited<$Error>> {
-                    self.[<validate_ $limit>]($limit)
-                        .map_err(|error| Composited::Single(error))
+        impl<T> $ValidateCompositedTrait for T
+        where
+            T: $ValidateTrait,
+        {
+            fn $validate_composited_method(
+                &self,
+                $limit: $limit_type,
+            ) -> Result<(), Composited<$Error>> {
+                self.$validate_method($limit)
+                    .map_err(|error| Composited::Single(error))
+            }
+        }
+
+        impl<T> $ValidateCompositedTrait for Vec<T>
+        where
+            T: $ValidateCompositedTrait,
+        {
+            fn $validate_composited_method(
+                &self,
+                $limit: $limit_type,
+            ) -> Result<(), Composited<$Error>> {
+                let errors: IndexMap<usize, crate::validation::Composited<$Error>> = self
+                    .iter()
+                    .enumerate()
+                    .filter_map(
+                        |(index, item)| match item.$validate_composited_method($limit) {
+                            Ok(_) => None,
+                            Err(error) => Some((index, error)),
+                        },
+                    )
+                    .collect();
+
+                if errors.is_empty() {
+                    Ok(())
+                } else {
+                    Err(Composited::Array(errors))
                 }
             }
+        }
 
-            impl<T> $ValidateCompositedTrait for Vec<T>
-            where
-                T: $ValidateCompositedTrait,
-            {
-                fn $validate_composited_method(
-                    &self,
-                    $limit: $limit_type,
-                ) -> Result<(), Composited<$Error>> {
-                    let errors: IndexMap<usize, crate::validation::Composited<$Error>> = self
-                        .iter()
-                        .enumerate()
-                        .filter_map(
-                            |(index, item)| match item.$validate_composited_method($limit) {
-                                Ok(_) => None,
-                                Err(error) => Some((index, error)),
-                            },
-                        )
-                        .collect();
+        impl<T, const N: usize> $ValidateCompositedTrait for [T; N]
+        where
+            T: $ValidateCompositedTrait,
+        {
+            fn $validate_composited_method(
+                &self,
+                $limit: $limit_type,
+            ) -> Result<(), Composited<$Error>> {
+                let errors: IndexMap<usize, crate::validation::Composited<$Error>> = self
+                    .iter()
+                    .enumerate()
+                    .filter_map(
+                        |(index, item)| match item.$validate_composited_method($limit) {
+                            Ok(_) => None,
+                            Err(error) => Some((index, error)),
+                        },
+                    )
+                    .collect();
 
-                    if errors.is_empty() {
-                        Ok(())
-                    } else {
-                        Err(Composited::Array(errors))
-                    }
+                if errors.is_empty() {
+                    Ok(())
+                } else {
+                    Err(Composited::Array(errors))
                 }
             }
+        }
 
-            impl<T, const N: usize> $ValidateCompositedTrait for [T; N]
-            where
-                T: $ValidateCompositedTrait,
-            {
-                fn $validate_composited_method(
-                    &self,
-                    $limit: $limit_type,
-                ) -> Result<(), Composited<$Error>> {
-                    let errors: IndexMap<usize, crate::validation::Composited<$Error>> = self
-                        .iter()
-                        .enumerate()
-                        .filter_map(
-                            |(index, item)| match item.$validate_composited_method($limit) {
-                                Ok(_) => None,
-                                Err(error) => Some((index, error)),
-                            },
-                        )
-                        .collect();
-
-                    if errors.is_empty() {
-                        Ok(())
-                    } else {
-                        Err(Composited::Array(errors))
-                    }
-                }
-            }
-
-            impl<T> $ValidateCompositedTrait for Option<T>
-            where
-                T: $ValidateCompositedTrait,
-            {
-                fn $validate_composited_method(
-                    &self,
-                    $limit: $limit_type,
-                ) -> Result<(), Composited<$Error>> {
-                    match self {
-                        Some(value) => value.$validate_composited_method($limit),
-                        None => Ok(()),
-                    }
+        impl<T> $ValidateCompositedTrait for Option<T>
+        where
+            T: $ValidateCompositedTrait,
+        {
+            fn $validate_composited_method(
+                &self,
+                $limit: $limit_type,
+            ) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(value) => value.$validate_composited_method($limit),
+                    None => Ok(()),
                 }
             }
         }
@@ -135,6 +134,7 @@ macro_rules! impl_composited_validation_1args {
                 $limit:ident: $limit_type:ty$(,)*
             ) -> Result<(), Composited<$Error:ty>>;
         }
+        via $ValidateTrait:ident::$validate_method:ident;
 
         impl<K, V> $ValidateCompositedTrait2:ident for std::collections::HashMap<K, V>
         where
@@ -147,32 +147,32 @@ macro_rules! impl_composited_validation_1args {
                     $limit: $limit_type
                 ) -> Result<(), Composited<$Error>>;
             }
+            via $ValidateTrait::$validate_method;
         );
-        paste::paste! {
-            impl<K, V> $ValidateCompositedTrait2 for std::collections::HashMap<K, V>
-            where
-                V: $ValidateCompositedTrait3,
-            {
-                fn $validate_composited_method(
-                    &self,
-                    $limit: $limit_type,
-                ) -> Result<(), Composited<$Error>> {
-                    let errors: IndexMap<usize, crate::validation::Composited<$Error>> = self
-                        .iter()
-                        .enumerate()
-                        .filter_map(
-                            |(index, (_key, value))| match value.$validate_composited_method($limit) {
-                                Ok(_) => None,
-                                Err(error) => Some((index, error)),
-                            },
-                        )
-                        .collect();
 
-                    if errors.is_empty() {
-                        Ok(())
-                    } else {
-                        Err(Composited::Array(errors))
-                    }
+        impl<K, V> $ValidateCompositedTrait2 for std::collections::HashMap<K, V>
+        where
+            V: $ValidateCompositedTrait3,
+        {
+            fn $validate_composited_method(
+                &self,
+                $limit: $limit_type,
+            ) -> Result<(), Composited<$Error>> {
+                let errors: IndexMap<usize, crate::validation::Composited<$Error>> = self
+                    .iter()
+                    .enumerate()
+                    .filter_map(
+                        |(index, (_key, value))| match value.$validate_composited_method($limit) {
+                            Ok(_) => None,
+                            Err(error) => Some((index, error)),
+                        },
+                    )
+                    .collect();
+
+                if errors.is_empty() {
+                    Ok(())
+                } else {
+                    Err(Composited::Array(errors))
                 }
             }
         }
@@ -293,21 +293,23 @@ macro_rules! impl_composited_validation_1args {
 
 macro_rules! impl_generic_composited_validation_1args {
     (
-        $ErrorType:ident,
+        $ValidateCompositedTrait:ident,
+        $validate_composited_method:ident,
+        $ValidateTrait:ident,
+        $validate_method:ident,
+        $Error:ident,
         $type:ty
     ) => {
-        paste::paste! {
-            impl<T> [<ValidateComposited $ErrorType >]<$type> for T
-            where
-                T: [<Validate $ErrorType >]<$type>,
-            {
-                fn [< validate_composited_ $ErrorType:snake>](
-                    &self,
-                    limit: $type,
-                ) -> Result<(), crate::validation::Composited<[<$ErrorType Error>]>> {
-                    self.[< validate_ $ErrorType:snake>](limit)
-                        .map_err(|error| crate::validation::Composited::Single(error))
-                }
+        impl<T> $ValidateCompositedTrait<$type> for T
+        where
+            T: $ValidateTrait<$type>,
+        {
+            fn $validate_composited_method(
+                &self,
+                limit: $type,
+            ) -> Result<(), crate::validation::Composited<$Error>> {
+                self.$validate_method(limit)
+                    .map_err(|error| crate::validation::Composited::Single(error))
             }
         }
     };
@@ -363,6 +365,7 @@ impl_composited_validation_1args!(
             max_length: usize,
         ) -> Result<(), Composited<MaxLengthError>>;
     }
+    via ValidateMaxLength::validate_max_length;
 
     impl<K, V> ValidateCompositedMaxLength for std::collections::HashMap<K, V>
     where
@@ -376,6 +379,7 @@ impl_composited_validation_1args!(
             min_length: usize,
         ) -> Result<(), Composited<MinLengthError>>;
     }
+    via ValidateMinLength::validate_min_length;
 
     impl<K, V> ValidateCompositedMinLength for std::collections::HashMap<K, V>
     where
@@ -389,6 +393,7 @@ impl_composited_validation_1args!(
             pattern: &regex::Regex,
         ) -> Result<(), Composited<PatternError>>;
     }
+    via ValidatePattern::validate_pattern;
 
     impl<K, V> ValidateCompositedPattern for std::collections::HashMap<K, V>
     where
@@ -403,6 +408,7 @@ impl_composited_validation_1args!(
             max_properties: usize,
         ) -> Result<(), Composited<MaxPropertiesError>>;
     }
+    via ValidateMaxProperties::validate_max_properties;
 );
 
 impl_composited_validation_1args!(
@@ -412,6 +418,7 @@ impl_composited_validation_1args!(
             min_properties: usize,
         ) -> Result<(), Composited<MinPropertiesError>>;
     }
+    via ValidateMinProperties::validate_min_properties;
 );
 
 // Generic
