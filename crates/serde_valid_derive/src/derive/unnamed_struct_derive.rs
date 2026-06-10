@@ -111,7 +111,7 @@ fn collect_unnamed_field_validators(
 ) -> Result<FieldValidators<'_, UnnamedField<'_>>, crate::Errors> {
     let mut errors = vec![];
 
-    let unnamed_field = UnnamedField::new(index, field);
+    let unnamed_field = UnnamedField::new(index, field).map_err(|error| vec![error])?;
 
     let validators = unnamed_field
         .attrs()

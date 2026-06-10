@@ -87,7 +87,10 @@ fn inner_extract_variant_validator(
         syn::Meta::NameValue(name_value) => &name_value.path,
     };
 
-    let validation_name = SingleIdentPath::new(validation_path).ident().to_string();
+    let validation_name = SingleIdentPath::new(validation_path)
+        .map_err(|error| vec![error])?
+        .ident()
+        .to_string();
     let validator = match (
         MetaPathStructValidation::from_str(&validation_name),
         MetaListStructValidation::from_str(&validation_name),

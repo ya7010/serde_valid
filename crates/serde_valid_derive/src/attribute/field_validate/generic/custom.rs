@@ -12,7 +12,9 @@ pub fn extract_generic_custom_validator_from_meta_list(
     rename_map: &RenameMap,
 ) -> Result<Validator, crate::Errors> {
     let path = &meta_list.path;
-    let path_ident = SingleIdentPath::new(path).ident();
+    let path_ident = SingleIdentPath::new(path)
+        .map_err(|error| vec![error])?
+        .ident();
     let field_name = field.name();
     let field_key = field.key();
     let nested = meta_list

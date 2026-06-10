@@ -23,6 +23,7 @@ pub fn extract_custom_message_format(
         syn::Meta::NameValue(name_value) => &name_value.path,
     };
     let custom_message_name = SingleIdentPath::new(custom_message_path)
+        .map_err(|error| vec![error])?
         .ident()
         .to_string();
 
@@ -71,7 +72,9 @@ fn extract_custom_message_format_from_meta_list(
         #[cfg(feature = "fluent")]
         message_type @ (MetaListCustomMessage::I18n | MetaListCustomMessage::Fluent) => {
             let path = &meta_list.path;
-            let path_ident = SingleIdentPath::new(path).ident();
+            let path_ident = SingleIdentPath::new(path)
+                .map_err(|error| vec![error])?
+                .ident();
             let message_fn_define = meta_list
                 .parse_args_with(CommaSeparatedNestedMetas::parse_terminated)
                 .map_err(|error| {
