@@ -56,7 +56,14 @@ macro_rules! impl_validate_numeric_minimum {
             }
         }
 
-        impl_generic_composited_validation_1args!(Minimum, $type);
+        impl_generic_composited_validation_1args!(
+            ValidateCompositedMinimum,
+            validate_composited_minimum,
+            ValidateMinimum,
+            validate_minimum,
+            MinimumError,
+            $type
+        );
     };
 }
 

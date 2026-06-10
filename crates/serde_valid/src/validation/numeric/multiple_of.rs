@@ -66,7 +66,14 @@ macro_rules! impl_validate_numeric_multiple_of {
             }
         }
 
-        impl_generic_composited_validation_1args!(MultipleOf, $type);
+        impl_generic_composited_validation_1args!(
+            ValidateCompositedMultipleOf,
+            validate_composited_multiple_of,
+            ValidateMultipleOf,
+            validate_multiple_of,
+            MultipleOfError,
+            $type
+        );
     };
 }
 

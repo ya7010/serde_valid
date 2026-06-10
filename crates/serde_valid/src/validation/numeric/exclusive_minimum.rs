@@ -62,7 +62,14 @@ macro_rules! impl_validate_numeric_exclusive_minimum {
             }
         }
 
-        impl_generic_composited_validation_1args!(ExclusiveMinimum, $type);
+        impl_generic_composited_validation_1args!(
+            ValidateCompositedExclusiveMinimum,
+            validate_composited_exclusive_minimum,
+            ValidateExclusiveMinimum,
+            validate_exclusive_minimum,
+            ExclusiveMinimumError,
+            $type
+        );
     };
 }
 

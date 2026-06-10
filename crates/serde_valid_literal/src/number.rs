@@ -77,50 +77,48 @@ impl std::fmt::Display for Number {
 }
 
 macro_rules! impl_from_trait {
-    ($type:ty) => {
-        paste::paste! {
-            impl From<$type> for Number {
-                fn from(item: $type) -> Self {
-                    Number::[<$type:camel>](item)
-                }
+    ($type:ty => $variant:ident) => {
+        impl From<$type> for Number {
+            fn from(item: $type) -> Self {
+                Number::$variant(item)
             }
+        }
 
-            impl From<&$type> for Number {
-                fn from(item: &$type) -> Self {
-                    Number::[<$type:camel>](*item)
-                }
+        impl From<&$type> for Number {
+            fn from(item: &$type) -> Self {
+                Number::$variant(*item)
             }
         }
     };
 }
 
-impl_from_trait!(i8);
-impl_from_trait!(i16);
-impl_from_trait!(i32);
-impl_from_trait!(i64);
+impl_from_trait!(i8 => I8);
+impl_from_trait!(i16 => I16);
+impl_from_trait!(i32 => I32);
+impl_from_trait!(i64 => I64);
 #[cfg(feature = "i128")]
-impl_from_trait!(i128);
-impl_from_trait!(isize);
-impl_from_trait!(u8);
-impl_from_trait!(u16);
-impl_from_trait!(u32);
-impl_from_trait!(u64);
+impl_from_trait!(i128 => I128);
+impl_from_trait!(isize => Isize);
+impl_from_trait!(u8 => U8);
+impl_from_trait!(u16 => U16);
+impl_from_trait!(u32 => U32);
+impl_from_trait!(u64 => U64);
 #[cfg(feature = "i128")]
-impl_from_trait!(u128);
-impl_from_trait!(usize);
-impl_from_trait!(NonZeroI8);
-impl_from_trait!(NonZeroI16);
-impl_from_trait!(NonZeroI32);
-impl_from_trait!(NonZeroI64);
+impl_from_trait!(u128 => U128);
+impl_from_trait!(usize => Usize);
+impl_from_trait!(NonZeroI8 => NonZeroI8);
+impl_from_trait!(NonZeroI16 => NonZeroI16);
+impl_from_trait!(NonZeroI32 => NonZeroI32);
+impl_from_trait!(NonZeroI64 => NonZeroI64);
 #[cfg(feature = "i128")]
-impl_from_trait!(NonZeroI128);
-impl_from_trait!(NonZeroIsize);
-impl_from_trait!(NonZeroU8);
-impl_from_trait!(NonZeroU16);
-impl_from_trait!(NonZeroU32);
-impl_from_trait!(NonZeroU64);
+impl_from_trait!(NonZeroI128 => NonZeroI128);
+impl_from_trait!(NonZeroIsize => NonZeroIsize);
+impl_from_trait!(NonZeroU8 => NonZeroU8);
+impl_from_trait!(NonZeroU16 => NonZeroU16);
+impl_from_trait!(NonZeroU32 => NonZeroU32);
+impl_from_trait!(NonZeroU64 => NonZeroU64);
 #[cfg(feature = "i128")]
-impl_from_trait!(NonZeroU128);
-impl_from_trait!(NonZeroUsize);
-impl_from_trait!(f32);
-impl_from_trait!(f64);
+impl_from_trait!(NonZeroU128 => NonZeroU128);
+impl_from_trait!(NonZeroUsize => NonZeroUsize);
+impl_from_trait!(f32 => F32);
+impl_from_trait!(f64 => F64);

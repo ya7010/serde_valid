@@ -62,7 +62,14 @@ macro_rules! impl_validate_numeric_exclusive_maximum {
             }
         }
 
-        impl_generic_composited_validation_1args!(ExclusiveMaximum, $type);
+        impl_generic_composited_validation_1args!(
+            ValidateCompositedExclusiveMaximum,
+            validate_composited_exclusive_maximum,
+            ValidateExclusiveMaximum,
+            validate_exclusive_maximum,
+            ExclusiveMaximumError,
+            $type
+        );
     };
 }
 

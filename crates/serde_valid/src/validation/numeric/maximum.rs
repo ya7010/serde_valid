@@ -56,7 +56,14 @@ macro_rules! impl_validate_numeric_maximum {
             }
         }
 
-        impl_generic_composited_validation_1args!(Maximum, $type);
+        impl_generic_composited_validation_1args!(
+            ValidateCompositedMaximum,
+            validate_composited_maximum,
+            ValidateMaximum,
+            validate_maximum,
+            MaximumError,
+            $type
+        );
     };
 }
 
