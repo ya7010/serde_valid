@@ -44,7 +44,6 @@ macro_rules! extract_object_size_validator {
                     #limit
                 ) {
                     use ::serde_valid::validation::IntoError;
-                    use ::serde_valid::validation::error::FormatDefault;
 
                     #errors
                         .entry(#rename)

@@ -42,7 +42,6 @@ macro_rules! extract_numeric_range_validator{
                     #validation_value,
                 ) {
                     use ::serde_valid::validation::IntoError;
-                    use ::serde_valid::validation::error::FormatDefault;
 
                     #errors
                         .entry(#rename)
