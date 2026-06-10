@@ -40,7 +40,6 @@ fn inner_extract_string_pattern_validator(
             __pattern,
         ) {
             use ::serde_valid::validation::IntoError;
-            use ::serde_valid::validation::error::FormatDefault;
 
             #errors
                 .entry(#rename)

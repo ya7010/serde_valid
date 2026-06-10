@@ -44,8 +44,6 @@ macro_rules! extract_array_length_validator{
                     #field_ident,
                     #limit,
                 ) {
-                    use ::serde_valid::validation::error::FormatDefault;
-
                     #errors
                         .entry(#rename)
                         .or_default()
