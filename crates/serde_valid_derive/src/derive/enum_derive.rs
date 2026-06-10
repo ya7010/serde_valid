@@ -95,7 +95,7 @@ fn expand_enum_variant_named_fields_validation(
 
     let variant_ident = &variant.ident;
     let mut fields_idents = CommaSeparatedTokenStreams::new();
-    let rename_map = collect_serde_rename_map(named_fields);
+    let rename_map = collect_serde_rename_map(named_fields)?;
 
     let enum_validates = match collect_variant_custom_from_variant(&input.attrs) {
         Ok(validations) => {

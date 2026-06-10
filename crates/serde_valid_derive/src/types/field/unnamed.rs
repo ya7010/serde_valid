@@ -1,5 +1,4 @@
 use super::Field;
-use proc_macro_error2::abort;
 use quote::quote;
 use std::borrow::Cow;
 use std::convert::AsRef;
@@ -14,16 +13,16 @@ pub struct UnnamedField<'a> {
 }
 
 impl<'a> UnnamedField<'a> {
-    pub fn new(index: usize, field: &'a syn::Field) -> Self {
+    pub fn new(index: usize, field: &'a syn::Field) -> Result<Self, crate::Error> {
         if field.ident.is_some() {
-            abort!(field.span(), "struct must be unnamed fields struct.")
+            return Err(crate::Error::unnamed_fields_struct_required(field));
         }
-        Self {
+        Ok(Self {
             name: index.to_string(),
             index,
             ident: syn::Ident::new(&format!("__{}", index), field.span()),
             field: Cow::Borrowed(field),
-        }
+        })
     }
 }
 

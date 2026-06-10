@@ -174,6 +174,27 @@ impl Error {
         Self::new(input.span(), "#[derive(Validate)] does not support Union.")
     }
 
+    pub fn path_must_be_single_ident(path: &syn::Path) -> Self {
+        let path_str = path
+            .segments
+            .iter()
+            .map(|segment| segment.ident.to_string())
+            .collect::<Vec<_>>()
+            .join("::");
+        Self::new(
+            path.span(),
+            format!("Path(='{path_str}') must be single ident path."),
+        )
+    }
+
+    pub fn named_fields_struct_required(field: &syn::Field) -> Self {
+        Self::new(field.span(), "struct must be named fields struct.")
+    }
+
+    pub fn unnamed_fields_struct_required(field: &syn::Field) -> Self {
+        Self::new(field.span(), "struct must be unnamed fields struct.")
+    }
+
     pub fn validate_meta_name_value_not_supported(name_value: &syn::MetaNameValue) -> Self {
         Self::new(name_value.span(), "#[validate = ???] not supported.")
     }

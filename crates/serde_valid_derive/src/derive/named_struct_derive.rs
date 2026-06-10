@@ -14,7 +14,7 @@ pub fn expand_named_struct_derive(
 ) -> Result<TokenStream, crate::Errors> {
     let ident = &input.ident;
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
-    let rename_map = collect_serde_rename_map(fields);
+    let rename_map = collect_serde_rename_map(fields)?;
 
     let mut warnings = vec![];
     let mut errors = vec![];
@@ -110,7 +110,7 @@ fn collect_named_field_validators<'a>(
 ) -> Result<FieldValidators<'a, NamedField<'a>>, crate::Errors> {
     let mut errors = vec![];
 
-    let named_field = NamedField::new(field);
+    let named_field = NamedField::new(field).map_err(|error| vec![error])?;
     let validators = named_field
         .attrs()
         .iter()

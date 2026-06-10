@@ -1,8 +1,6 @@
 use super::Field;
-use proc_macro_error2::abort;
 use quote::quote;
 use std::borrow::Cow;
-use syn::spanned::Spanned;
 
 #[derive(Debug, Clone)]
 pub struct NamedField<'a> {
@@ -11,14 +9,14 @@ pub struct NamedField<'a> {
 }
 
 impl<'a> NamedField<'a> {
-    pub fn new(field: &'a syn::Field) -> Self {
-        if field.ident.is_none() {
-            abort!(field.span(), "struct must be named fields struct.")
-        }
-        Self {
-            name: field.ident.as_ref().unwrap().to_string(),
+    pub fn new(field: &'a syn::Field) -> Result<Self, crate::Error> {
+        let Some(ident) = field.ident.as_ref() else {
+            return Err(crate::Error::named_fields_struct_required(field));
+        };
+        Ok(Self {
+            name: ident.to_string(),
             field: Cow::Borrowed(field),
-        }
+        })
     }
 }
 

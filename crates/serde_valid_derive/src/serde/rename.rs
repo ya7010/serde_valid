@@ -6,10 +6,10 @@ use quote::{quote, ToTokens};
 
 pub type RenameMap = HashMap<String, TokenStream>;
 
-pub fn collect_serde_rename_map(fields: &syn::FieldsNamed) -> RenameMap {
+pub fn collect_serde_rename_map(fields: &syn::FieldsNamed) -> Result<RenameMap, crate::Errors> {
     let mut renames = RenameMap::new();
     for field in fields.named.iter() {
-        let named_field = NamedField::new(field);
+        let named_field = NamedField::new(field).map_err(|error| vec![error])?;
         for attribute in named_field.attrs() {
             if attribute.path().is_ident("serde") {
                 if let Some(rename) = find_rename_from_serde_attributes(attribute) {
@@ -21,7 +21,7 @@ pub fn collect_serde_rename_map(fields: &syn::FieldsNamed) -> RenameMap {
             }
         }
     }
-    renames
+    Ok(renames)
 }
 
 fn find_rename_from_serde_attributes(attribute: &syn::Attribute) -> Option<TokenStream> {

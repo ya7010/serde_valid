@@ -91,7 +91,10 @@ fn inner_extract_field_validator(
         syn::Meta::NameValue(name_value) => &name_value.path,
     };
 
-    let validation_name = SingleIdentPath::new(validation_path).ident().to_string();
+    let validation_name = SingleIdentPath::new(validation_path)
+        .map_err(|error| vec![error])?
+        .ident()
+        .to_string();
 
     let validator = match (
         MetaPathFieldValidation::from_str(&validation_name),
