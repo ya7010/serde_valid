@@ -19,6 +19,8 @@ pub use error::{
     PropertyErrorsMap, PropertyVecErrorsMap, VecErrors,
 };
 pub use generic::ValidateEnum;
+#[allow(deprecated)]
+pub use generic::ValidateEnumerate;
 use indexmap::IndexMap;
 pub use numeric::{
     ValidateExclusiveMaximum, ValidateExclusiveMinimum, ValidateMaximum, ValidateMinimum,
@@ -178,6 +180,7 @@ macro_rules! impl_composited_validation_1args {
         }
     };
     (
+        $(#[$trait_meta:meta])*
         pub trait $ValidateCompositedTrait:ident<T> {
             fn $validate_composited_method:ident(
                 &self,
@@ -185,6 +188,8 @@ macro_rules! impl_composited_validation_1args {
             ) -> Result<(), Composited<$Error:ty>>;
         }
     ) => {
+        #[allow(deprecated)]
+        $(#[$trait_meta])*
         pub trait $ValidateCompositedTrait<T> {
             fn $validate_composited_method(
                 &self,
@@ -192,6 +197,7 @@ macro_rules! impl_composited_validation_1args {
             ) -> Result<(), crate::validation::Composited<$Error>>;
         }
 
+        #[allow(deprecated)]
         impl<T, U> $ValidateCompositedTrait<T> for Vec<U>
         where
             T: Copy,
@@ -220,6 +226,7 @@ macro_rules! impl_composited_validation_1args {
             }
         }
 
+        #[allow(deprecated)]
         impl<T, K, V> $ValidateCompositedTrait<T> for std::collections::HashMap<K, V>
         where
             T: Copy,
@@ -245,6 +252,7 @@ macro_rules! impl_composited_validation_1args {
             }
         }
 
+        #[allow(deprecated)]
         impl<T, U, const N: usize> $ValidateCompositedTrait<T> for [U; N]
         where
             T: Copy,
@@ -273,6 +281,7 @@ macro_rules! impl_composited_validation_1args {
             }
         }
 
+        #[allow(deprecated)]
         impl<T, U> $ValidateCompositedTrait<T> for Option<U>
         where
             T: Copy,
@@ -425,5 +434,15 @@ impl_composited_validation_1args!(
 impl_composited_validation_1args!(
     pub trait ValidateCompositedEnum<T> {
         fn validate_composited_enum(&self, candidates: T) -> Result<(), Composited<EnumError>>;
+    }
+);
+
+impl_composited_validation_1args!(
+    #[deprecated(
+        since = "2.0.2",
+        note = "use `ValidateCompositedEnum` and `validate_composited_enum` instead"
+    )]
+    pub trait ValidateCompositedEnumerate<T> {
+        fn validate_composited_enumerate(&self, enumerate: T) -> Result<(), Composited<EnumError>>;
     }
 );
