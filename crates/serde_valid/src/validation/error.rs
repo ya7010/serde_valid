@@ -7,6 +7,8 @@ mod object_errors;
 
 use std::borrow::Cow;
 
+#[allow(deprecated)]
+pub use crate::error::EnumerateError;
 pub use crate::error::{
     EnumError, ExclusiveMaximumError, ExclusiveMinimumError, MaxItemsError, MaxLengthError,
     MaxPropertiesError, MaximumError, MinItemsError, MinLengthError, MinPropertiesError,
