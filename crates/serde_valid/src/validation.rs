@@ -180,7 +180,7 @@ macro_rules! impl_composited_validation_1args {
         }
     };
     (
-        $(#[$trait_meta:meta])*
+        $(#[$trait_meta:meta])+
         pub trait $ValidateCompositedTrait:ident<T> {
             fn $validate_composited_method:ident(
                 &self,
@@ -188,7 +188,49 @@ macro_rules! impl_composited_validation_1args {
             ) -> Result<(), Composited<$Error:ty>>;
         }
     ) => {
-        #[allow(deprecated)]
+        impl_composited_validation_1args!(
+            @generic
+            [#[allow(deprecated)] $(#[$trait_meta])*]
+            [#[allow(deprecated)]]
+            pub trait $ValidateCompositedTrait<T> {
+                fn $validate_composited_method(
+                    &self,
+                    $limit: T,
+                ) -> Result<(), Composited<$Error>>;
+            }
+        );
+    };
+    (
+        pub trait $ValidateCompositedTrait:ident<T> {
+            fn $validate_composited_method:ident(
+                &self,
+                $limit:ident: T$(,)*
+            ) -> Result<(), Composited<$Error:ty>>;
+        }
+    ) => {
+        impl_composited_validation_1args!(
+            @generic
+            []
+            []
+            pub trait $ValidateCompositedTrait<T> {
+                fn $validate_composited_method(
+                    &self,
+                    $limit: T,
+                ) -> Result<(), Composited<$Error>>;
+            }
+        );
+    };
+    (
+        @generic
+        [$(#[$trait_meta:meta])*]
+        [$(#[$impl_meta:meta])*]
+        pub trait $ValidateCompositedTrait:ident<T> {
+            fn $validate_composited_method:ident(
+                &self,
+                $limit:ident: T$(,)*
+            ) -> Result<(), Composited<$Error:ty>>;
+        }
+    ) => {
         $(#[$trait_meta])*
         pub trait $ValidateCompositedTrait<T> {
             fn $validate_composited_method(
@@ -197,7 +239,7 @@ macro_rules! impl_composited_validation_1args {
             ) -> Result<(), crate::validation::Composited<$Error>>;
         }
 
-        #[allow(deprecated)]
+        $(#[$impl_meta])*
         impl<T, U> $ValidateCompositedTrait<T> for Vec<U>
         where
             T: Copy,
@@ -226,7 +268,7 @@ macro_rules! impl_composited_validation_1args {
             }
         }
 
-        #[allow(deprecated)]
+        $(#[$impl_meta])*
         impl<T, K, V> $ValidateCompositedTrait<T> for std::collections::HashMap<K, V>
         where
             T: Copy,
@@ -252,7 +294,7 @@ macro_rules! impl_composited_validation_1args {
             }
         }
 
-        #[allow(deprecated)]
+        $(#[$impl_meta])*
         impl<T, U, const N: usize> $ValidateCompositedTrait<T> for [U; N]
         where
             T: Copy,
@@ -281,7 +323,7 @@ macro_rules! impl_composited_validation_1args {
             }
         }
 
-        #[allow(deprecated)]
+        $(#[$impl_meta])*
         impl<T, U> $ValidateCompositedTrait<T> for Option<U>
         where
             T: Copy,
