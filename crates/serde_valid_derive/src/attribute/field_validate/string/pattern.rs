@@ -28,7 +28,7 @@ fn inner_extract_string_pattern_validator(
     let errors = field.errors_variable();
     let pattern = get_str(validation_value)?;
     let pattern_ident = syn::Ident::new(
-        &format!("{}_PATTERN", &field_ident).to_uppercase(),
+        &format!("{}_PATTERN", field_ident).to_uppercase(),
         field_ident.span(),
     );
 
