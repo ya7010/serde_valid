@@ -42,6 +42,9 @@ fn find_rename_from_serde_attributes(attribute: &syn::Attribute) -> Option<Token
 fn find_rename_from_serde_rename_attributes(serde_meta: &syn::Meta) -> Option<TokenStream> {
     match serde_meta {
         syn::Meta::NameValue(rename_name_value) => {
+            if !rename_name_value.path.is_ident("rename") {
+                return None;
+            }
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Str(lit_str),
                 ..
@@ -53,6 +56,9 @@ fn find_rename_from_serde_rename_attributes(serde_meta: &syn::Meta) -> Option<To
             }
         }
         syn::Meta::List(rename_list) => {
+            if !rename_list.path.is_ident("rename") {
+                return None;
+            }
             if let Ok(nested) = rename_list.parse_args_with(CommaSeparatedMetas::parse_terminated) {
                 for rename_meta in nested {
                     if !rename_meta.path().is_ident("deserialize") {
