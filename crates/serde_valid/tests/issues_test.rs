@@ -144,6 +144,7 @@ mod issue107 {
 }
 
 mod issue125 {
+    use indexmap::IndexMap;
     use serde::Deserialize;
     use serde_json::json;
     use serde_valid::{EnumError, Validate, ValidateEnum};
@@ -304,6 +305,39 @@ mod issue125 {
         value: std::borrow::Cow<'a, CustomEnumValue>,
     }
 
+    #[derive(Debug, Validate)]
+    struct CowIntegerConstraint<'a> {
+        #[validate(r#enum = [1, 2])]
+        value: std::borrow::Cow<'a, i32>,
+    }
+
+    #[derive(Debug, Validate)]
+    struct CowStringConstraint<'a> {
+        #[validate(r#enum = ["alpha", "beta"])]
+        value: std::borrow::Cow<'a, str>,
+    }
+
+    #[derive(Debug, Validate)]
+    struct BorrowedCustomEnumConstraint<'a> {
+        #[validate(r#enum = ["alpha", "beta"])]
+        value: &'a CustomEnumValue,
+    }
+
+    #[derive(Debug, Validate)]
+    struct BorrowedIntegerConstraint<'a> {
+        #[validate(r#enum = [1, 2])]
+        value: &'a i32,
+    }
+
+    #[derive(Debug, Validate)]
+    #[allow(clippy::box_collection)]
+    struct BoxedOuterContainerConstraints {
+        #[validate(r#enum = [1, 2])]
+        optional: Box<Option<i32>>,
+        #[validate(minimum = 1)]
+        values: Box<Vec<i32>>,
+    }
+
     #[test]
     fn boxed_and_cow_values_delegate_enum_validation_to_their_inner_type() {
         assert!(BoxedIntegerConstraint { value: Box::new(1) }
@@ -333,6 +367,16 @@ mod issue125 {
         }
         .validate()
         .is_ok());
+        assert!(CowStringConstraint {
+            value: std::borrow::Cow::Borrowed("alpha"),
+        }
+        .validate()
+        .is_ok());
+        assert!(CowStringConstraint {
+            value: std::borrow::Cow::Owned("gamma".to_owned()),
+        }
+        .validate()
+        .is_err());
         assert!(CowOsStrConstraint {
             value: std::borrow::Cow::Borrowed(std::ffi::OsStr::new("alpha")),
         }
@@ -343,6 +387,11 @@ mod issue125 {
         }
         .validate()
         .is_err());
+        assert!(CowOsStrConstraint {
+            value: std::borrow::Cow::Owned(std::ffi::OsString::from("alpha")),
+        }
+        .validate()
+        .is_ok());
         assert!(CowPathConstraint {
             value: std::borrow::Cow::Borrowed(std::path::Path::new("alpha")),
         }
@@ -353,13 +402,96 @@ mod issue125 {
         }
         .validate()
         .is_err());
+        assert!(CowPathConstraint {
+            value: std::borrow::Cow::Owned(std::path::PathBuf::from("alpha")),
+        }
+        .validate()
+        .is_ok());
         assert!(CowCustomEnumConstraint {
             value: std::borrow::Cow::Owned(CustomEnumValue("alpha".to_owned())),
         }
         .validate()
         .is_ok());
+
+        let custom = CustomEnumValue("alpha".to_owned());
         assert!(CowCustomEnumConstraint {
+            value: std::borrow::Cow::Borrowed(&custom),
+        }
+        .validate()
+        .is_ok());
+
+        let errors = CowCustomEnumConstraint {
             value: std::borrow::Cow::Owned(CustomEnumValue("gamma".to_owned())),
+        }
+        .validate()
+        .unwrap_err();
+        assert_eq!(
+            serde_json::to_value(errors).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": {
+                        "errors": ["The value must be in [alpha, beta]."]
+                    }
+                }
+            })
+        );
+
+        let one = 1;
+        assert!(CowIntegerConstraint {
+            value: std::borrow::Cow::Borrowed(&one),
+        }
+        .validate()
+        .is_ok());
+        assert!(CowIntegerConstraint {
+            value: std::borrow::Cow::Owned(3),
+        }
+        .validate()
+        .is_err());
+
+        let custom = CustomEnumValue("alpha".to_owned());
+        assert!(BorrowedCustomEnumConstraint { value: &custom }
+            .validate()
+            .is_ok());
+        let integer = 3;
+        assert!(BorrowedIntegerConstraint { value: &integer }
+            .validate()
+            .is_err());
+
+        assert!(BoxedOuterContainerConstraints {
+            optional: Box::new(Some(1)),
+            values: Box::new(vec![1, 2]),
+        }
+        .validate()
+        .is_ok());
+
+        let errors = serde_json::to_value(
+            BoxedOuterContainerConstraints {
+                optional: Box::new(Some(3)),
+                values: Box::new(vec![1, 2]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+        assert!(errors["properties"].get("optional").is_some());
+        assert!(errors["properties"].get("values").is_none());
+
+        let errors = serde_json::to_value(
+            BoxedOuterContainerConstraints {
+                optional: Box::new(Some(1)),
+                values: Box::new(vec![0, 2]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+        assert!(errors["properties"].get("optional").is_none());
+        assert!(errors["properties"].get("values").is_some());
+
+        assert!(BoxedOuterContainerConstraints {
+            optional: Box::new(Some(3)),
+            values: Box::new(vec![0, 2]),
         }
         .validate()
         .is_err());
@@ -368,6 +500,7 @@ mod issue125 {
     #[allow(deprecated)]
     mod deprecated_enumerate {
         use super::*;
+        use serde_valid::validation::ValidateCompositedEnumerate;
         use serde_valid::ValidateEnumerate;
 
         #[derive(Debug, Validate)]
@@ -376,13 +509,30 @@ mod issue125 {
             value: Box<str>,
         }
 
-        #[derive(Clone)]
+        #[derive(Clone, Debug)]
         struct DeprecatedCustomEnumValue(String);
 
         impl ValidateEnumerate<&'static str> for DeprecatedCustomEnumValue {
             fn validate_enumerate(&self, candidates: &[&'static str]) -> Result<(), EnumError> {
                 self.0.validate_enumerate(candidates)
             }
+        }
+
+        fn validate_enumerate<T, C>(value: &T, candidates: &[C]) -> Result<(), EnumError>
+        where
+            T: ValidateEnumerate<C>,
+        {
+            value.validate_enumerate(candidates)
+        }
+
+        fn validate_composited_enumerate<'a, T>(
+            value: &T,
+            candidates: &'a [i32],
+        ) -> Result<(), serde_valid::validation::Composited<EnumError>>
+        where
+            T: ValidateCompositedEnumerate<&'a [i32]>,
+        {
+            value.validate_composited_enumerate(candidates)
         }
 
         #[test]
@@ -401,7 +551,24 @@ mod issue125 {
             assert!(custom.validate_enumerate(&["alpha", "beta"]).is_ok());
             let custom: std::borrow::Cow<'_, DeprecatedCustomEnumValue> =
                 std::borrow::Cow::Owned(DeprecatedCustomEnumValue("alpha".to_owned()));
-            assert!(custom.validate_enumerate(&["alpha", "beta"]).is_ok());
+            assert!(validate_enumerate(&custom, &["alpha", "beta"]).is_ok());
+            let custom: std::borrow::Cow<'_, DeprecatedCustomEnumValue> =
+                std::borrow::Cow::Owned(DeprecatedCustomEnumValue("gamma".to_owned()));
+            assert!(validate_enumerate(&custom, &["alpha", "beta"]).is_err());
+            let custom = DeprecatedCustomEnumValue("alpha".to_owned());
+            let custom = std::borrow::Cow::Borrowed(&custom);
+            assert!(validate_enumerate(&custom, &["alpha", "beta"]).is_ok());
+            let custom = DeprecatedCustomEnumValue("gamma".to_owned());
+            let custom = std::borrow::Cow::Borrowed(&custom);
+            assert!(validate_enumerate(&custom, &["alpha", "beta"]).is_err());
+
+            let integer: std::borrow::Cow<'_, i32> = std::borrow::Cow::Owned(1);
+            assert!(validate_enumerate(&integer, &[1, 2]).is_ok());
+            let integer: std::borrow::Cow<'_, i32> = std::borrow::Cow::Owned(3);
+            assert!(validate_enumerate(&integer, &[1, 2]).is_err());
+
+            let values = IndexMap::from([("value".to_owned(), 3)]);
+            assert!(validate_composited_enumerate(&values, &[1, 2]).is_err());
         }
     }
 
@@ -585,14 +752,81 @@ mod issue125 {
         assert!(BorrowedNumbers { numbers: &[0, 2] }.validate().is_err());
     }
 
+    #[derive(Debug, Validate)]
+    struct IndexMapCompositedConstraints {
+        #[validate(minimum = 1)]
+        numbers: IndexMap<String, i32>,
+        #[validate(min_length = 2)]
+        strings: IndexMap<String, String>,
+        #[validate(r#enum = [1, 2])]
+        enumerated: IndexMap<String, i32>,
+    }
+
     #[test]
-    fn existing_map_key_contract_remains_supported() {
+    fn index_map_supports_composited_validators() {
+        assert!(IndexMapCompositedConstraints {
+            numbers: IndexMap::from([("number".to_owned(), 1)]),
+            strings: IndexMap::from([("string".to_owned(), "ok".to_owned())]),
+            enumerated: IndexMap::from([("enumerated".to_owned(), 1)]),
+        }
+        .validate()
+        .is_ok());
+
+        let errors = serde_json::to_value(
+            IndexMapCompositedConstraints {
+                numbers: IndexMap::from([("number".to_owned(), 0)]),
+                strings: IndexMap::from([("string".to_owned(), "x".to_owned())]),
+                enumerated: IndexMap::from([("enumerated".to_owned(), 3)]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+        assert!(errors["properties"].get("numbers").is_some());
+        assert!(errors["properties"].get("strings").is_some());
+        assert!(errors["properties"].get("enumerated").is_some());
+    }
+
+    #[derive(Debug, Deserialize, Validate)]
+    struct BorrowedMapKeys<'a> {
+        #[validate]
+        #[serde(borrow)]
+        hash_map: HashMap<&'a str, Child>,
+        #[validate]
+        #[serde(borrow)]
+        index_map: IndexMap<&'a str, Child>,
+    }
+
+    #[test]
+    fn maps_deserialize_and_validate_borrowed_string_keys() {
+        let value: BorrowedMapKeys<'_> = serde_json::from_str(
+            r#"{
+                "hash_map": { "hash": { "value": 0 } },
+                "index_map": { "index": { "value": 0 } }
+            }"#,
+        )
+        .unwrap();
+
+        let errors = serde_json::to_value(value.validate().unwrap_err()).unwrap();
+        assert_eq!(
+            errors["properties"]["hash_map"]["properties"]["hash"]["properties"]["value"]["errors"],
+            json!(["The number must be `>= 1`."])
+        );
+        assert_eq!(
+            errors["properties"]["index_map"]["properties"]["index"]["properties"]["value"]
+                ["errors"],
+            json!(["The number must be `>= 1`."])
+        );
+    }
+
+    #[test]
+    fn string_like_map_key_contract_supports_owned_and_borrowed_keys() {
         #[derive(Eq, Hash, PartialEq)]
         struct CustomKey(String);
 
-        impl From<&CustomKey> for String {
-            fn from(key: &CustomKey) -> Self {
-                key.0.clone()
+        impl AsRef<str> for CustomKey {
+            fn as_ref(&self) -> &str {
+                &self.0
             }
         }
 
@@ -601,5 +835,24 @@ mod issue125 {
 
         let custom_keys = HashMap::from([(CustomKey("custom".to_owned()), Child { value: 0 })]);
         assert!(custom_keys.validate().is_err());
+
+        let borrowed_keys = HashMap::from([("borrowed", Child { value: 0 })]);
+        assert_eq!(
+            serde_json::to_value(borrowed_keys.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "borrowed": {
+                        "errors": [],
+                        "properties": {
+                            "value": { "errors": ["The number must be `>= 1`."] }
+                        }
+                    }
+                }
+            })
+        );
+
+        let borrowed_keys = IndexMap::from([("borrowed", Child { value: 0 })]);
+        assert!(borrowed_keys.validate().is_err());
     }
 }

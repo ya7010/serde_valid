@@ -29,6 +29,9 @@ jobs:
       - name: Run cargo test
         run: cargo +stable test --all-features
 
+      - name: Run cargo test without default features
+        run: cargo +stable test --no-default-features
+
   lints:
     name: Lints
     runs-on: ubuntu-latest

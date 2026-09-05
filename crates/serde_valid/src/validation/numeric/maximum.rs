@@ -185,6 +185,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "i128")]
     fn test_validate_numeric_maximum_128() {
         assert!(ValidateMaximum::validate_maximum(&10, 10i128).is_ok());
         assert!(ValidateMaximum::validate_maximum(&10, 10u128).is_ok());
