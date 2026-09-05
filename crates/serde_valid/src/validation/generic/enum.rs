@@ -132,16 +132,23 @@ impl ValidateEnum<&'static str> for str {
     }
 }
 
-impl_validate_generic_enumerate_str!(&str);
 impl_validate_generic_enumerate_str!(String);
-impl_validate_generic_enumerate_str!(&std::ffi::OsStr);
 impl_validate_generic_enumerate_str!(std::ffi::OsString);
 
-impl<T> ValidateEnum<&'static str> for std::borrow::Cow<'_, T>
+impl<C, T> ValidateEnum<C> for &T
 where
-    T: std::borrow::ToOwned + ValidateEnum<&'static str> + ?Sized,
+    T: ValidateEnum<C> + ?Sized,
 {
-    fn validate_enum(&self, candidates: &[&'static str]) -> Result<(), EnumError> {
+    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
+        (*self).validate_enum(candidates)
+    }
+}
+
+impl<C, T> ValidateEnum<C> for std::borrow::Cow<'_, T>
+where
+    T: std::borrow::ToOwned + ValidateEnum<C> + ?Sized,
+{
+    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
         self.as_ref().validate_enum(candidates)
     }
 }
@@ -185,7 +192,6 @@ macro_rules! impl_validate_generic_enumerate_path {
     };
 }
 
-impl_validate_generic_enumerate_path!(&std::path::Path);
 impl_validate_generic_enumerate_path!(std::path::PathBuf);
 
 impl ValidateEnum<&'static str> for std::path::Path {

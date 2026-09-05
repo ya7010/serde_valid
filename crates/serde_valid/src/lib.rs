@@ -716,15 +716,15 @@ where
 
 impl<K, V> Validate for HashMap<K, V>
 where
+    K: AsRef<str>,
     V: Validate,
-    for<'a> &'a K: Into<String>,
 {
     fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
         let mut items = IndexMap::new();
 
         for (key, value) in self.iter() {
             if let Err(errors) = value.validate() {
-                items.insert(Cow::from(key.into()), errors);
+                items.insert(Cow::Owned(key.as_ref().to_owned()), errors);
             }
         }
 
@@ -740,15 +740,15 @@ where
 
 impl<K, V> Validate for IndexMap<K, V>
 where
+    K: AsRef<str>,
     V: Validate,
-    for<'a> &'a K: Into<String>,
 {
     fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
         let mut items = IndexMap::new();
 
         for (key, value) in self.iter() {
             if let Err(errors) = value.validate() {
-                items.insert(Cow::from(key.into()), errors);
+                items.insert(Cow::Owned(key.as_ref().to_owned()), errors);
             }
         }
 
