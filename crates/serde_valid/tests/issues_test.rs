@@ -142,3 +142,152 @@ mod issue107 {
         assert!(v3.validate().is_err());
     }
 }
+
+mod issue125 {
+    use serde::Deserialize;
+    use serde_valid::Validate;
+    use std::collections::HashMap;
+
+    #[derive(Debug, Deserialize, Validate)]
+    struct Child {
+        #[validate(minimum = 1)]
+        value: i32,
+    }
+
+    #[derive(Debug, Deserialize, Validate)]
+    struct BorrowedNames<'a> {
+        #[validate(min_items = 4)]
+        #[validate(max_items = 2)]
+        #[validate(min_length = 1)]
+        #[validate(unique_items)]
+        #[serde(borrow)]
+        names: Box<[&'a str]>,
+    }
+
+    #[test]
+    fn boxed_slice_supports_array_and_composited_validators() {
+        let value = BorrowedNames {
+            names: vec!["", "duplicate", "duplicate"].into_boxed_slice(),
+        };
+
+        let errors = value.validate().unwrap_err().to_string();
+        assert!(errors.contains("The length of the items must be `>= 4`."));
+        assert!(errors.contains("The length of the items must be `<= 2`."));
+        assert!(errors.contains("The length of the value must be `>= 1`."));
+        assert!(errors.contains("The items must be unique."));
+    }
+
+    #[test]
+    fn boxed_slice_deserializes_borrowed_strings() {
+        let json = r#"{"names":["borrowed"]}"#;
+        let value: BorrowedNames<'_> = serde_json::from_str(json).unwrap();
+        assert_eq!(value.names.as_ref(), ["borrowed"]);
+    }
+
+    #[derive(Debug, Deserialize, Validate)]
+    struct BorrowedSlice<'a> {
+        #[validate(min_items = 2)]
+        #[validate(max_items = 2)]
+        #[validate(unique_items)]
+        #[serde(borrow)]
+        data: &'a [u8],
+    }
+
+    #[test]
+    fn borrowed_slice_supports_array_validators() {
+        assert!(BorrowedSlice { data: &[1, 2] }.validate().is_ok());
+        assert!(BorrowedSlice { data: &[1] }.validate().is_err());
+        assert!(BorrowedSlice { data: &[1, 2, 3] }.validate().is_err());
+        assert!(BorrowedSlice { data: &[1, 1] }.validate().is_err());
+    }
+
+    #[derive(Debug, Validate)]
+    struct BoxedString {
+        #[validate(min_length = 1)]
+        #[validate(max_length = 2)]
+        value: Box<str>,
+    }
+
+    #[test]
+    fn boxed_string_supports_length_validators() {
+        assert!(BoxedString { value: "x".into() }.validate().is_ok());
+        assert!(BoxedString { value: "".into() }.validate().is_err());
+        assert!(BoxedString {
+            value: "too long".into(),
+        }
+        .validate()
+        .is_err());
+    }
+
+    #[derive(Debug, Validate)]
+    struct BoxedChildren {
+        #[validate]
+        children: Box<[Child]>,
+    }
+
+    #[derive(Debug, Validate)]
+    struct BorrowedChildren<'a> {
+        #[validate]
+        children: &'a [Child],
+    }
+
+    #[test]
+    fn boxed_and_borrowed_slices_support_nested_validation() {
+        let children = vec![Child { value: 0 }].into_boxed_slice();
+        assert!(BoxedChildren { children }.validate().is_err());
+
+        let children = [Child { value: 0 }];
+        assert!(BorrowedChildren {
+            children: &children,
+        }
+        .validate()
+        .is_err());
+    }
+
+    #[derive(Debug, Validate)]
+    struct BoxedNumbers {
+        #[validate(minimum = 1)]
+        numbers: Box<[i32]>,
+    }
+
+    #[derive(Debug, Validate)]
+    struct BorrowedNumbers<'a> {
+        #[validate(minimum = 1)]
+        numbers: &'a [i32],
+    }
+
+    #[test]
+    fn boxed_slice_supports_numeric_composited_validation() {
+        assert!(BoxedNumbers {
+            numbers: vec![1, 2].into_boxed_slice(),
+        }
+        .validate()
+        .is_ok());
+        assert!(BoxedNumbers {
+            numbers: vec![0, 2].into_boxed_slice(),
+        }
+        .validate()
+        .is_err());
+
+        assert!(BorrowedNumbers { numbers: &[1, 2] }.validate().is_ok());
+        assert!(BorrowedNumbers { numbers: &[0, 2] }.validate().is_err());
+    }
+
+    #[test]
+    fn existing_map_key_contract_remains_supported() {
+        #[derive(Eq, Hash, PartialEq)]
+        struct CustomKey(String);
+
+        impl From<&CustomKey> for String {
+            fn from(key: &CustomKey) -> Self {
+                key.0.clone()
+            }
+        }
+
+        let string_keys = HashMap::from([("string".to_owned(), Child { value: 0 })]);
+        assert!(string_keys.validate().is_err());
+
+        let custom_keys = HashMap::from([(CustomKey("custom".to_owned()), Child { value: 0 })]);
+        assert!(custom_keys.validate().is_err());
+    }
+}

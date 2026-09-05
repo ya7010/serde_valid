@@ -655,6 +655,29 @@ where
     }
 }
 
+impl<T> Validate for [T]
+where
+    T: Validate,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        let mut items = IndexMap::new();
+
+        for (index, item) in self.iter().enumerate() {
+            if let Err(errors) = item.validate() {
+                items.insert(index, errors);
+            }
+        }
+
+        if items.is_empty() {
+            Ok(())
+        } else {
+            Err(self::validation::Errors::Array(
+                validation::error::ArrayErrors::new(vec![], items),
+            ))
+        }
+    }
+}
+
 impl<K, V> Validate for HashMap<K, V>
 where
     V: Validate,

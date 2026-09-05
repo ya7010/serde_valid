@@ -4,6 +4,15 @@ pub trait Length {
     fn length(&self) -> usize;
 }
 
+impl<T> Length for Box<T>
+where
+    T: Length + ?Sized,
+{
+    fn length(&self) -> usize {
+        self.as_ref().length()
+    }
+}
+
 macro_rules! impl_for_str {
     ($ty:ty) => {
         impl Length for $ty {
