@@ -89,11 +89,43 @@ macro_rules! impl_validate_generic_enumerate_str {
     };
 }
 
+impl ValidateEnumerate<&'static str> for str {
+    fn validate_enumerate(&self, enumerate: &[&'static str]) -> Result<(), EnumError> {
+        if enumerate.contains(&self) {
+            Ok(())
+        } else {
+            Err(EnumError::new(enumerate))
+        }
+    }
+}
+
 impl_validate_generic_enumerate_str!(&str);
 impl_validate_generic_enumerate_str!(String);
 impl_validate_generic_enumerate_str!(std::borrow::Cow<'_, str>);
 impl_validate_generic_enumerate_str!(&std::ffi::OsStr);
 impl_validate_generic_enumerate_str!(std::ffi::OsString);
+
+impl ValidateEnumerate<&'static str> for std::ffi::OsStr {
+    fn validate_enumerate(&self, enumerate: &[&'static str]) -> Result<(), EnumError> {
+        if enumerate
+            .iter()
+            .any(|candidate| std::ffi::OsStr::new(candidate) == self)
+        {
+            Ok(())
+        } else {
+            Err(EnumError::new(enumerate))
+        }
+    }
+}
+
+impl<C, T> ValidateEnumerate<C> for Box<T>
+where
+    T: ValidateEnumerate<C> + ?Sized,
+{
+    fn validate_enumerate(&self, enumerate: &[C]) -> Result<(), EnumError> {
+        self.as_ref().validate_enumerate(enumerate)
+    }
+}
 
 macro_rules! impl_validate_generic_enumerate_path {
     ($type:ty) => {
@@ -114,6 +146,19 @@ macro_rules! impl_validate_generic_enumerate_path {
 
 impl_validate_generic_enumerate_path!(&std::path::Path);
 impl_validate_generic_enumerate_path!(std::path::PathBuf);
+
+impl ValidateEnumerate<&'static str> for std::path::Path {
+    fn validate_enumerate(&self, enumerate: &[&'static str]) -> Result<(), EnumError> {
+        if enumerate
+            .iter()
+            .any(|candidate| std::path::Path::new(candidate) == self)
+        {
+            Ok(())
+        } else {
+            Err(EnumError::new(enumerate))
+        }
+    }
+}
 
 impl<T> ValidateCompositedEnumerate<&[&'static str]> for T
 where

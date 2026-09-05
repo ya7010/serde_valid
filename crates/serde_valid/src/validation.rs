@@ -165,6 +165,30 @@ macro_rules! impl_composited_validation_1args {
             }
         }
 
+        impl<T, const N: usize> $ValidateCompositedTrait for &[T; N]
+        where
+            T: $ValidateCompositedTrait,
+        {
+            fn $validate_composited_method(
+                &self,
+                $limit: $limit_type,
+            ) -> Result<(), Composited<$Error>> {
+                self.as_ref().$validate_composited_method($limit)
+            }
+        }
+
+        impl<T, const N: usize> $ValidateCompositedTrait for Box<[T; N]>
+        where
+            T: $ValidateCompositedTrait,
+        {
+            fn $validate_composited_method(
+                &self,
+                $limit: $limit_type,
+            ) -> Result<(), Composited<$Error>> {
+                self.as_ref().$validate_composited_method($limit)
+            }
+        }
+
         impl<T> $ValidateCompositedTrait for Option<T>
         where
             T: $ValidateCompositedTrait,
@@ -419,6 +443,34 @@ macro_rules! impl_composited_validation_1args {
 
         $(#[$impl_meta])*
         impl<T, U> $ValidateCompositedTrait<T> for Box<[U]>
+        where
+            T: Copy,
+            U: $ValidateCompositedTrait<T>,
+        {
+            fn $validate_composited_method(
+                &self,
+                $limit: T,
+            ) -> Result<(), crate::validation::Composited<$Error>> {
+                self.as_ref().$validate_composited_method($limit)
+            }
+        }
+
+        $(#[$impl_meta])*
+        impl<T, U, const N: usize> $ValidateCompositedTrait<T> for &[U; N]
+        where
+            T: Copy,
+            U: $ValidateCompositedTrait<T>,
+        {
+            fn $validate_composited_method(
+                &self,
+                $limit: T,
+            ) -> Result<(), crate::validation::Composited<$Error>> {
+                self.as_ref().$validate_composited_method($limit)
+            }
+        }
+
+        $(#[$impl_meta])*
+        impl<T, U, const N: usize> $ValidateCompositedTrait<T> for Box<[U; N]>
         where
             T: Copy,
             U: $ValidateCompositedTrait<T>,

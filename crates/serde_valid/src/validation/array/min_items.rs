@@ -86,6 +86,18 @@ impl<T, const N: usize> ValidateMinItems for [T; N] {
     }
 }
 
+impl<T, const N: usize> ValidateMinItems for &[T; N] {
+    fn validate_min_items(&self, min_items: usize) -> Result<(), crate::MinItemsError> {
+        self.as_ref().validate_min_items(min_items)
+    }
+}
+
+impl<T, const N: usize> ValidateMinItems for Box<[T; N]> {
+    fn validate_min_items(&self, min_items: usize) -> Result<(), crate::MinItemsError> {
+        self.as_ref().validate_min_items(min_items)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

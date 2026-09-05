@@ -678,6 +678,42 @@ where
     }
 }
 
+impl<T> Validate for &[T]
+where
+    T: Validate,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        self.as_ref().validate()
+    }
+}
+
+impl<T> Validate for Box<[T]>
+where
+    T: Validate,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        self.as_ref().validate()
+    }
+}
+
+impl<T, const N: usize> Validate for &[T; N]
+where
+    T: Validate,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        self.as_ref().validate()
+    }
+}
+
+impl<T, const N: usize> Validate for Box<[T; N]>
+where
+    T: Validate,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        self.as_ref().validate()
+    }
+}
+
 impl<K, V> Validate for HashMap<K, V>
 where
     V: Validate,
