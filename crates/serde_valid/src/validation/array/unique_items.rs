@@ -100,6 +100,24 @@ where
     }
 }
 
+impl<T, const N: usize> ValidateUniqueItems for &[T; N]
+where
+    T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
+{
+    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
+        self.as_ref().validate_unique_items()
+    }
+}
+
+impl<T, const N: usize> ValidateUniqueItems for Box<[T; N]>
+where
+    T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
+{
+    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
+        self.as_ref().validate_unique_items()
+    }
+}
+
 impl<T> ValidateUniqueItems for Option<T>
 where
     T: ValidateUniqueItems,

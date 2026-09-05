@@ -86,6 +86,18 @@ impl<T, const N: usize> ValidateMaxItems for [T; N] {
     }
 }
 
+impl<T, const N: usize> ValidateMaxItems for &[T; N] {
+    fn validate_max_items(&self, max_items: usize) -> Result<(), crate::MaxItemsError> {
+        self.as_ref().validate_max_items(max_items)
+    }
+}
+
+impl<T, const N: usize> ValidateMaxItems for Box<[T; N]> {
+    fn validate_max_items(&self, max_items: usize) -> Result<(), crate::MaxItemsError> {
+        self.as_ref().validate_max_items(max_items)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

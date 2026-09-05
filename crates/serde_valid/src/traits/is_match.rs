@@ -2,6 +2,15 @@ pub trait IsMatch {
     fn is_match(&self, pattern: &regex::Regex) -> bool;
 }
 
+impl<T> IsMatch for Box<T>
+where
+    T: IsMatch + ?Sized,
+{
+    fn is_match(&self, pattern: &regex::Regex) -> bool {
+        self.as_ref().is_match(pattern)
+    }
+}
+
 macro_rules! impl_for_str {
     ($ty:ty) => {
         impl IsMatch for $ty {

@@ -145,7 +145,7 @@ mod issue107 {
 
 mod issue125 {
     use serde::Deserialize;
-    use serde_valid::Validate;
+    use serde_valid::{EnumError, Validate, ValidateEnum};
     use std::collections::HashMap;
 
     #[derive(Debug, Deserialize, Validate)]
@@ -220,6 +220,164 @@ mod issue125 {
     }
 
     #[derive(Debug, Validate)]
+    struct BoxedStringConstraints {
+        #[validate(pattern = "^[a-z]+$")]
+        #[validate(r#enum = ["alpha", "beta"])]
+        value: Box<str>,
+    }
+
+    #[test]
+    fn boxed_string_supports_pattern_and_enum_validators() {
+        assert!(BoxedStringConstraints {
+            value: "alpha".into(),
+        }
+        .validate()
+        .is_ok());
+        assert!(BoxedStringConstraints {
+            value: "123".into(),
+        }
+        .validate()
+        .is_err());
+        assert!(BoxedStringConstraints {
+            value: "gamma".into(),
+        }
+        .validate()
+        .is_err());
+    }
+
+    #[derive(Debug, Validate)]
+    struct BoxedIntegerConstraint {
+        #[validate(r#enum = [1, 2])]
+        value: Box<i32>,
+    }
+
+    #[derive(Debug)]
+    struct CustomEnumValue(String);
+
+    impl ValidateEnum<&'static str> for CustomEnumValue {
+        fn validate_enum(&self, candidates: &[&'static str]) -> Result<(), EnumError> {
+            self.0.validate_enum(candidates)
+        }
+    }
+
+    #[derive(Debug, Validate)]
+    struct BoxedCustomEnumConstraint {
+        #[validate(r#enum = ["alpha", "beta"])]
+        value: Box<CustomEnumValue>,
+    }
+
+    #[derive(Debug, Validate)]
+    struct BoxedOsStrConstraint {
+        #[validate(r#enum = ["alpha", "beta"])]
+        value: Box<std::ffi::OsStr>,
+    }
+
+    #[derive(Debug, Validate)]
+    struct BoxedPathConstraint {
+        #[validate(r#enum = ["alpha", "beta"])]
+        value: Box<std::path::Path>,
+    }
+
+    #[test]
+    fn boxed_values_delegate_enum_validation_to_their_inner_type() {
+        assert!(BoxedIntegerConstraint { value: Box::new(1) }
+            .validate()
+            .is_ok());
+        assert!(BoxedIntegerConstraint { value: Box::new(3) }
+            .validate()
+            .is_err());
+
+        assert!(BoxedCustomEnumConstraint {
+            value: Box::new(CustomEnumValue("alpha".to_owned())),
+        }
+        .validate()
+        .is_ok());
+        assert!(BoxedCustomEnumConstraint {
+            value: Box::new(CustomEnumValue("gamma".to_owned())),
+        }
+        .validate()
+        .is_err());
+
+        assert!(BoxedOsStrConstraint {
+            value: std::ffi::OsString::from("alpha").into_boxed_os_str(),
+        }
+        .validate()
+        .is_ok());
+        assert!(BoxedPathConstraint {
+            value: std::path::PathBuf::from("alpha").into_boxed_path(),
+        }
+        .validate()
+        .is_ok());
+    }
+
+    #[allow(deprecated)]
+    mod deprecated_enumerate {
+        use super::*;
+
+        #[derive(Debug, Validate)]
+        struct DeprecatedBoxedStringConstraint {
+            #[validate(enumerate = ["alpha", "beta"])]
+            value: Box<str>,
+        }
+
+        #[test]
+        fn boxed_string_remains_supported_by_deprecated_enumerate_validator() {
+            assert!(DeprecatedBoxedStringConstraint {
+                value: "alpha".into(),
+            }
+            .validate()
+            .is_ok());
+            assert!(DeprecatedBoxedStringConstraint {
+                value: "gamma".into(),
+            }
+            .validate()
+            .is_err());
+        }
+    }
+
+    #[derive(Debug, Validate)]
+    struct BoxedArray {
+        #[validate(min_items = 4)]
+        #[validate(max_items = 2)]
+        #[validate(unique_items)]
+        #[validate(minimum = 1)]
+        values: Box<[i32; 3]>,
+    }
+
+    #[derive(Debug, Validate)]
+    struct BorrowedArray<'a> {
+        #[validate(min_items = 4)]
+        #[validate(max_items = 2)]
+        #[validate(unique_items)]
+        #[validate(minimum = 1)]
+        values: &'a [i32; 3],
+    }
+
+    #[test]
+    fn boxed_and_borrowed_arrays_support_array_and_composited_validators() {
+        let errors = BoxedArray {
+            values: Box::new([0, 1, 1]),
+        }
+        .validate()
+        .unwrap_err()
+        .to_string();
+        assert!(errors.contains("The length of the items must be `>= 4`."));
+        assert!(errors.contains("The length of the items must be `<= 2`."));
+        assert!(errors.contains("The items must be unique."));
+        assert!(errors.contains("The number must be `>= 1`."));
+
+        let values = [0, 1, 1];
+        let errors = BorrowedArray { values: &values }
+            .validate()
+            .unwrap_err()
+            .to_string();
+        assert!(errors.contains("The length of the items must be `>= 4`."));
+        assert!(errors.contains("The length of the items must be `<= 2`."));
+        assert!(errors.contains("The items must be unique."));
+        assert!(errors.contains("The number must be `>= 1`."));
+    }
+
+    #[derive(Debug, Validate)]
     struct BoxedChildren {
         #[validate]
         children: Box<[Child]>,
@@ -242,6 +400,43 @@ mod issue125 {
         }
         .validate()
         .is_err());
+    }
+
+    #[derive(Debug, Validate)]
+    struct OptionalChildren<'a> {
+        #[validate]
+        boxed_slice: Option<Box<[Child]>>,
+        #[validate]
+        borrowed_slice: Option<&'a [Child]>,
+        #[validate]
+        boxed_array: Option<Box<[Child; 1]>>,
+        #[validate]
+        borrowed_array: Option<&'a [Child; 1]>,
+    }
+
+    #[test]
+    fn optional_boxed_and_borrowed_containers_support_nested_validation() {
+        let children = [Child { value: 0 }];
+        let value = OptionalChildren {
+            boxed_slice: Some(vec![Child { value: 0 }].into_boxed_slice()),
+            borrowed_slice: Some(&children),
+            boxed_array: Some(Box::new([Child { value: 0 }])),
+            borrowed_array: Some(&children),
+        };
+        let errors = value.validate().unwrap_err().to_string();
+        assert!(errors.contains("boxed_slice"));
+        assert!(errors.contains("borrowed_slice"));
+        assert!(errors.contains("boxed_array"));
+        assert!(errors.contains("borrowed_array"));
+
+        assert!(OptionalChildren {
+            boxed_slice: None,
+            borrowed_slice: None,
+            boxed_array: None,
+            borrowed_array: None,
+        }
+        .validate()
+        .is_ok());
     }
 
     #[derive(Debug, Validate)]
