@@ -145,6 +145,7 @@ mod issue107 {
 
 mod issue125 {
     use serde::Deserialize;
+    use serde_json::json;
     use serde_valid::{EnumError, Validate, ValidateEnum};
     use std::collections::HashMap;
 
@@ -221,7 +222,7 @@ mod issue125 {
 
     #[derive(Debug, Validate)]
     struct BoxedStringConstraints {
-        #[validate(pattern = "^[a-z]+$")]
+        #[validate(pattern = "^(alpha|gamma)$")]
         #[validate(r#enum = ["alpha", "beta"])]
         value: Box<str>,
     }
@@ -233,16 +234,23 @@ mod issue125 {
         }
         .validate()
         .is_ok());
-        assert!(BoxedStringConstraints {
-            value: "123".into(),
+        let pattern_errors = BoxedStringConstraints {
+            value: "beta".into(),
         }
         .validate()
-        .is_err());
-        assert!(BoxedStringConstraints {
+        .unwrap_err()
+        .to_string();
+        assert!(pattern_errors.contains("must match the pattern"));
+        assert!(!pattern_errors.contains("must be in"));
+
+        let enum_errors = BoxedStringConstraints {
             value: "gamma".into(),
         }
         .validate()
-        .is_err());
+        .unwrap_err()
+        .to_string();
+        assert!(!enum_errors.contains("must match the pattern"));
+        assert!(enum_errors.contains("must be in"));
     }
 
     #[derive(Debug, Validate)]
@@ -251,7 +259,7 @@ mod issue125 {
         value: Box<i32>,
     }
 
-    #[derive(Debug)]
+    #[derive(Clone, Debug)]
     struct CustomEnumValue(String);
 
     impl ValidateEnum<&'static str> for CustomEnumValue {
@@ -278,8 +286,26 @@ mod issue125 {
         value: Box<std::path::Path>,
     }
 
+    #[derive(Debug, Validate)]
+    struct CowOsStrConstraint<'a> {
+        #[validate(r#enum = ["alpha", "beta"])]
+        value: std::borrow::Cow<'a, std::ffi::OsStr>,
+    }
+
+    #[derive(Debug, Validate)]
+    struct CowPathConstraint<'a> {
+        #[validate(r#enum = ["alpha", "beta"])]
+        value: std::borrow::Cow<'a, std::path::Path>,
+    }
+
+    #[derive(Debug, Validate)]
+    struct CowCustomEnumConstraint<'a> {
+        #[validate(r#enum = ["alpha", "beta"])]
+        value: std::borrow::Cow<'a, CustomEnumValue>,
+    }
+
     #[test]
-    fn boxed_values_delegate_enum_validation_to_their_inner_type() {
+    fn boxed_and_cow_values_delegate_enum_validation_to_their_inner_type() {
         assert!(BoxedIntegerConstraint { value: Box::new(1) }
             .validate()
             .is_ok());
@@ -297,7 +323,6 @@ mod issue125 {
         }
         .validate()
         .is_err());
-
         assert!(BoxedOsStrConstraint {
             value: std::ffi::OsString::from("alpha").into_boxed_os_str(),
         }
@@ -308,16 +333,56 @@ mod issue125 {
         }
         .validate()
         .is_ok());
+        assert!(CowOsStrConstraint {
+            value: std::borrow::Cow::Borrowed(std::ffi::OsStr::new("alpha")),
+        }
+        .validate()
+        .is_ok());
+        assert!(CowOsStrConstraint {
+            value: std::borrow::Cow::Borrowed(std::ffi::OsStr::new("gamma")),
+        }
+        .validate()
+        .is_err());
+        assert!(CowPathConstraint {
+            value: std::borrow::Cow::Borrowed(std::path::Path::new("alpha")),
+        }
+        .validate()
+        .is_ok());
+        assert!(CowPathConstraint {
+            value: std::borrow::Cow::Borrowed(std::path::Path::new("gamma")),
+        }
+        .validate()
+        .is_err());
+        assert!(CowCustomEnumConstraint {
+            value: std::borrow::Cow::Owned(CustomEnumValue("alpha".to_owned())),
+        }
+        .validate()
+        .is_ok());
+        assert!(CowCustomEnumConstraint {
+            value: std::borrow::Cow::Owned(CustomEnumValue("gamma".to_owned())),
+        }
+        .validate()
+        .is_err());
     }
 
     #[allow(deprecated)]
     mod deprecated_enumerate {
         use super::*;
+        use serde_valid::ValidateEnumerate;
 
         #[derive(Debug, Validate)]
         struct DeprecatedBoxedStringConstraint {
             #[validate(enumerate = ["alpha", "beta"])]
             value: Box<str>,
+        }
+
+        #[derive(Clone)]
+        struct DeprecatedCustomEnumValue(String);
+
+        impl ValidateEnumerate<&'static str> for DeprecatedCustomEnumValue {
+            fn validate_enumerate(&self, candidates: &[&'static str]) -> Result<(), EnumError> {
+                self.0.validate_enumerate(candidates)
+            }
         }
 
         #[test]
@@ -332,6 +397,11 @@ mod issue125 {
             }
             .validate()
             .is_err());
+            let custom = Box::new(DeprecatedCustomEnumValue("alpha".to_owned()));
+            assert!(custom.validate_enumerate(&["alpha", "beta"]).is_ok());
+            let custom: std::borrow::Cow<'_, DeprecatedCustomEnumValue> =
+                std::borrow::Cow::Owned(DeprecatedCustomEnumValue("alpha".to_owned()));
+            assert!(custom.validate_enumerate(&["alpha", "beta"]).is_ok());
         }
     }
 
@@ -423,11 +493,58 @@ mod issue125 {
             boxed_array: Some(Box::new([Child { value: 0 }])),
             borrowed_array: Some(&children),
         };
-        let errors = value.validate().unwrap_err().to_string();
-        assert!(errors.contains("boxed_slice"));
-        assert!(errors.contains("borrowed_slice"));
-        assert!(errors.contains("boxed_array"));
-        assert!(errors.contains("borrowed_array"));
+        assert_eq!(
+            serde_json::to_value(value.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "boxed_slice": {
+                        "errors": [],
+                        "items": {
+                            "0": {
+                                "errors": [],
+                                "properties": {
+                                    "value": { "errors": ["The number must be `>= 1`."] }
+                                }
+                            }
+                        }
+                    },
+                    "borrowed_slice": {
+                        "errors": [],
+                        "items": {
+                            "0": {
+                                "errors": [],
+                                "properties": {
+                                    "value": { "errors": ["The number must be `>= 1`."] }
+                                }
+                            }
+                        }
+                    },
+                    "boxed_array": {
+                        "errors": [],
+                        "items": {
+                            "0": {
+                                "errors": [],
+                                "properties": {
+                                    "value": { "errors": ["The number must be `>= 1`."] }
+                                }
+                            }
+                        }
+                    },
+                    "borrowed_array": {
+                        "errors": [],
+                        "items": {
+                            "0": {
+                                "errors": [],
+                                "properties": {
+                                    "value": { "errors": ["The number must be `>= 1`."] }
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+        );
 
         assert!(OptionalChildren {
             boxed_slice: None,
