@@ -101,9 +101,17 @@ impl ValidateEnumerate<&'static str> for str {
 
 impl_validate_generic_enumerate_str!(&str);
 impl_validate_generic_enumerate_str!(String);
-impl_validate_generic_enumerate_str!(std::borrow::Cow<'_, str>);
 impl_validate_generic_enumerate_str!(&std::ffi::OsStr);
 impl_validate_generic_enumerate_str!(std::ffi::OsString);
+
+impl<T> ValidateEnumerate<&'static str> for std::borrow::Cow<'_, T>
+where
+    T: std::borrow::ToOwned + ValidateEnumerate<&'static str> + ?Sized,
+{
+    fn validate_enumerate(&self, enumerate: &[&'static str]) -> Result<(), EnumError> {
+        self.as_ref().validate_enumerate(enumerate)
+    }
+}
 
 impl ValidateEnumerate<&'static str> for std::ffi::OsStr {
     fn validate_enumerate(&self, enumerate: &[&'static str]) -> Result<(), EnumError> {
