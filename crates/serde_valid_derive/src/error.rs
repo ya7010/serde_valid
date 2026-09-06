@@ -35,7 +35,10 @@ pub fn object_errors_tokens() -> TokenStream {
                     if !__field_properties_errors.is_empty() {
                         let __object_errors = __field_properties_errors
                             .into_iter()
-                            .reduce(|a, b| a.merge(b))
+                            .reduce(|mut a, b| {
+                                a.merge(b);
+                                a
+                            })
                             .unwrap();
                         __field_errors.extend(__object_errors.errors);
 
@@ -103,7 +106,10 @@ pub fn array_errors_tokens() -> TokenStream {
                     if !__field_properties_errors.is_empty() {
                         let __object_errors = __field_properties_errors
                             .into_iter()
-                            .reduce(|a, b| a.merge(b))
+                            .reduce(|mut a, b| {
+                                a.merge(b);
+                                a
+                            })
                             .unwrap();
                         __field_errors.extend(__object_errors.errors);
 

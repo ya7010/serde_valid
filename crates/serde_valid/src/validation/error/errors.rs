@@ -76,7 +76,7 @@ where
                     unreachable!("conflict Object and Array in serde_valid::validation::Errors")
                 }
                 Errors::Object(b) => {
-                    a.merge_in_place(b);
+                    a.merge(b);
                 }
                 Errors::NewType(errors) => {
                     a.errors.extend(errors);

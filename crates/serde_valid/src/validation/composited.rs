@@ -52,7 +52,10 @@ fn merge_errors(errors: Vec<crate::validation::error::Error>) -> crate::validati
     if !property_errors.is_empty() {
         let property_errors = property_errors
             .into_iter()
-            .reduce(|a, b| a.merge(b))
+            .reduce(|mut a, b| {
+                a.merge(b);
+                a
+            })
             .unwrap();
         errors.extend(property_errors.errors);
         crate::validation::error::Errors::Object(crate::validation::error::ObjectErrors::new(
