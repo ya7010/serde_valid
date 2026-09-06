@@ -103,6 +103,21 @@ macro_rules! for_each_composited_wrapper {
         ] [K, V] Box<indexmap::IndexMap<K, V>> => indexmap::IndexMap<K, V>; []);
         $callback!([
             $($context)*
+        ] ['a, T] std::borrow::Cow<'a, Vec<T>> => Vec<T>; [Vec<T>: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
+        ] ['a, T] std::borrow::Cow<'a, Option<T>> => Option<T>; [Option<T>: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
+        ] ['a, T, const N: usize] std::borrow::Cow<'a, [T; N]> => [T; N]; [[T; N]: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
+        ] ['a, K, V] std::borrow::Cow<'a, std::collections::HashMap<K, V>> => std::collections::HashMap<K, V>; [std::collections::HashMap<K, V>: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
+        ] ['a, K, V] std::borrow::Cow<'a, indexmap::IndexMap<K, V>> => indexmap::IndexMap<K, V>; [indexmap::IndexMap<K, V>: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
         ] ['a, T] std::borrow::Cow<'a, [T]> => [T]; [[T]: std::borrow::ToOwned]);
     };
 }

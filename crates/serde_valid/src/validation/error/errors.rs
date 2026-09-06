@@ -188,4 +188,24 @@ mod tests {
         assert_eq!(errors.errors, ["object error", "array error"]);
         assert_eq!(errors.properties.len(), 1);
     }
+
+    #[test]
+    fn array_errors_at_the_same_index_are_merged_recursively() {
+        let mut errors = Errors::Array(ArrayErrors::new(
+            Vec::new(),
+            ItemErrorsMap::from([(0, Errors::NewType(vec!["first"]))]),
+        ));
+        errors.merge(Errors::Array(ArrayErrors::new(
+            Vec::new(),
+            ItemErrorsMap::from([(0, Errors::NewType(vec!["second"]))]),
+        )));
+
+        let Errors::Array(errors) = errors else {
+            panic!("array structure must be retained")
+        };
+        let Errors::NewType(errors) = &errors.items[&0] else {
+            panic!("item errors must remain newtype errors")
+        };
+        assert_eq!(errors, &["first", "second"]);
+    }
 }

@@ -13,7 +13,9 @@ macro_rules! extract_numeric_range_validator{
         $extract_validator:ident,
         $inner_extract_validator:ident,
         $ValidateCompositedTrait:ident,
-        $validate_composited_method:ident
+        $validate_composited_method:ident,
+        $autoderef_method:ident,
+        $Error:ident
     ) => {
         pub fn $extract_validator(
             field: &impl Field,
@@ -35,12 +37,14 @@ macro_rules! extract_numeric_range_validator{
             let field_key = field.key();
             let rename = rename_map.get(field_name).unwrap_or(&field_key);
             let errors = field.errors_variable();
+            let validate = quote_composited_autoderef!(
+                generic field_ident, validation_value,
+                $ValidateCompositedTrait, $validate_composited_method,
+                $autoderef_method, $Error
+            );
 
             Ok(quote!(
-                if let Err(__composited_error_params) = ::serde_valid::validation::$ValidateCompositedTrait::$validate_composited_method(
-                    #field_ident,
-                    #validation_value,
-                ) {
+                if let Err(__composited_error_params) = #validate {
                     use ::serde_valid::validation::IntoError;
 
                     #errors
@@ -57,23 +61,31 @@ extract_numeric_range_validator!(
     extract_numeric_maximum_validator,
     inner_extract_numeric_maximum_validator,
     ValidateCompositedMaximum,
-    validate_composited_maximum
+    validate_composited_maximum,
+    __serde_valid_autoderef_validate_composited_maximum,
+    MaximumError
 );
 extract_numeric_range_validator!(
     extract_numeric_minimum_validator,
     inner_extract_numeric_minimum_validator,
     ValidateCompositedMinimum,
-    validate_composited_minimum
+    validate_composited_minimum,
+    __serde_valid_autoderef_validate_composited_minimum,
+    MinimumError
 );
 extract_numeric_range_validator!(
     extract_numeric_exclusive_maximum_validator,
     inner_extract_numeric_exclusive_maximum_validator,
     ValidateCompositedExclusiveMaximum,
-    validate_composited_exclusive_maximum
+    validate_composited_exclusive_maximum,
+    __serde_valid_autoderef_validate_composited_exclusive_maximum,
+    ExclusiveMaximumError
 );
 extract_numeric_range_validator!(
     extract_numeric_exclusive_minimum_validator,
     inner_extract_numeric_exclusive_minimum_validator,
     ValidateCompositedExclusiveMinimum,
-    validate_composited_exclusive_minimum
+    validate_composited_exclusive_minimum,
+    __serde_valid_autoderef_validate_composited_exclusive_minimum,
+    ExclusiveMinimumError
 );

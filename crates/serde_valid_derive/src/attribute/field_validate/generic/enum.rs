@@ -27,12 +27,14 @@ fn inner_extract_generic_enum_validator(
     let field_key = field.key();
     let rename = rename_map.get(field_name).unwrap_or(&field_key);
     let errors = field.errors_variable();
+    let validate = quote_composited_autoderef!(
+        slice field_ident, lits,
+        ValidateCompositedEnum, validate_composited_enum,
+        __serde_valid_autoderef_validate_composited_enum, EnumError
+    );
 
     Ok(quote!(
-        if let Err(__composited_error_params) = ::serde_valid::validation::ValidateCompositedEnum::validate_composited_enum(
-            #field_ident,
-            &[#lits],
-        ) {
+        if let Err(__composited_error_params) = #validate {
             use ::serde_valid::validation::IntoError;
 
             #errors
