@@ -1219,4 +1219,143 @@ mod issue125 {
         .validate()
         .is_err());
     }
+
+    #[derive(Debug, Eq, Hash, PartialEq)]
+    struct AliasedKey(u8);
+
+    impl AsRef<str> for AliasedKey {
+        fn as_ref(&self) -> &str {
+            "same"
+        }
+    }
+
+    #[derive(Debug)]
+    struct DataDependentValidation(bool);
+
+    impl Validate for DataDependentValidation {
+        fn validate(&self) -> Result<(), serde_valid::validation::Errors> {
+            use serde_valid::validation::{
+                ArrayErrors, Error, Errors, ItemErrorsMap, ObjectErrors, PropertyErrorsMap,
+            };
+
+            if self.0 {
+                Err(Errors::Object(ObjectErrors::new(
+                    vec![Error::Custom("object error".to_owned())],
+                    PropertyErrorsMap::from([(
+                        "property".into(),
+                        Errors::NewType(vec![Error::Custom("property error".to_owned())]),
+                    )]),
+                )))
+            } else {
+                Err(Errors::Array(ArrayErrors::new(
+                    vec![Error::Custom("array error".to_owned())],
+                    ItemErrorsMap::from([(
+                        0,
+                        Errors::NewType(vec![Error::Custom("item error".to_owned())]),
+                    )]),
+                )))
+            }
+        }
+    }
+
+    #[test]
+    fn aliased_map_keys_with_different_error_shapes_do_not_panic() {
+        let index_map = IndexMap::from([
+            (AliasedKey(1), DataDependentValidation(false)),
+            (AliasedKey(2), DataDependentValidation(true)),
+        ]);
+        let index_map_errors = serde_json::to_value(index_map.validate().unwrap_err()).unwrap();
+        assert_eq!(
+            index_map_errors["properties"]["same"],
+            json!({
+                "errors": ["array error", "object error"],
+                "properties": {
+                    "property": { "errors": ["property error"] }
+                }
+            })
+        );
+
+        let hash_map = HashMap::from([
+            (AliasedKey(1), DataDependentValidation(false)),
+            (AliasedKey(2), DataDependentValidation(true)),
+        ]);
+        let hash_map_errors = serde_json::to_value(hash_map.validate().unwrap_err()).unwrap();
+        let errors = hash_map_errors["properties"]["same"]["errors"]
+            .as_array()
+            .unwrap();
+        assert!(errors.contains(&json!("array error")));
+        assert!(errors.contains(&json!("object error")));
+        assert!(hash_map_errors["properties"]["same"]["properties"]["property"].is_object());
+    }
+
+    #[derive(Debug)]
+    struct MixedCompositedShape(bool);
+
+    impl serde_valid::validation::ValidateCompositedMinimum<i32> for MixedCompositedShape {
+        fn validate_composited_minimum(
+            &self,
+            minimum: i32,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinimumError>> {
+            use serde_valid::validation::Composited;
+
+            if self.0 {
+                Err(Composited::Object(IndexMap::from([(
+                    "property".into(),
+                    vec![Composited::Single(serde_valid::MinimumError::new(minimum))],
+                )])))
+            } else {
+                Err(Composited::Array(IndexMap::from([(
+                    0,
+                    Composited::Single(serde_valid::MinimumError::new(minimum)),
+                )])))
+            }
+        }
+    }
+
+    impl serde_valid::validation::ValidateCompositedMaximum<i32> for MixedCompositedShape {
+        fn validate_composited_maximum(
+            &self,
+            maximum: i32,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaximumError>> {
+            use serde_valid::validation::Composited;
+
+            Err(Composited::Object(IndexMap::from([(
+                "property".into(),
+                vec![Composited::Single(serde_valid::MaximumError::new(maximum))],
+            )])))
+        }
+    }
+
+    #[derive(Debug, Validate)]
+    struct MixedCompositedConstraints {
+        #[validate(minimum = 1)]
+        #[validate(maximum = 2)]
+        direct: MixedCompositedShape,
+        #[validate(minimum = 1)]
+        aliased: IndexMap<AliasedKey, MixedCompositedShape>,
+    }
+
+    #[test]
+    fn mixed_composited_error_shapes_use_object_precedence_without_panicking() {
+        let errors = serde_json::to_value(
+            MixedCompositedConstraints {
+                direct: MixedCompositedShape(false),
+                aliased: IndexMap::from([
+                    (AliasedKey(1), MixedCompositedShape(false)),
+                    (AliasedKey(2), MixedCompositedShape(true)),
+                ]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+
+        assert!(errors["properties"]["direct"]["items"].is_null());
+        assert!(errors["properties"]["direct"]["properties"]["property"].is_object());
+        assert!(errors["properties"]["aliased"]["properties"]["same"]["items"].is_null());
+        assert!(
+            errors["properties"]["aliased"]["properties"]["same"]["properties"]["property"]
+                .is_object()
+        );
+    }
 }
