@@ -76,7 +76,7 @@ where
                     unreachable!("conflict Object and Array in serde_valid::validation::Errors")
                 }
                 Errors::Object(b) => {
-                    *a = a.clone().merge(b);
+                    a.merge_in_place(b);
                 }
                 Errors::NewType(errors) => {
                     a.errors.extend(errors);
@@ -103,5 +103,42 @@ where
                 std::fmt::Display::fmt(&value, f)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    };
+
+    use super::*;
+    use crate::validation::PropertyErrorsMap;
+
+    #[derive(Debug)]
+    struct CloneTracker(Arc<AtomicUsize>);
+
+    impl Clone for CloneTracker {
+        fn clone(&self) -> Self {
+            self.0.fetch_add(1, Ordering::Relaxed);
+            Self(Arc::clone(&self.0))
+        }
+    }
+
+    #[test]
+    fn merging_object_errors_does_not_clone_existing_errors() {
+        let clone_count = Arc::new(AtomicUsize::new(0));
+        let mut errors = Errors::Object(ObjectErrors::new(
+            vec![CloneTracker(Arc::clone(&clone_count))],
+            PropertyErrorsMap::new(),
+        ));
+
+        errors.merge(Errors::Object(ObjectErrors::new(
+            Vec::new(),
+            PropertyErrorsMap::new(),
+        )));
+
+        assert_eq!(clone_count.load(Ordering::Relaxed), 0);
     }
 }

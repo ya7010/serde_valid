@@ -34,6 +34,11 @@ where
     E: Clone,
 {
     pub fn merge(mut self, other: ObjectErrors<E>) -> Self {
+        self.merge_in_place(other);
+        self
+    }
+
+    pub(crate) fn merge_in_place(&mut self, other: ObjectErrors<E>) {
         self.errors.extend(other.errors);
 
         for (property, errors) in other.properties {
@@ -44,8 +49,6 @@ where
                 }
             }
         }
-
-        self
     }
 }
 
