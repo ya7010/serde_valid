@@ -248,6 +248,9 @@ mod deprecated_enumerate_warning_hygiene {
         custom: String,
     }
 
+    #[derive(::serde_valid::Validate)]
+    struct TupleInput(#[validate(enumerate = ["a"])] String);
+
     #[test]
     fn warning_helper_does_not_shadow_custom_validator() {
         let value = Input {
@@ -255,6 +258,11 @@ mod deprecated_enumerate_warning_hygiene {
             custom: "value".to_owned(),
         };
         assert!(::serde_valid::Validate::validate(&value).is_ok());
+    }
+
+    #[test]
+    fn warning_helper_is_valid_for_tuple_structs() {
+        assert!(::serde_valid::Validate::validate(&TupleInput("a".to_owned())).is_ok());
     }
 }
 
