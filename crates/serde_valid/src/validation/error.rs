@@ -3,7 +3,6 @@ mod errors;
 mod format;
 mod into_error;
 mod message;
-mod mixed_errors;
 mod object_errors;
 
 use std::borrow::Cow;
@@ -21,7 +20,6 @@ pub use format::{Format, FormatDefault};
 use indexmap::IndexMap;
 pub use into_error::IntoError;
 pub use message::Message;
-pub use mixed_errors::MixedErrors;
 pub use object_errors::ObjectErrors;
 
 #[derive(Debug, Clone, serde::Serialize, thiserror::Error)]

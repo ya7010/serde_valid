@@ -1,11 +1,10 @@
-use super::{ArrayErrors, ItemErrorsMap, MixedErrors, ObjectErrors, PropertyErrorsMap, VecErrors};
+use super::{ArrayErrors, ObjectErrors, VecErrors};
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum Errors<E = crate::validation::Error> {
     Array(ArrayErrors<E>),
     Object(ObjectErrors<E>),
     NewType(VecErrors<E>),
-    Mixed(Box<MixedErrors<E>>),
 }
 
 impl<E> serde::Serialize for Errors<E>
@@ -27,95 +26,51 @@ where
 
                 serde::Serialize::serialize(&NewTypeErrors { errors: n }, serializer)
             }
-            Self::Mixed(mixed) => serde::Serialize::serialize(mixed, serializer),
         }
     }
 }
 
 impl<E> Errors<E> {
     pub fn merge(&mut self, other: Errors<E>) {
-        let current = std::mem::replace(self, Errors::NewType(Vec::new()));
-        let mut parts = ErrorParts::from(current);
-        parts.merge(ErrorParts::from(other));
-        *self = parts.into();
-    }
-}
-
-struct ErrorParts<E> {
-    errors: VecErrors<E>,
-    items: Option<ItemErrorsMap<E>>,
-    properties: Option<PropertyErrorsMap<E>>,
-}
-
-impl<E> ErrorParts<E> {
-    fn merge(&mut self, other: Self) {
-        self.errors.extend(other.errors);
-        merge_structural_errors(&mut self.items, other.items);
-        merge_structural_errors(&mut self.properties, other.properties);
-    }
-}
-
-fn merge_structural_errors<K, E>(
-    target: &mut Option<indexmap::IndexMap<K, Errors<E>>>,
-    source: Option<indexmap::IndexMap<K, Errors<E>>>,
-) where
-    K: std::hash::Hash + Eq,
-{
-    let Some(source) = source else {
-        return;
-    };
-
-    let Some(target) = target else {
-        *target = Some(source);
-        return;
-    };
-
-    for (key, errors) in source {
-        match target.get_mut(&key) {
-            Some(existing) => existing.merge(errors),
-            None => {
-                target.insert(key, errors);
-            }
-        }
-    }
-}
-
-impl<E> From<Errors<E>> for ErrorParts<E> {
-    fn from(errors: Errors<E>) -> Self {
-        match errors {
-            Errors::Array(errors) => Self {
-                errors: errors.errors,
-                items: Some(errors.items),
-                properties: None,
+        match self {
+            Errors::Array(current) => match other {
+                Errors::Array(other) => {
+                    current.errors.extend(other.errors);
+                    for (index, errors) in other.items {
+                        match current.items.get_mut(&index) {
+                            Some(current) => current.merge(errors),
+                            None => {
+                                current.items.insert(index, errors);
+                            }
+                        }
+                    }
+                }
+                Errors::Object(_) => {
+                    unreachable!("conflict Array and Object in serde_valid::validation::Errors")
+                }
+                Errors::NewType(errors) => current.errors.extend(errors),
             },
-            Errors::Object(errors) => Self {
-                errors: errors.errors,
-                items: None,
-                properties: Some(errors.properties),
+            Errors::Object(current) => match other {
+                Errors::Array(_) => {
+                    unreachable!("conflict Object and Array in serde_valid::validation::Errors")
+                }
+                Errors::Object(other) => current.merge(other),
+                Errors::NewType(errors) => current.errors.extend(errors),
             },
-            Errors::NewType(errors) => Self {
-                errors,
-                items: None,
-                properties: None,
+            Errors::NewType(current) => match other {
+                Errors::Array(other) => {
+                    let mut errors = std::mem::take(current);
+                    errors.extend(other.errors);
+                    *self = Errors::Array(ArrayErrors::new(errors, other.items));
+                }
+                Errors::Object(mut other) => {
+                    let mut errors = std::mem::take(current);
+                    errors.extend(other.errors);
+                    other.errors = errors;
+                    *self = Errors::Object(other);
+                }
+                Errors::NewType(errors) => current.extend(errors),
             },
-            Errors::Mixed(errors) => Self {
-                errors: errors.errors,
-                items: Some(errors.items),
-                properties: Some(errors.properties),
-            },
-        }
-    }
-}
-
-impl<E> From<ErrorParts<E>> for Errors<E> {
-    fn from(parts: ErrorParts<E>) -> Self {
-        match (parts.items, parts.properties) {
-            (Some(items), Some(properties)) => {
-                Errors::Mixed(Box::new(MixedErrors::new(parts.errors, items, properties)))
-            }
-            (Some(items), None) => Errors::Array(ArrayErrors::new(parts.errors, items)),
-            (None, Some(properties)) => Errors::Object(ObjectErrors::new(parts.errors, properties)),
-            (None, None) => Errors::NewType(parts.errors),
         }
     }
 }
@@ -136,7 +91,6 @@ where
                 let value = serde_json::json!({ "errors": errors });
                 std::fmt::Display::fmt(&value, f)
             }
-            Self::Mixed(errors) => std::fmt::Display::fmt(errors, f),
         }
     }
 }
@@ -149,7 +103,7 @@ mod tests {
     };
 
     use super::*;
-    use crate::validation::PropertyErrorsMap;
+    use crate::validation::{ItemErrorsMap, PropertyErrorsMap};
 
     #[derive(Debug)]
     struct CloneTracker(Arc<AtomicUsize>);

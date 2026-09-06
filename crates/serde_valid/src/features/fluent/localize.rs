@@ -25,11 +25,6 @@ impl Localize for Errors<crate::validation::Error> {
             Errors::Array(array) => Errors::Array(array.localize(bundle)),
             Errors::Object(object) => Errors::Object(object.localize(bundle)),
             Errors::NewType(newtype) => Errors::NewType(newtype.localize(bundle)),
-            Errors::Mixed(errors) => Errors::Mixed(Box::new(crate::validation::MixedErrors::new(
-                errors.errors.localize(bundle),
-                errors.items.localize(bundle),
-                errors.properties.localize(bundle),
-            ))),
         }
     }
 }
