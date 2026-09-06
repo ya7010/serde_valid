@@ -46,7 +46,7 @@ macro_rules! extract_string_length_validator{
             );
 
             Ok(quote!(
-                if let Err(__composited_error_params) = #validate {
+                if let ::std::result::Result::Err(__composited_error_params) = #validate {
                     use ::serde_valid::validation::IntoError;
 
                     #errors

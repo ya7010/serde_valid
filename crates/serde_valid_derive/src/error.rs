@@ -26,13 +26,13 @@ pub fn object_errors_tokens() -> TokenStream {
                             ::serde_valid::validation::Error::Properties(__object_errors) => {
                                 ::serde_valid::validation::Errors::Object(__object_errors)
                             }
-                            error => ::serde_valid::validation::Errors::NewType(vec![error]),
+                            error => ::serde_valid::validation::Errors::NewType(::std::vec![error]),
                         })
                         .reduce(|mut errors, other| {
                             errors.merge(other);
                             errors
                         })
-                        .unwrap_or_else(|| ::serde_valid::validation::Errors::NewType(Vec::new()));
+                        .unwrap_or_else(|| ::serde_valid::validation::Errors::NewType(::std::vec::Vec::new()));
 
                     (field, __field_errors)
                 })
@@ -59,13 +59,13 @@ pub fn array_errors_tokens() -> TokenStream {
                             ::serde_valid::validation::Error::Properties(__object_errors) => {
                                 ::serde_valid::validation::Errors::Object(__object_errors)
                             }
-                            error => ::serde_valid::validation::Errors::NewType(vec![error]),
+                            error => ::serde_valid::validation::Errors::NewType(::std::vec![error]),
                         })
                         .reduce(|mut errors, other| {
                             errors.merge(other);
                             errors
                         })
-                        .unwrap_or_else(|| ::serde_valid::validation::Errors::NewType(Vec::new()));
+                        .unwrap_or_else(|| ::serde_valid::validation::Errors::NewType(::std::vec::Vec::new()));
 
                     (index, __field_errors)
                 })
@@ -83,7 +83,7 @@ pub fn new_type_errors_tokens() -> TokenStream {
             .chain(
                 #item_vec_errors_map
                     .remove(&0)
-                    .unwrap_or(vec![])
+                    .unwrap_or(::std::vec![])
                     .into_iter()
             )
             .collect()

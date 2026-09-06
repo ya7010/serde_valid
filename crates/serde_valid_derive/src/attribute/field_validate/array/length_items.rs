@@ -47,7 +47,7 @@ macro_rules! extract_array_length_validator{
             );
 
             Ok(quote!(
-                if let Err(error_params) = #validate {
+                if let ::std::result::Result::Err(error_params) = #validate {
                     #errors
                         .entry(#rename)
                         .or_default()

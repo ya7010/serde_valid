@@ -67,9 +67,9 @@ pub fn expand_named_struct_derive(
                     #struct_validations
 
                     if #rule_vec_errors.is_empty() && #property_vec_errors_map.is_empty() {
-                        Ok(())
+                        ::std::result::Result::Ok(())
                     } else {
-                        Err(#fields_errors)
+                        ::std::result::Result::Err(#fields_errors)
                     }
                 }
             }

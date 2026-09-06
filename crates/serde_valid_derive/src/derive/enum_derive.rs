@@ -75,7 +75,7 @@ pub fn expand_enum_validate_derive(
                     #( #warnings )*
                     #validations_and_rules
 
-                    Ok(())
+                    ::std::result::Result::Ok(())
                 }
             }
         ))
@@ -143,7 +143,7 @@ fn expand_enum_variant_named_fields_validation(
                     #enum_validates
 
                     if !(#rule_vec_errors.is_empty() && #property_vec_errors_map.is_empty()) {
-                        Err(#variant_errors)?
+                        ::std::result::Result::Err(#variant_errors)?
                     }
                 }
             ),
@@ -218,7 +218,7 @@ fn expand_enum_variant_unnamed_fields_varidation(
                     #validates
 
                     if !(#rule_vec_errors.is_empty() && #item_vec_errors_map.is_empty()) {
-                        Err(#variant_errors)?
+                        ::std::result::Result::Err(#variant_errors)?
                     }
                 }
             ),

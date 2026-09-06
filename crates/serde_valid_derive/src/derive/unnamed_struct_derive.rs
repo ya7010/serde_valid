@@ -61,9 +61,9 @@ pub fn expand_unnamed_struct_derive(
 
     if errors.is_empty() {
         Ok(quote!(
-            #(#warnings)*
             impl #impl_generics ::serde_valid::Validate for #ident #type_generics #where_clause {
                 fn validate(&self) -> ::std::result::Result<(), ::serde_valid::validation::Errors> {
+                    #(#warnings)*
                     let mut #rule_vec_errors = ::serde_valid::validation::VecErrors::new();
                     let mut #item_vec_errors_map = ::serde_valid::validation::ItemVecErrorsMap::new();
 
@@ -71,9 +71,9 @@ pub fn expand_unnamed_struct_derive(
                     #struct_validations
 
                     if #rule_vec_errors.is_empty() && #item_vec_errors_map.is_empty() {
-                        Ok(())
+                        ::std::result::Result::Ok(())
                     } else {
-                        Err(#fields_errors)
+                        ::std::result::Result::Err(#fields_errors)
                     }
                 }
             }

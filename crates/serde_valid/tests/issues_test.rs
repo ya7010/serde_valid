@@ -150,6 +150,122 @@ mod derive_hygiene_edge_cases {
     }
 }
 
+mod prelude_name_hygiene_edge_cases {
+    mod result_variants {
+        #![allow(dead_code)]
+
+        struct Ok<T>(T);
+        struct Err<T>(T);
+
+        #[derive(::serde_valid::Validate)]
+        struct Input {
+            #[validate(minimum = 0)]
+            value: i32,
+        }
+
+        #[test]
+        fn result_variant_names_do_not_affect_generated_validation() {
+            assert!(::serde_valid::Validate::validate(&Input { value: 0 }).is_ok());
+        }
+    }
+
+    mod vec_type {
+        #![allow(dead_code)]
+
+        struct Vec;
+
+        #[derive(::serde_valid::Validate)]
+        struct Input {
+            #[validate(minimum = 0)]
+            value: i32,
+        }
+
+        #[test]
+        fn vec_type_name_does_not_affect_generated_errors() {
+            assert!(::serde_valid::Validate::validate(&Input { value: -1 }).is_err());
+        }
+    }
+
+    mod vec_macro {
+        #![allow(unused_macros)]
+
+        macro_rules! vec {
+            ($($tokens:tt)*) => {
+                0usize
+            };
+        }
+
+        #[derive(::serde_valid::Validate)]
+        struct Input {
+            #[validate(minimum = 0)]
+            value: i32,
+        }
+
+        #[test]
+        fn vec_macro_name_does_not_affect_generated_errors() {
+            assert!(::serde_valid::Validate::validate(&Input { value: -1 }).is_err());
+        }
+    }
+
+    mod to_string_trait {
+        #![allow(dead_code)]
+
+        trait ToString {
+            fn to_string(&self) -> String;
+        }
+
+        impl ToString for str {
+            fn to_string(&self) -> String {
+                String::from("shadowed")
+            }
+        }
+
+        #[derive(::serde_valid::Validate)]
+        struct Input {
+            #[validate(minimum = 0, message = "too small")]
+            value: i32,
+        }
+
+        #[test]
+        fn to_string_trait_name_does_not_affect_custom_messages() {
+            let errors = ::serde_valid::Validate::validate(&Input { value: -1 }).unwrap_err();
+            assert!(errors.to_string().contains("too small"));
+        }
+    }
+}
+
+#[allow(deprecated)]
+mod deprecated_enumerate_warning_hygiene {
+    fn __enumerate_0(_value: &String) -> Result<(), ::serde_valid::validation::Error> {
+        Ok(())
+    }
+
+    #[derive(::serde_valid::Validate)]
+    struct Input {
+        #[validate(enumerate = ["a"])]
+        enumerated: String,
+        #[validate(custom = __enumerate_0)]
+        custom: String,
+    }
+
+    #[derive(::serde_valid::Validate)]
+    struct TupleInput(#[validate(enumerate = ["a"])] String);
+
+    #[test]
+    fn warning_helper_does_not_shadow_custom_validator() {
+        let value = Input {
+            enumerated: "a".to_owned(),
+            custom: "value".to_owned(),
+        };
+        assert!(::serde_valid::Validate::validate(&value).is_ok());
+    }
+
+    #[test]
+    fn warning_helper_is_valid_for_tuple_structs() {
+        assert!(::serde_valid::Validate::validate(&TupleInput("a".to_owned())).is_ok());
+    }
+}
+
 mod wrapper_trait_compile_checks {
     #[test]
     fn string_wrappers_implement_public_validation_traits_directly() {
@@ -176,7 +292,9 @@ mod wrapper_trait_compile_checks {
         {
         }
 
+        assert_array::<&'static [i32]>();
         assert_array::<Box<[i32]>>();
+        assert_array::<::std::borrow::Cow<'static, [i32]>>();
     }
 
     #[test]
@@ -191,6 +309,42 @@ mod wrapper_trait_compile_checks {
 
         assert_generic::<Box<[i32]>>();
         assert_fixed::<Box<[String]>>();
+    }
+
+    #[test]
+    fn every_composited_wrapper_shape_has_direct_trait_implementations() {
+        use ::indexmap::IndexMap;
+        use ::std::borrow::Cow;
+        use ::std::collections::HashMap;
+
+        fn assert_generic<T: ::serde_valid::validation::ValidateCompositedMinimum<i32>>() {}
+        fn assert_fixed<T: ::serde_valid::validation::ValidateCompositedMaxLength>() {}
+
+        macro_rules! assert_all_shapes {
+            ($assertion:ident, $item:ty) => {
+                $assertion::<&'static [$item]>();
+                $assertion::<Box<[$item]>>();
+                $assertion::<&'static [$item; 1]>();
+                $assertion::<Box<[$item; 1]>>();
+                $assertion::<&'static Vec<$item>>();
+                $assertion::<Box<Vec<$item>>>();
+                $assertion::<&'static Option<$item>>();
+                $assertion::<Box<Option<$item>>>();
+                $assertion::<&'static HashMap<String, $item>>();
+                $assertion::<Box<HashMap<String, $item>>>();
+                $assertion::<&'static IndexMap<String, $item>>();
+                $assertion::<Box<IndexMap<String, $item>>>();
+                $assertion::<Cow<'static, Vec<$item>>>();
+                $assertion::<Cow<'static, Option<$item>>>();
+                $assertion::<Cow<'static, [$item; 1]>>();
+                $assertion::<Cow<'static, HashMap<String, $item>>>();
+                $assertion::<Cow<'static, IndexMap<String, $item>>>();
+                $assertion::<Cow<'static, [$item]>>();
+            };
+        }
+
+        assert_all_shapes!(assert_generic, i32);
+        assert_all_shapes!(assert_fixed, String);
     }
 }
 

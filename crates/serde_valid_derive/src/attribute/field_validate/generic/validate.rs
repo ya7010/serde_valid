@@ -20,7 +20,7 @@ pub fn extract_generic_validate_validator(
     );
 
     Ok(WithWarnings::new(quote!(
-        if let Err(__inner_errors) = #validate {
+        if let ::std::result::Result::Err(__inner_errors) = #validate {
             match __inner_errors {
                 ::serde_valid::validation::Errors::Object(__object_errors) => {
                     #errors.entry(#rename).or_default().push(

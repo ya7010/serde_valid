@@ -1,7 +1,6 @@
-use std::{hash::Hash, str::FromStr};
+use std::hash::Hash;
 
 use proc_macro2::Span;
-use proc_macro2::TokenStream;
 use quote::{quote_spanned, ToTokens};
 
 #[derive(Debug, Clone)]
@@ -107,18 +106,21 @@ impl ToTokens for Warning {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
             Self::Deprecated { ident, note, span } => {
-                let func_name =
-                    TokenStream::from_str(&format!("__{}", ident.to_string().to_lowercase()))
-                        .unwrap();
+                let func_name = syn::Ident::new(
+                    &format!("__{}", ident.to_string().to_lowercase()),
+                    Span::mixed_site(),
+                );
 
                 quote_spanned!(*span =>
-                    #[allow(dead_code)]
-                    #[allow(clippy::let_unit_value)]
-                    fn #func_name() {
-                        #[deprecated(note = #note)]
-                        #[allow(non_upper_case_globals)]
-                        const _deprecated: () = ();
-                        let _ = _deprecated;
+                    {
+                        #[allow(dead_code)]
+                        #[allow(clippy::let_unit_value)]
+                        fn #func_name() {
+                            #[deprecated(note = #note)]
+                            #[allow(non_upper_case_globals)]
+                            const _deprecated: () = ();
+                            let _ = _deprecated;
+                        }
                     }
                 )
                 .to_tokens(tokens)
