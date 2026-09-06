@@ -497,6 +497,61 @@ mod issue125 {
         .is_err());
     }
 
+    #[derive(Validate)]
+    #[allow(clippy::box_collection)]
+    struct StandardCompositedWrappers<'a> {
+        #[validate(minimum = 1)]
+        boxed_hash_map: Box<HashMap<String, i32>>,
+        #[validate(min_length = 2)]
+        boxed_index_map: Box<IndexMap<String, String>>,
+        #[validate(minimum = 1)]
+        borrowed_vec: &'a Vec<i32>,
+        #[validate(minimum = 1)]
+        borrowed_option: &'a Option<i32>,
+        #[validate(r#enum = [1, 2])]
+        cow_slice: std::borrow::Cow<'a, [i32]>,
+    }
+
+    #[test]
+    fn standard_composited_wrappers_delegate_to_their_containers() {
+        let valid_vec = vec![1, 2];
+        let valid_option = Some(1);
+        assert!(StandardCompositedWrappers {
+            boxed_hash_map: Box::new(HashMap::from([("number".to_owned(), 1)])),
+            boxed_index_map: Box::new(IndexMap::from([("string".to_owned(), "ok".to_owned(),)])),
+            borrowed_vec: &valid_vec,
+            borrowed_option: &valid_option,
+            cow_slice: std::borrow::Cow::Borrowed(&[1, 2]),
+        }
+        .validate()
+        .is_ok());
+
+        let invalid_vec = vec![0];
+        let invalid_option = Some(0);
+        let errors = serde_json::to_value(
+            StandardCompositedWrappers {
+                boxed_hash_map: Box::new(HashMap::from([("number".to_owned(), 0)])),
+                boxed_index_map: Box::new(IndexMap::from([("string".to_owned(), "x".to_owned())])),
+                borrowed_vec: &invalid_vec,
+                borrowed_option: &invalid_option,
+                cow_slice: std::borrow::Cow::Owned(vec![3]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+
+        for field in [
+            "boxed_hash_map",
+            "boxed_index_map",
+            "borrowed_vec",
+            "borrowed_option",
+            "cow_slice",
+        ] {
+            assert!(errors["properties"].get(field).is_some(), "missing {field}");
+        }
+    }
+
     #[allow(deprecated)]
     mod deprecated_enumerate {
         use super::*;
@@ -817,6 +872,15 @@ mod issue125 {
                 ["errors"],
             json!(["The number must be `>= 1`."])
         );
+
+        let json = String::from(
+            r#"{
+                "hash_map": { "hash": { "value": 1 } },
+                "index_map": { "index": { "value": 1 } }
+            }"#,
+        );
+        let value: BorrowedMapKeys<'_> = serde_json::from_str(&json).unwrap();
+        assert!(value.validate().is_ok());
     }
 
     #[test]
