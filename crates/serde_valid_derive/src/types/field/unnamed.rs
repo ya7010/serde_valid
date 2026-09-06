@@ -41,7 +41,8 @@ impl Field for UnnamedField<'_> {
     }
 
     fn errors_variable(&self) -> proc_macro2::TokenStream {
-        quote!(__item_vec_errors_map)
+        let item_vec_errors_map = crate::types::item_vec_errors_map_ident();
+        quote!(#item_vec_errors_map)
     }
 
     fn getter_token(&self) -> proc_macro2::TokenStream {

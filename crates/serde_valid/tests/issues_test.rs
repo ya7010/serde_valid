@@ -28,6 +28,172 @@ mod issue54 {
     }
 }
 
+mod derive_hygiene_edge_cases {
+    #![allow(dead_code)]
+
+    // This deliberately shadows the dependency's crate name. Generated paths must
+    // start with `::serde_valid` to resolve the external crate.
+    mod serde_valid {}
+
+    fn validate_field(_value: &String) -> Result<(), ::serde_valid::validation::Error> {
+        Ok(())
+    }
+
+    #[derive(::serde_valid::Validate)]
+    struct CustomField {
+        #[validate(custom = validate_field)]
+        value: String,
+    }
+
+    fn validate_struct(_value: &CustomStruct) -> Result<(), ::serde_valid::validation::Error> {
+        Ok(())
+    }
+
+    fn validate_internal_collector_names(
+        _value: &InternalCollectorNames,
+    ) -> Result<(), ::serde_valid::validation::Error> {
+        Err(::serde_valid::validation::Error::Custom(
+            "struct error".to_owned(),
+        ))
+    }
+
+    #[derive(::serde_valid::Validate)]
+    #[validate(custom = validate_struct)]
+    struct CustomStruct {
+        value: String,
+    }
+
+    #[derive(::serde_valid::Validate)]
+    #[validate(custom = validate_internal_collector_names)]
+    struct InternalCollectorNames {
+        #[validate(min_length = 1)]
+        __property_vec_errors_map: String,
+        #[validate(min_length = 1)]
+        __rule_vec_errors: String,
+    }
+
+    #[derive(::serde_valid::Validate)]
+    enum IgnoredNamedFields {
+        RawIdentifier {
+            r#type: String,
+            #[validate(minimum = 0)]
+            value: i32,
+        },
+        BindingCollision {
+            foo: String,
+            #[validate(min_length = 1)]
+            _foo: String,
+        },
+        CollectorNames {
+            #[validate(min_length = 1)]
+            __property_vec_errors_map: String,
+            #[validate(min_length = 1)]
+            __rule_vec_errors: String,
+        },
+    }
+
+    #[allow(non_camel_case_types)]
+    #[derive(::serde::Serialize, ::serde_valid::Validate)]
+    struct std {
+        #[serde(rename = "renamed")]
+        #[validate(minimum = 0)]
+        value: i32,
+    }
+
+    #[test]
+    fn generated_identifiers_do_not_collide_with_user_fields() {
+        let value = InternalCollectorNames {
+            __property_vec_errors_map: String::new(),
+            __rule_vec_errors: String::new(),
+        };
+
+        let errors = ::serde_valid::Validate::validate(&value).unwrap_err();
+        let errors = ::serde_json::to_value(errors).unwrap();
+        assert_eq!(errors["errors"], ::serde_json::json!(["struct error"]));
+        assert!(errors["properties"]["__property_vec_errors_map"].is_object());
+        assert!(errors["properties"]["__rule_vec_errors"].is_object());
+    }
+
+    #[test]
+    fn ignored_enum_fields_accept_raw_and_overlapping_identifiers() {
+        let raw = IgnoredNamedFields::RawIdentifier {
+            r#type: "value".to_owned(),
+            value: 0,
+        };
+        let collision = IgnoredNamedFields::BindingCollision {
+            foo: "ignored".to_owned(),
+            _foo: "validated".to_owned(),
+        };
+        let collector_names = IgnoredNamedFields::CollectorNames {
+            __property_vec_errors_map: String::new(),
+            __rule_vec_errors: String::new(),
+        };
+
+        assert!(::serde_valid::Validate::validate(&raw).is_ok());
+        assert!(::serde_valid::Validate::validate(&collision).is_ok());
+        assert!(::serde_valid::Validate::validate(&collector_names).is_err());
+    }
+
+    #[test]
+    fn generated_dependency_and_standard_library_paths_are_absolute() {
+        let field = CustomField {
+            value: "value".to_owned(),
+        };
+        let structure = CustomStruct {
+            value: "value".to_owned(),
+        };
+        let standard_library_shadow = std { value: 0 };
+
+        assert!(::serde_valid::Validate::validate(&field).is_ok());
+        assert!(::serde_valid::Validate::validate(&structure).is_ok());
+        assert!(::serde_valid::Validate::validate(&standard_library_shadow).is_ok());
+    }
+}
+
+mod wrapper_trait_compile_checks {
+    #[test]
+    fn string_wrappers_implement_public_validation_traits_directly() {
+        fn assert_string<T>()
+        where
+            T: ::serde_valid::ValidateMaxLength
+                + ::serde_valid::ValidateMinLength
+                + ::serde_valid::ValidatePattern,
+        {
+        }
+
+        assert_string::<Box<str>>();
+        assert_string::<::std::borrow::Cow<'static, ::std::ffi::OsStr>>();
+        assert_string::<::std::borrow::Cow<'static, ::std::path::Path>>();
+    }
+
+    #[test]
+    fn boxed_slices_implement_public_array_traits_directly() {
+        fn assert_array<T>()
+        where
+            T: ::serde_valid::ValidateMaxItems
+                + ::serde_valid::ValidateMinItems
+                + ::serde_valid::ValidateUniqueItems,
+        {
+        }
+
+        assert_array::<Box<[i32]>>();
+    }
+
+    #[test]
+    fn boxed_slices_keep_generic_and_fixed_composited_forwarding() {
+        fn assert_generic<T: ::serde_valid::validation::ValidateCompositedMinimum<i32>>() {}
+        fn assert_fixed<T>()
+        where
+            T: ::serde_valid::validation::ValidateCompositedMaxLength
+                + ::serde_valid::validation::ValidateCompositedPattern,
+        {
+        }
+
+        assert_generic::<Box<[i32]>>();
+        assert_fixed::<Box<[String]>>();
+    }
+}
+
 mod issue107 {
     use serde::{Deserialize, Serialize};
     use serde_valid::Validate;
