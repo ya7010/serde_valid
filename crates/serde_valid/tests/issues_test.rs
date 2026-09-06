@@ -187,6 +187,8 @@ mod prelude_name_hygiene_edge_cases {
     }
 
     mod vec_macro {
+        #![allow(unused_macros)]
+
         macro_rules! vec {
             ($($tokens:tt)*) => {
                 0usize
@@ -206,6 +208,8 @@ mod prelude_name_hygiene_edge_cases {
     }
 
     mod to_string_trait {
+        #![allow(dead_code)]
+
         trait ToString {
             fn to_string(&self) -> String;
         }

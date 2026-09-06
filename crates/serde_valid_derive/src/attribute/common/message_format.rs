@@ -121,9 +121,13 @@ fn get_message_fn_from_meta_name_value(
 
 fn get_message(expr: &syn::Expr) -> Result<WithWarnings<MessageFormat>, crate::Errors> {
     match expr {
-        syn::Expr::Lit(lit) => {
-            get_str(&lit.lit).map(|lit_str| quote!(::serde_valid::validation::error::Format::Message(#lit_str.to_string()))).map(WithWarnings::new)
-        }
+        syn::Expr::Lit(lit) => get_str(&lit.lit)
+            .map(|lit_str| {
+                quote!(::serde_valid::validation::error::Format::Message(
+                    ::std::string::ToString::to_string(#lit_str)
+                ))
+            })
+            .map(WithWarnings::new),
         _ => Err(vec![crate::Error::literal_only(expr)]),
     }
 }
@@ -148,7 +152,7 @@ fn get_fluent_message_from_meta(
                 ::serde_valid::validation::error::Format::Fluent(
                     ::serde_valid::fluent::Message{
                         id: #id,
-                        args: vec![]
+                        args: ::std::vec![]
                     }
                 )
             )))
@@ -177,7 +181,7 @@ fn get_fluent_message_from_meta(
                     ::serde_valid::validation::error::Format::Fluent(
                         ::serde_valid::fluent::Message{
                             id: #id,
-                            args: vec![#args]
+                            args: ::std::vec![#args]
                         }
                     )
                 )))
@@ -227,7 +231,7 @@ fn get_fluent_message_from_call_expr(
             ::serde_valid::validation::error::Format::Fluent(
                 ::serde_valid::fluent::Message{
                     id: #fluent_id,
-                    args: vec![#fluent_args]
+                    args: ::std::vec![#fluent_args]
                 }
             )
         )))

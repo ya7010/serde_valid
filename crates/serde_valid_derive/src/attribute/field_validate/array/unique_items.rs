@@ -30,7 +30,7 @@ fn inner_extract_array_unique_items_validator(
     );
 
     quote!(
-        if let Err(error_params) = #validate {
+        if let ::std::result::Result::Err(error_params) = #validate {
             #errors
                 .entry(#rename)
                 .or_default()
