@@ -497,6 +497,43 @@ mod issue125 {
         .is_err());
     }
 
+    #[derive(Clone, Debug, PartialEq)]
+    struct NonCopyCandidate(i32);
+
+    impl From<NonCopyCandidate> for serde_valid::validation::Literal {
+        fn from(candidate: NonCopyCandidate) -> Self {
+            candidate.0.into()
+        }
+    }
+
+    #[derive(Clone, Debug)]
+    struct CandidateValue(i32);
+
+    impl ValidateEnum<NonCopyCandidate> for CandidateValue {
+        fn validate_enum(&self, candidates: &[NonCopyCandidate]) -> Result<(), EnumError> {
+            if candidates.iter().any(|candidate| candidate.0 == self.0) {
+                Ok(())
+            } else {
+                Err(EnumError::new(candidates))
+            }
+        }
+    }
+
+    #[test]
+    fn enum_wrappers_support_non_copy_candidate_types() {
+        let candidates = vec![NonCopyCandidate(1), NonCopyCandidate(2)];
+
+        let value = CandidateValue(1);
+        let borrowed = &value;
+        assert!(ValidateEnum::<NonCopyCandidate>::validate_enum(&borrowed, &candidates).is_ok());
+
+        let boxed = Box::new(CandidateValue(1));
+        assert!(ValidateEnum::<NonCopyCandidate>::validate_enum(&boxed, &candidates).is_ok());
+
+        let cow: std::borrow::Cow<'_, CandidateValue> = std::borrow::Cow::Owned(CandidateValue(1));
+        assert!(ValidateEnum::<NonCopyCandidate>::validate_enum(&cow, &candidates).is_ok());
+    }
+
     #[derive(Validate)]
     #[allow(clippy::box_collection)]
     struct StandardCompositedWrappers<'a> {
@@ -550,6 +587,125 @@ mod issue125 {
         ] {
             assert!(errors["properties"].get(field).is_some(), "missing {field}");
         }
+    }
+
+    #[derive(Validate)]
+    #[allow(
+        clippy::borrowed_box,
+        clippy::box_collection,
+        clippy::owned_cow,
+        clippy::redundant_allocation
+    )]
+    struct NestedCompositedWrappers<'a> {
+        #[validate(minimum = 1)]
+        cow_vec: std::borrow::Cow<'a, Vec<i32>>,
+        #[validate(minimum = 1)]
+        cow_option: std::borrow::Cow<'a, Option<i32>>,
+        #[validate(minimum = 1)]
+        cow_hash_map: std::borrow::Cow<'a, HashMap<String, i32>>,
+        #[validate(minimum = 1)]
+        cow_index_map: std::borrow::Cow<'a, IndexMap<String, i32>>,
+        #[validate(minimum = 1)]
+        cow_array: std::borrow::Cow<'a, [i32; 1]>,
+        #[validate(minimum = 1)]
+        nested_boxed_vec: Box<Box<Vec<i32>>>,
+        #[validate(minimum = 1)]
+        borrowed_boxed_vec: &'a Box<Vec<i32>>,
+        #[validate(minimum = 1)]
+        boxed_borrowed_vec: Box<&'a Vec<i32>>,
+        #[validate(minimum = 1)]
+        boxed_cow_slice: Box<std::borrow::Cow<'a, [i32]>>,
+        #[validate(minimum = 1)]
+        rc_vec: std::rc::Rc<Vec<i32>>,
+        #[validate(minimum = 1)]
+        arc_vec: std::sync::Arc<Vec<i32>>,
+        #[validate(minimum = 1)]
+        pinned_vec: std::pin::Pin<Box<Vec<i32>>>,
+        #[validate(multiple_of = 2)]
+        nested_multiple_of: Box<Box<Vec<i32>>>,
+        #[validate(min_length = 2)]
+        nested_min_length: Box<Box<Vec<String>>>,
+        #[validate(pattern = "^[a-z]+$")]
+        nested_pattern: Box<Box<Vec<String>>>,
+        #[validate(min_properties = 1)]
+        nested_min_properties: Box<Box<Vec<HashMap<String, i32>>>>,
+        #[validate(r#enum = [1, 2])]
+        nested_enum: Box<Box<Vec<i32>>>,
+    }
+
+    #[test]
+    fn composited_validation_supports_cow_containers_and_nested_wrappers() {
+        let borrowed_vec = vec![0];
+        let borrowed_boxed_vec = Box::new(vec![0]);
+        let errors = serde_json::to_value(
+            NestedCompositedWrappers {
+                cow_vec: std::borrow::Cow::Owned(vec![0]),
+                cow_option: std::borrow::Cow::Owned(Some(0)),
+                cow_hash_map: std::borrow::Cow::Owned(HashMap::from([("value".to_owned(), 0)])),
+                cow_index_map: std::borrow::Cow::Owned(IndexMap::from([("value".to_owned(), 0)])),
+                cow_array: std::borrow::Cow::Owned([0]),
+                nested_boxed_vec: Box::new(Box::new(vec![0])),
+                borrowed_boxed_vec: &borrowed_boxed_vec,
+                boxed_borrowed_vec: Box::new(&borrowed_vec),
+                boxed_cow_slice: Box::new(std::borrow::Cow::Borrowed(&[0])),
+                rc_vec: std::rc::Rc::new(vec![0]),
+                arc_vec: std::sync::Arc::new(vec![0]),
+                pinned_vec: Box::pin(vec![0]),
+                nested_multiple_of: Box::new(Box::new(vec![3])),
+                nested_min_length: Box::new(Box::new(vec!["x".to_owned()])),
+                nested_pattern: Box::new(Box::new(vec!["123".to_owned()])),
+                nested_min_properties: Box::new(Box::new(vec![HashMap::new()])),
+                nested_enum: Box::new(Box::new(vec![3])),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+
+        for field in [
+            "cow_vec",
+            "cow_option",
+            "cow_hash_map",
+            "cow_index_map",
+            "cow_array",
+            "nested_boxed_vec",
+            "borrowed_boxed_vec",
+            "boxed_borrowed_vec",
+            "boxed_cow_slice",
+            "rc_vec",
+            "arc_vec",
+            "pinned_vec",
+            "nested_multiple_of",
+            "nested_min_length",
+            "nested_pattern",
+            "nested_min_properties",
+            "nested_enum",
+        ] {
+            assert!(errors["properties"].get(field).is_some(), "missing {field}");
+        }
+    }
+
+    #[test]
+    #[allow(clippy::owned_cow)]
+    fn cow_container_composited_traits_are_available_directly() {
+        use serde_valid::validation::ValidateCompositedMinimum;
+
+        let vec: std::borrow::Cow<'_, Vec<i32>> = std::borrow::Cow::Owned(vec![1]);
+        assert!(ValidateCompositedMinimum::validate_composited_minimum(&vec, 1).is_ok());
+
+        let option: std::borrow::Cow<'_, Option<i32>> = std::borrow::Cow::Owned(Some(1));
+        assert!(ValidateCompositedMinimum::validate_composited_minimum(&option, 1).is_ok());
+
+        let hash_map: std::borrow::Cow<'_, HashMap<String, i32>> =
+            std::borrow::Cow::Owned(HashMap::from([("value".to_owned(), 1)]));
+        assert!(ValidateCompositedMinimum::validate_composited_minimum(&hash_map, 1).is_ok());
+
+        let index_map: std::borrow::Cow<'_, IndexMap<String, i32>> =
+            std::borrow::Cow::Owned(IndexMap::from([("value".to_owned(), 1)]));
+        assert!(ValidateCompositedMinimum::validate_composited_minimum(&index_map, 1).is_ok());
+
+        let array: std::borrow::Cow<'_, [i32; 1]> = std::borrow::Cow::Owned([1]);
+        assert!(ValidateCompositedMinimum::validate_composited_minimum(&array, 1).is_ok());
     }
 
     #[allow(deprecated)]
@@ -1351,11 +1507,15 @@ mod issue125 {
         .unwrap();
 
         assert!(errors["properties"]["direct"]["items"].is_null());
-        assert!(errors["properties"]["direct"]["properties"]["property"].is_object());
+        assert_eq!(
+            errors["properties"]["direct"]["properties"]["property"]["errors"],
+            json!(["The number must be `<= 2`."])
+        );
         assert!(errors["properties"]["aliased"]["properties"]["same"]["items"].is_null());
-        assert!(
+        assert_eq!(
             errors["properties"]["aliased"]["properties"]["same"]["properties"]["property"]
-                .is_object()
+                ["errors"],
+            json!(["The number must be `>= 1`."])
         );
     }
 }

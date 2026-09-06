@@ -37,10 +37,8 @@ macro_rules! extract_numeric_range_validator{
             let errors = field.errors_variable();
 
             Ok(quote!(
-                if let Err(__composited_error_params) = ::serde_valid::validation::$ValidateCompositedTrait::$validate_composited_method(
-                    #field_ident,
-                    #validation_value,
-                ) {
+                use ::serde_valid::validation::$ValidateCompositedTrait as _;
+                if let Err(__composited_error_params) = (#field_ident).$validate_composited_method(#validation_value) {
                     use ::serde_valid::validation::IntoError;
 
                     #errors

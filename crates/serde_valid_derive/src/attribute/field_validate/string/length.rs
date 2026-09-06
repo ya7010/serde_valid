@@ -39,10 +39,8 @@ macro_rules! extract_string_length_validator{
             let limit = get_numeric(validation_value)?;
 
             Ok(quote!(
-                if let Err(__composited_error_params) = ::serde_valid::validation::$ValidateCompositedTrait::$validate_composited_method(
-                    #field_ident,
-                    #limit,
-                ) {
+                use ::serde_valid::validation::$ValidateCompositedTrait as _;
+                if let Err(__composited_error_params) = (#field_ident).$validate_composited_method(#limit) {
                     use ::serde_valid::validation::IntoError;
 
                     #errors

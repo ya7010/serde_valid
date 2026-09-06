@@ -29,10 +29,8 @@ fn inner_extract_numeric_multiple_of_validator(
     let multiple_of = get_numeric(validation_value)?;
 
     Ok(quote!(
-        if let Err(__composited_error_params) = ::serde_valid::validation::ValidateCompositedMultipleOf::validate_composited_multiple_of(
-            #field_ident,
-            #multiple_of,
-        ) {
+        use ::serde_valid::validation::ValidateCompositedMultipleOf as _;
+        if let Err(__composited_error_params) = (#field_ident).validate_composited_multiple_of(#multiple_of) {
             use ::serde_valid::validation::IntoError;
 
             #errors

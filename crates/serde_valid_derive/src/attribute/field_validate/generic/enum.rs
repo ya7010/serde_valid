@@ -29,10 +29,8 @@ fn inner_extract_generic_enum_validator(
     let errors = field.errors_variable();
 
     Ok(quote!(
-        if let Err(__composited_error_params) = ::serde_valid::validation::ValidateCompositedEnum::validate_composited_enum(
-            #field_ident,
-            &[#lits],
-        ) {
+        use ::serde_valid::validation::ValidateCompositedEnum as _;
+        if let Err(__composited_error_params) = (#field_ident).validate_composited_enum(&[#lits]) {
             use ::serde_valid::validation::IntoError;
 
             #errors
