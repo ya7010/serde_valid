@@ -61,16 +61,27 @@ where
                     a.extend(b.errors);
                     *self = Errors::Array(ArrayErrors::new(a.to_vec(), b.items));
                 }
-                Errors::Object(_) => {
-                    unreachable!("conflict Array and Object in serde_valid::validation::Errors")
+                Errors::Object(mut b) => {
+                    let mut errors = a.to_vec();
+                    errors.extend(b.errors);
+                    b.errors = errors;
+                    *self = Errors::Object(b);
                 }
                 Errors::NewType(b) => {
                     a.extend(b);
                 }
             },
-            Errors::Object(_) => {
-                unimplemented!("Object does not support yet.")
-            }
+            Errors::Object(a) => match other {
+                Errors::Array(_) => {
+                    unreachable!("conflict Object and Array in serde_valid::validation::Errors")
+                }
+                Errors::Object(b) => {
+                    *a = a.clone().merge(b);
+                }
+                Errors::NewType(errors) => {
+                    a.errors.extend(errors);
+                }
+            },
         }
     }
 }

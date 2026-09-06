@@ -810,11 +810,15 @@ mod issue125 {
     #[derive(Debug, Validate)]
     struct IndexMapCompositedConstraints {
         #[validate(minimum = 1)]
+        #[validate(maximum = 2)]
         numbers: IndexMap<String, i32>,
         #[validate(min_length = 2)]
         strings: IndexMap<String, String>,
         #[validate(r#enum = [1, 2])]
         enumerated: IndexMap<String, i32>,
+        #[validate(minimum = 2)]
+        #[validate(r#enum = [2])]
+        merged: IndexMap<String, i32>,
     }
 
     #[test]
@@ -823,23 +827,192 @@ mod issue125 {
             numbers: IndexMap::from([("number".to_owned(), 1)]),
             strings: IndexMap::from([("string".to_owned(), "ok".to_owned())]),
             enumerated: IndexMap::from([("enumerated".to_owned(), 1)]),
+            merged: IndexMap::from([("merged".to_owned(), 2)]),
         }
         .validate()
         .is_ok());
 
         let errors = serde_json::to_value(
             IndexMapCompositedConstraints {
-                numbers: IndexMap::from([("number".to_owned(), 0)]),
+                numbers: IndexMap::from([("low".to_owned(), 0), ("high".to_owned(), 3)]),
                 strings: IndexMap::from([("string".to_owned(), "x".to_owned())]),
                 enumerated: IndexMap::from([("enumerated".to_owned(), 3)]),
+                merged: IndexMap::from([("merged".to_owned(), 1)]),
             }
             .validate()
             .unwrap_err(),
         )
         .unwrap();
-        assert!(errors["properties"].get("numbers").is_some());
-        assert!(errors["properties"].get("strings").is_some());
-        assert!(errors["properties"].get("enumerated").is_some());
+        assert_eq!(
+            errors,
+            json!({
+                "errors": [],
+                "properties": {
+                    "numbers": {
+                        "errors": [],
+                        "properties": {
+                            "low": { "errors": ["The number must be `>= 1`."] },
+                            "high": { "errors": ["The number must be `<= 2`."] }
+                        }
+                    },
+                    "strings": {
+                        "errors": [],
+                        "properties": {
+                            "string": { "errors": ["The length of the value must be `>= 2`."] }
+                        }
+                    },
+                    "enumerated": {
+                        "errors": [],
+                        "properties": {
+                            "enumerated": { "errors": ["The value must be in [1, 2]."] }
+                        }
+                    },
+                    "merged": {
+                        "errors": [],
+                        "properties": {
+                            "merged": {
+                                "errors": [
+                                    "The number must be `>= 2`.",
+                                    "The value must be in [2]."
+                                ]
+                            }
+                        }
+                    }
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn hash_map_composited_errors_preserve_keys_and_nested_items() {
+        #[derive(Eq, Hash, PartialEq)]
+        struct AliasedKey(u8);
+
+        impl AsRef<str> for AliasedKey {
+            fn as_ref(&self) -> &str {
+                "same"
+            }
+        }
+
+        #[derive(Validate)]
+        struct MapConstraints {
+            #[validate(minimum = 1)]
+            numbers: HashMap<String, i32>,
+            #[validate(minimum = 1)]
+            nested: HashMap<String, Vec<i32>>,
+            #[validate(minimum = 1)]
+            nested_maps: HashMap<String, HashMap<String, i32>>,
+            #[validate(minimum = 1)]
+            maps_in_sequence: Vec<HashMap<String, i32>>,
+            #[validate(minimum = 1)]
+            aliased: HashMap<AliasedKey, i32>,
+        }
+
+        let errors = serde_json::to_value(
+            MapConstraints {
+                numbers: HashMap::from([("invalid".to_owned(), 0), ("valid".to_owned(), 1)]),
+                nested: HashMap::from([("group".to_owned(), vec![0, 1])]),
+                nested_maps: HashMap::from([(
+                    "outer".to_owned(),
+                    HashMap::from([("inner".to_owned(), 0)]),
+                )]),
+                maps_in_sequence: vec![HashMap::from([("inner".to_owned(), 0)])],
+                aliased: HashMap::from([(AliasedKey(1), 0), (AliasedKey(2), 0)]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            errors["properties"]["numbers"],
+            json!({
+                "errors": [],
+                "properties": {
+                    "invalid": { "errors": ["The number must be `>= 1`."] }
+                }
+            })
+        );
+        assert_eq!(
+            errors["properties"]["nested"],
+            json!({
+                "errors": [],
+                "properties": {
+                    "group": {
+                        "errors": [],
+                        "items": {
+                            "0": { "errors": ["The number must be `>= 1`."] }
+                        }
+                    }
+                }
+            })
+        );
+        assert_eq!(
+            errors["properties"]["aliased"]["properties"]["same"]["errors"],
+            json!(["The number must be `>= 1`.", "The number must be `>= 1`."])
+        );
+        assert_eq!(
+            errors["properties"]["nested_maps"],
+            json!({
+                "errors": [],
+                "properties": {
+                    "outer": {
+                        "errors": [],
+                        "properties": {
+                            "inner": { "errors": ["The number must be `>= 1`."] }
+                        }
+                    }
+                }
+            })
+        );
+        assert_eq!(
+            errors["properties"]["maps_in_sequence"],
+            json!({
+                "errors": [],
+                "items": {
+                    "0": {
+                        "errors": [],
+                        "properties": {
+                            "inner": { "errors": ["The number must be `>= 1`."] }
+                        }
+                    }
+                }
+            })
+        );
+
+        #[derive(Validate)]
+        struct BorrowedMap<'a> {
+            #[validate(minimum = 1)]
+            numbers: HashMap<&'a str, i32>,
+        }
+
+        let key = String::from("borrowed");
+        let errors = serde_json::to_value(
+            BorrowedMap {
+                numbers: HashMap::from([(key.as_str(), 0)]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+        assert_eq!(
+            errors["properties"]["numbers"]["properties"]["borrowed"]["errors"],
+            json!(["The number must be `>= 1`."])
+        );
+
+        #[derive(Validate)]
+        struct MapTuple(#[validate(minimum = 1)] HashMap<String, i32>);
+
+        let errors = serde_json::to_value(
+            MapTuple(HashMap::from([("tuple".to_owned(), 0)]))
+                .validate()
+                .unwrap_err(),
+        )
+        .unwrap();
+        assert_eq!(
+            errors["errors"][0]["properties"]["tuple"]["errors"],
+            json!(["The number must be `>= 1`."])
+        );
     }
 
     #[derive(Debug, Deserialize, Validate)]

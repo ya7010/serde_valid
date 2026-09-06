@@ -29,6 +29,26 @@ impl<E> ObjectErrors<E> {
     }
 }
 
+impl<E> ObjectErrors<E>
+where
+    E: Clone,
+{
+    pub fn merge(mut self, other: ObjectErrors<E>) -> Self {
+        self.errors.extend(other.errors);
+
+        for (property, errors) in other.properties {
+            match self.properties.get_mut(&property) {
+                Some(existing) => existing.merge(errors),
+                None => {
+                    self.properties.insert(property, errors);
+                }
+            }
+        }
+
+        self
+    }
+}
+
 impl<E> std::fmt::Display for ObjectErrors<E>
 where
     E: std::fmt::Display + serde::Serialize,

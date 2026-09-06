@@ -265,54 +265,54 @@ macro_rules! impl_composited_validation_1args {
 
         impl<K, V> $ValidateCompositedTrait2 for std::collections::HashMap<K, V>
         where
+            K: AsRef<str>,
             V: $ValidateCompositedTrait3,
         {
             fn $validate_composited_method(
                 &self,
                 $limit: $limit_type,
             ) -> Result<(), Composited<$Error>> {
-                let errors: IndexMap<usize, crate::validation::Composited<$Error>> = self
-                    .iter()
-                    .enumerate()
-                    .filter_map(
-                        |(index, (_key, value))| match value.$validate_composited_method($limit) {
-                            Ok(_) => None,
-                            Err(error) => Some((index, error)),
-                        },
-                    )
-                    .collect();
+                let mut errors = IndexMap::new();
+                for (key, value) in self {
+                    if let Err(error) = value.$validate_composited_method($limit) {
+                        errors
+                            .entry(std::borrow::Cow::Owned(key.as_ref().to_owned()))
+                            .or_insert_with(Vec::new)
+                            .push(error);
+                    }
+                }
 
                 if errors.is_empty() {
                     Ok(())
                 } else {
-                    Err(Composited::Array(errors))
+                    Err(Composited::Object(errors))
                 }
             }
         }
 
         impl<K, V> $ValidateCompositedTrait2 for indexmap::IndexMap<K, V>
         where
+            K: AsRef<str>,
             V: $ValidateCompositedTrait3,
         {
             fn $validate_composited_method(
                 &self,
                 $limit: $limit_type,
             ) -> Result<(), Composited<$Error>> {
-                let errors: IndexMap<usize, crate::validation::Composited<$Error>> = self
-                    .iter()
-                    .enumerate()
-                    .filter_map(
-                        |(index, (_key, value))| match value.$validate_composited_method($limit) {
-                            Ok(_) => None,
-                            Err(error) => Some((index, error)),
-                        },
-                    )
-                    .collect();
+                let mut errors = IndexMap::new();
+                for (key, value) in self {
+                    if let Err(error) = value.$validate_composited_method($limit) {
+                        errors
+                            .entry(std::borrow::Cow::Owned(key.as_ref().to_owned()))
+                            .or_insert_with(Vec::new)
+                            .push(error);
+                    }
+                }
 
                 if errors.is_empty() {
                     Ok(())
                 } else {
-                    Err(Composited::Array(errors))
+                    Err(Composited::Object(errors))
                 }
             }
         }
@@ -410,24 +410,24 @@ macro_rules! impl_composited_validation_1args {
         impl<T, K, V> $ValidateCompositedTrait<T> for std::collections::HashMap<K, V>
         where
             T: Copy,
+            K: AsRef<str>,
             V: $ValidateCompositedTrait<T>,
         {
             fn $validate_composited_method(&self, $limit: T) -> Result<(), Composited<$Error>> {
-                let errors: IndexMap<usize, crate::validation::Composited<$Error>> = self
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, (_key, value))| {
-                        match value.$validate_composited_method($limit) {
-                            Ok(_) => None,
-                            Err(error) => Some((index, error)),
-                        }
-                    })
-                    .collect();
+                let mut errors = IndexMap::new();
+                for (key, value) in self {
+                    if let Err(error) = value.$validate_composited_method($limit) {
+                        errors
+                            .entry(std::borrow::Cow::Owned(key.as_ref().to_owned()))
+                            .or_insert_with(Vec::new)
+                            .push(error);
+                    }
+                }
 
                 if errors.is_empty() {
                     Ok(())
                 } else {
-                    Err(Composited::Array(errors))
+                    Err(Composited::Object(errors))
                 }
             }
         }
@@ -436,24 +436,24 @@ macro_rules! impl_composited_validation_1args {
         impl<T, K, V> $ValidateCompositedTrait<T> for indexmap::IndexMap<K, V>
         where
             T: Copy,
+            K: AsRef<str>,
             V: $ValidateCompositedTrait<T>,
         {
             fn $validate_composited_method(&self, $limit: T) -> Result<(), Composited<$Error>> {
-                let errors: IndexMap<usize, crate::validation::Composited<$Error>> = self
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, (_key, value))| {
-                        match value.$validate_composited_method($limit) {
-                            Ok(_) => None,
-                            Err(error) => Some((index, error)),
-                        }
-                    })
-                    .collect();
+                let mut errors = IndexMap::new();
+                for (key, value) in self {
+                    if let Err(error) = value.$validate_composited_method($limit) {
+                        errors
+                            .entry(std::borrow::Cow::Owned(key.as_ref().to_owned()))
+                            .or_insert_with(Vec::new)
+                            .push(error);
+                    }
+                }
 
                 if errors.is_empty() {
                     Ok(())
                 } else {
-                    Err(Composited::Array(errors))
+                    Err(Composited::Object(errors))
                 }
             }
         }
