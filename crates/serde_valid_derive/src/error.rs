@@ -11,30 +11,37 @@ use syn::spanned::Spanned;
 pub fn object_errors_tokens() -> TokenStream {
     let rule_vec_errors = crate::types::rule_vec_errors_ident();
     let property_vec_errors_map = crate::types::property_vec_errors_map_ident();
+    let field = crate::types::generated_ident("__serde_valid_field");
+    let errors = crate::types::generated_ident("__serde_valid_errors");
+    let field_errors = crate::types::generated_ident("__serde_valid_field_errors");
+    let error = crate::types::generated_ident("__serde_valid_error");
+    let array_errors = crate::types::generated_ident("__serde_valid_array_errors");
+    let object_errors = crate::types::generated_ident("__serde_valid_object_errors");
+    let other = crate::types::generated_ident("__serde_valid_other");
     quote!(::serde_valid::validation::Errors::Object(
         ::serde_valid::validation::ObjectErrors::new(
             #rule_vec_errors,
             #property_vec_errors_map
                 .into_iter()
-                .map(|(field, errors)| {
-                    let __field_errors = errors
+                .map(|(#field, #errors)| {
+                    let #field_errors = #errors
                         .into_iter()
-                        .map(|error| match error {
-                            ::serde_valid::validation::Error::Items(__array_errors) => {
-                                ::serde_valid::validation::Errors::Array(__array_errors)
+                        .map(|#error| match #error {
+                            ::serde_valid::validation::Error::Items(#array_errors) => {
+                                ::serde_valid::validation::Errors::Array(#array_errors)
                             }
-                            ::serde_valid::validation::Error::Properties(__object_errors) => {
-                                ::serde_valid::validation::Errors::Object(__object_errors)
+                            ::serde_valid::validation::Error::Properties(#object_errors) => {
+                                ::serde_valid::validation::Errors::Object(#object_errors)
                             }
-                            error => ::serde_valid::validation::Errors::NewType(::std::vec![error]),
+                            #error => ::serde_valid::validation::Errors::NewType(::std::vec![#error]),
                         })
-                        .reduce(|mut errors, other| {
-                            errors.merge(other);
-                            errors
+                        .reduce(|mut #errors, #other| {
+                            #errors.merge(#other);
+                            #errors
                         })
                         .unwrap_or_else(|| ::serde_valid::validation::Errors::NewType(::std::vec::Vec::new()));
 
-                    (field, __field_errors)
+                    (#field, #field_errors)
                 })
                 .collect()
         )
@@ -44,30 +51,37 @@ pub fn object_errors_tokens() -> TokenStream {
 pub fn array_errors_tokens() -> TokenStream {
     let rule_vec_errors = crate::types::rule_vec_errors_ident();
     let item_vec_errors_map = crate::types::item_vec_errors_map_ident();
+    let index = crate::types::generated_ident("__serde_valid_index");
+    let errors = crate::types::generated_ident("__serde_valid_errors");
+    let field_errors = crate::types::generated_ident("__serde_valid_field_errors");
+    let error = crate::types::generated_ident("__serde_valid_error");
+    let array_errors = crate::types::generated_ident("__serde_valid_array_errors");
+    let object_errors = crate::types::generated_ident("__serde_valid_object_errors");
+    let other = crate::types::generated_ident("__serde_valid_other");
     quote!(::serde_valid::validation::Errors::Array(
         ::serde_valid::validation::error::ArrayErrors::new(
             #rule_vec_errors,
             #item_vec_errors_map
                 .into_iter()
-                .map(|(index, errors)| {
-                    let __field_errors = errors
+                .map(|(#index, #errors)| {
+                    let #field_errors = #errors
                         .into_iter()
-                        .map(|error| match error {
-                            ::serde_valid::validation::Error::Items(__array_errors) => {
-                                ::serde_valid::validation::Errors::Array(__array_errors)
+                        .map(|#error| match #error {
+                            ::serde_valid::validation::Error::Items(#array_errors) => {
+                                ::serde_valid::validation::Errors::Array(#array_errors)
                             }
-                            ::serde_valid::validation::Error::Properties(__object_errors) => {
-                                ::serde_valid::validation::Errors::Object(__object_errors)
+                            ::serde_valid::validation::Error::Properties(#object_errors) => {
+                                ::serde_valid::validation::Errors::Object(#object_errors)
                             }
-                            error => ::serde_valid::validation::Errors::NewType(::std::vec![error]),
+                            #error => ::serde_valid::validation::Errors::NewType(::std::vec![#error]),
                         })
-                        .reduce(|mut errors, other| {
-                            errors.merge(other);
-                            errors
+                        .reduce(|mut #errors, #other| {
+                            #errors.merge(#other);
+                            #errors
                         })
                         .unwrap_or_else(|| ::serde_valid::validation::Errors::NewType(::std::vec::Vec::new()));
 
-                    (index, __field_errors)
+                    (#index, #field_errors)
                 })
                 .collect()
         )

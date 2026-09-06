@@ -45,15 +45,16 @@ macro_rules! extract_array_length_validator{
                 $ValidateTrait, $validate_method,
                 $autoderef_method, ::serde_valid::$Error
             );
+            let error_params = crate::types::generated_ident("__serde_valid_error_params");
 
             Ok(quote!(
-                if let ::std::result::Result::Err(error_params) = #validate {
+                if let ::std::result::Result::Err(#error_params) = #validate {
                     #errors
                         .entry(#rename)
                         .or_default()
                         .push(::serde_valid::validation::Error::$ErrorType(
                             ::serde_valid::validation::error::Message::new(
-                                error_params,
+                                #error_params,
                                 #message_format,
                             )
                         ));

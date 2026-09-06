@@ -40,8 +40,6 @@ fn generated_error_bindings_do_not_collide_with_user_statics() {
 
 #[test]
 fn custom_message_expressions_resolve_user_statics() {
-    let validation_errors = InputWithMessage { values: vec![] }
-        .validate()
-        .unwrap_err();
+    let validation_errors = InputWithMessage { values: vec![] }.validate().unwrap_err();
     assert!(validation_errors.to_string().contains(error_params));
 }

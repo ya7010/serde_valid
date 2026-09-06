@@ -32,15 +32,16 @@ fn inner_extract_generic_enum_validator(
         ValidateCompositedEnum, validate_composited_enum,
         __serde_valid_autoderef_validate_composited_enum, EnumError
     );
+    let error_params = crate::types::generated_ident("__serde_valid_composited_error_params");
 
     Ok(quote!(
-        if let ::std::result::Result::Err(__composited_error_params) = #validate {
+        if let ::std::result::Result::Err(#error_params) = #validate {
             use ::serde_valid::validation::IntoError;
 
             #errors
                 .entry(#rename)
                 .or_default()
-                .push(__composited_error_params.into_error_by(#message_format));
+                .push(#error_params.into_error_by(#message_format));
         }
     ))
 }

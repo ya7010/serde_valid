@@ -2,7 +2,6 @@ use super::Field;
 use quote::quote;
 use std::borrow::Cow;
 use std::convert::AsRef;
-use syn::spanned::Spanned;
 
 #[derive(Debug, Clone)]
 pub struct UnnamedField<'a> {
@@ -20,7 +19,7 @@ impl<'a> UnnamedField<'a> {
         Ok(Self {
             name: index.to_string(),
             index,
-            ident: syn::Ident::new(&format!("__{}", index), field.span()),
+            ident: crate::types::generated_ident(&format!("__serde_valid_{index}")),
             field: Cow::Borrowed(field),
         })
     }

@@ -24,6 +24,10 @@ impl<'a, F: Field + Clone> FieldValidators<'a, F> {
         self.field.ident()
     }
 
+    pub fn getter_token(&self) -> proc_macro2::TokenStream {
+        self.field.getter_token()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.validators.is_empty()
     }

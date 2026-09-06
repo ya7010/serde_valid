@@ -28,15 +28,16 @@ fn inner_extract_array_unique_items_validator(
         ValidateUniqueItems, validate_unique_items,
         __serde_valid_autoderef_validate_unique_items, ::serde_valid::UniqueItemsError
     );
+    let error_params = crate::types::generated_ident("__serde_valid_error_params");
 
     quote!(
-        if let ::std::result::Result::Err(error_params) = #validate {
+        if let ::std::result::Result::Err(#error_params) = #validate {
             #errors
                 .entry(#rename)
                 .or_default()
                 .push(::serde_valid::validation::Error::UniqueItems(
                     ::serde_valid::validation::error::Message::new(
-                        error_params,
+                        #error_params,
                         #message_format,
                     )
                 ));

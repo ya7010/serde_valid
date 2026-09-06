@@ -6,10 +6,14 @@ macro_rules! quote_composited_autoderef {
         generic $receiver:ident, $argument:ident,
         $ValidateCompositedTrait:ident, $validate_composited_method:ident,
         $autoderef_method:ident, $Error:ident
-    ) => {
+    ) => {{
+        let __autoderef_method = crate::types::autoderef_method_ident(
+            stringify!($autoderef_method),
+            $receiver,
+        );
         quote::quote!({
             trait __SerdeValidCompositedAutoderef<__Argument> {
-                fn $autoderef_method(
+                fn #__autoderef_method(
                     &self,
                     argument: __Argument,
                 ) -> ::std::result::Result<
@@ -23,7 +27,7 @@ macro_rules! quote_composited_autoderef {
                 __Receiver: ::serde_valid::validation::$ValidateCompositedTrait<__Argument>
                     + ?::std::marker::Sized,
             {
-                fn $autoderef_method(
+                fn #__autoderef_method(
                     &self,
                     argument: __Argument,
                 ) -> ::std::result::Result<
@@ -37,17 +41,21 @@ macro_rules! quote_composited_autoderef {
                 }
             }
 
-            (#$receiver).$autoderef_method(#$argument)
+            (#$receiver).#__autoderef_method(#$argument)
         })
-    };
+    }};
     (
         fixed $receiver:ident, $argument:ident, $Argument:ty,
         $ValidateCompositedTrait:ident, $validate_composited_method:ident,
         $autoderef_method:ident, $Error:ident
-    ) => {
+    ) => {{
+        let __autoderef_method = crate::types::autoderef_method_ident(
+            stringify!($autoderef_method),
+            $receiver,
+        );
         quote::quote!({
             trait __SerdeValidCompositedAutoderef {
-                fn $autoderef_method(
+                fn #__autoderef_method(
                     &self,
                     argument: $Argument,
                 ) -> ::std::result::Result<
@@ -61,7 +69,7 @@ macro_rules! quote_composited_autoderef {
                 __Receiver: ::serde_valid::validation::$ValidateCompositedTrait
                     + ?::std::marker::Sized,
             {
-                fn $autoderef_method(
+                fn #__autoderef_method(
                     &self,
                     argument: $Argument,
                 ) -> ::std::result::Result<
@@ -75,17 +83,21 @@ macro_rules! quote_composited_autoderef {
                 }
             }
 
-            (#$receiver).$autoderef_method(#$argument)
+            (#$receiver).#__autoderef_method(#$argument)
         })
-    };
+    }};
     (
         slice $receiver:ident, $candidates:ident,
         $ValidateCompositedTrait:ident, $validate_composited_method:ident,
         $autoderef_method:ident, $Error:ident
-    ) => {
+    ) => {{
+        let __autoderef_method = crate::types::autoderef_method_ident(
+            stringify!($autoderef_method),
+            $receiver,
+        );
         quote::quote!({
             trait __SerdeValidCompositedAutoderef<'__candidate, __Candidate> {
-                fn $autoderef_method(
+                fn #__autoderef_method(
                     &self,
                     candidates: &'__candidate [__Candidate],
                 ) -> ::std::result::Result<
@@ -102,7 +114,7 @@ macro_rules! quote_composited_autoderef {
                         &'__candidate [__Candidate],
                     > + ?::std::marker::Sized,
             {
-                fn $autoderef_method(
+                fn #__autoderef_method(
                     &self,
                     candidates: &'__candidate [__Candidate],
                 ) -> ::std::result::Result<
@@ -116,9 +128,9 @@ macro_rules! quote_composited_autoderef {
                 }
             }
 
-            (#$receiver).$autoderef_method(&[#$candidates])
+            (#$receiver).#__autoderef_method(&[#$candidates])
         })
-    };
+    }};
 }
 
 macro_rules! quote_validation_autoderef {
@@ -126,32 +138,40 @@ macro_rules! quote_validation_autoderef {
         zero $receiver:ident,
         $ValidateTrait:ident, $validate_method:ident,
         $autoderef_method:ident, $Error:ty
-    ) => {
+    ) => {{
+        let __autoderef_method = crate::types::autoderef_method_ident(
+            stringify!($autoderef_method),
+            $receiver,
+        );
         quote::quote!({
             trait __SerdeValidAutoderef {
-                fn $autoderef_method(&self) -> ::std::result::Result<(), $Error>;
+                fn #__autoderef_method(&self) -> ::std::result::Result<(), $Error>;
             }
 
             impl<__Receiver> __SerdeValidAutoderef for __Receiver
             where
                 __Receiver: ::serde_valid::$ValidateTrait + ?::std::marker::Sized,
             {
-                fn $autoderef_method(&self) -> ::std::result::Result<(), $Error> {
+                fn #__autoderef_method(&self) -> ::std::result::Result<(), $Error> {
                     ::serde_valid::$ValidateTrait::$validate_method(self)
                 }
             }
 
-            (#$receiver).$autoderef_method()
+            (#$receiver).#__autoderef_method()
         })
-    };
+    }};
     (
         fixed $receiver:ident, $argument:ident, $Argument:ty,
         $ValidateTrait:ident, $validate_method:ident,
         $autoderef_method:ident, $Error:ty
-    ) => {
+    ) => {{
+        let __autoderef_method = crate::types::autoderef_method_ident(
+            stringify!($autoderef_method),
+            $receiver,
+        );
         quote::quote!({
             trait __SerdeValidAutoderef {
-                fn $autoderef_method(
+                fn #__autoderef_method(
                     &self,
                     argument: $Argument,
                 ) -> ::std::result::Result<(), $Error>;
@@ -161,7 +181,7 @@ macro_rules! quote_validation_autoderef {
             where
                 __Receiver: ::serde_valid::$ValidateTrait + ?::std::marker::Sized,
             {
-                fn $autoderef_method(
+                fn #__autoderef_method(
                     &self,
                     argument: $Argument,
                 ) -> ::std::result::Result<(), $Error> {
@@ -169,9 +189,9 @@ macro_rules! quote_validation_autoderef {
                 }
             }
 
-            (#$receiver).$autoderef_method(#$argument)
+            (#$receiver).#__autoderef_method(#$argument)
         })
-    };
+    }};
 }
 
 mod array;
