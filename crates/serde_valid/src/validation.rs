@@ -139,7 +139,7 @@ macro_rules! impl_composited_validation_1args {
             ) -> Result<(), Composited<$Error>>;
         }
 
-        impl<T> $ValidateCompositedTrait for T
+        impl<T: ?Sized> $ValidateCompositedTrait for T
         where
             T: $ValidateTrait,
         {
@@ -565,7 +565,7 @@ macro_rules! impl_generic_composited_validation_1args {
         $Error:ident,
         $type:ty
     ) => {
-        impl<T> $ValidateCompositedTrait<$type> for T
+        impl<T: ?Sized> $ValidateCompositedTrait<$type> for T
         where
             T: $ValidateTrait<$type>,
         {

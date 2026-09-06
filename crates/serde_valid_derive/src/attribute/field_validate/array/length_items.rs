@@ -15,7 +15,9 @@ macro_rules! extract_array_length_validator{
         $extract_validator:ident,
         $inner_extract_validator:ident,
         $ValidateTrait:ident,
-        $validate_method:ident
+        $validate_method:ident,
+        $autoderef_method:ident,
+        $Error:ident
     ) => {
         pub fn $extract_validator(
             field: &impl Field,
@@ -38,12 +40,14 @@ macro_rules! extract_array_length_validator{
             let rename = rename_map.get(field_name).unwrap_or(&field_key);
             let limit = get_numeric(validation_value)?;
             let errors = field.errors_variable();
+            let validate = quote_validation_autoderef!(
+                fixed field_ident, limit, usize,
+                $ValidateTrait, $validate_method,
+                $autoderef_method, ::serde_valid::$Error
+            );
 
             Ok(quote!(
-                if let Err(error_params) = ::serde_valid::$ValidateTrait::$validate_method(
-                    #field_ident,
-                    #limit,
-                ) {
+                if let Err(error_params) = #validate {
                     #errors
                         .entry(#rename)
                         .or_default()
@@ -64,12 +68,16 @@ extract_array_length_validator!(
     extract_array_max_items_validator,
     inner_extract_array_max_items_validator,
     ValidateMaxItems,
-    validate_max_items
+    validate_max_items,
+    __serde_valid_autoderef_validate_max_items,
+    MaxItemsError
 );
 extract_array_length_validator!(
     MinItems,
     extract_array_min_items_validator,
     inner_extract_array_min_items_validator,
     ValidateMinItems,
-    validate_min_items
+    validate_min_items,
+    __serde_valid_autoderef_validate_min_items,
+    MinItemsError
 );

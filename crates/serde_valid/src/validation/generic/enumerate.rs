@@ -28,7 +28,7 @@ macro_rules! impl_validate_generic_enumerate_literal {
             }
         }
 
-        impl<T> ValidateCompositedEnumerate<&[$type]> for T
+        impl<T: ?Sized> ValidateCompositedEnumerate<&[$type]> for T
         where
             T: ValidateEnumerate<$type>,
         {
@@ -174,7 +174,7 @@ impl ValidateEnumerate<&'static str> for std::path::Path {
     }
 }
 
-impl<T> ValidateCompositedEnumerate<&[&'static str]> for T
+impl<T: ?Sized> ValidateCompositedEnumerate<&[&'static str]> for T
 where
     T: ValidateEnumerate<&'static str>,
 {
