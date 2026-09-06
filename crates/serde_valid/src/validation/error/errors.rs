@@ -30,57 +30,50 @@ where
     }
 }
 
-impl<E> Errors<E>
-where
-    E: Clone,
-{
+impl<E> Errors<E> {
     pub fn merge(&mut self, other: Errors<E>) {
         match self {
-            Errors::Array(a) => match other {
-                Errors::Array(b) => {
-                    a.errors.extend(b.errors);
-
-                    for (index, item) in b.items {
-                        match a.items.get_mut(&index) {
-                            Some(errors) => errors.merge(item),
+            Errors::Array(current) => match other {
+                Errors::Array(other) => {
+                    current.errors.extend(other.errors);
+                    for (index, errors) in other.items {
+                        match current.items.get_mut(&index) {
+                            Some(current) => current.merge(errors),
                             None => {
-                                a.items.insert(index, item);
+                                current.items.insert(index, errors);
                             }
-                        };
+                        }
                     }
                 }
-                Errors::Object(_) => {
-                    unreachable!("conflict Array and Object in serde_valid::validation::Errors")
+                Errors::Object(mut other) => {
+                    // Errors cannot represent items and properties at the same level. Keep the
+                    // established object precedence while retaining both top-level error lists.
+                    let mut errors = std::mem::take(&mut current.errors);
+                    errors.extend(other.errors);
+                    other.errors = errors;
+                    *self = Errors::Object(other);
                 }
-                Errors::NewType(errors) => {
-                    a.errors.extend(errors);
-                }
+                Errors::NewType(errors) => current.errors.extend(errors),
             },
-            Errors::NewType(a) => match other {
-                Errors::Array(b) => {
-                    a.extend(b.errors);
-                    *self = Errors::Array(ArrayErrors::new(a.to_vec(), b.items));
-                }
-                Errors::Object(mut b) => {
-                    let mut errors = a.to_vec();
-                    errors.extend(b.errors);
-                    b.errors = errors;
-                    *self = Errors::Object(b);
-                }
-                Errors::NewType(b) => {
-                    a.extend(b);
-                }
+            Errors::Object(current) => match other {
+                // Keep object structure, but retain top-level errors from the array.
+                Errors::Array(other) => current.errors.extend(other.errors),
+                Errors::Object(other) => current.merge(other),
+                Errors::NewType(errors) => current.errors.extend(errors),
             },
-            Errors::Object(a) => match other {
-                Errors::Array(_) => {
-                    unreachable!("conflict Object and Array in serde_valid::validation::Errors")
+            Errors::NewType(current) => match other {
+                Errors::Array(other) => {
+                    let mut errors = std::mem::take(current);
+                    errors.extend(other.errors);
+                    *self = Errors::Array(ArrayErrors::new(errors, other.items));
                 }
-                Errors::Object(b) => {
-                    a.merge(b);
+                Errors::Object(mut other) => {
+                    let mut errors = std::mem::take(current);
+                    errors.extend(other.errors);
+                    other.errors = errors;
+                    *self = Errors::Object(other);
                 }
-                Errors::NewType(errors) => {
-                    a.errors.extend(errors);
-                }
+                Errors::NewType(errors) => current.extend(errors),
             },
         }
     }
@@ -114,7 +107,7 @@ mod tests {
     };
 
     use super::*;
-    use crate::validation::PropertyErrorsMap;
+    use crate::validation::{ItemErrorsMap, PropertyErrorsMap};
 
     #[derive(Debug)]
     struct CloneTracker(Arc<AtomicUsize>);
@@ -127,7 +120,7 @@ mod tests {
     }
 
     #[test]
-    fn merging_object_errors_does_not_clone_existing_errors() {
+    fn merging_errors_does_not_clone_existing_errors() {
         let clone_count = Arc::new(AtomicUsize::new(0));
         let mut errors = Errors::Object(ObjectErrors::new(
             vec![CloneTracker(Arc::clone(&clone_count))],
@@ -140,5 +133,59 @@ mod tests {
         )));
 
         assert_eq!(clone_count.load(Ordering::Relaxed), 0);
+
+        let mut errors = Errors::NewType(vec![CloneTracker(Arc::clone(&clone_count))]);
+        errors.merge(Errors::Array(ArrayErrors::new(
+            Vec::new(),
+            ItemErrorsMap::new(),
+        )));
+        assert_eq!(clone_count.load(Ordering::Relaxed), 0);
+
+        let mut errors = Errors::NewType(vec![CloneTracker(Arc::clone(&clone_count))]);
+        errors.merge(Errors::Object(ObjectErrors::new(
+            Vec::new(),
+            PropertyErrorsMap::new(),
+        )));
+        assert_eq!(clone_count.load(Ordering::Relaxed), 0);
+    }
+
+    #[test]
+    fn merging_errors_does_not_require_clone() {
+        #[derive(Debug)]
+        struct NotClone;
+
+        let mut errors = Errors::NewType(vec![NotClone]);
+        errors.merge(Errors::Object(ObjectErrors::new(
+            Vec::new(),
+            PropertyErrorsMap::new(),
+        )));
+    }
+
+    #[test]
+    fn object_errors_take_precedence_over_array_errors_without_losing_top_level_errors() {
+        let properties =
+            PropertyErrorsMap::from([("property".into(), Errors::NewType(vec!["property error"]))]);
+        let items = ItemErrorsMap::from([(0, Errors::NewType(vec!["item error"]))]);
+
+        let mut array_then_object =
+            Errors::Array(ArrayErrors::new(vec!["array error"], items.clone()));
+        array_then_object.merge(Errors::Object(ObjectErrors::new(
+            vec!["object error"],
+            properties.clone(),
+        )));
+        let Errors::Object(errors) = array_then_object else {
+            panic!("object errors must take precedence")
+        };
+        assert_eq!(errors.errors, ["array error", "object error"]);
+        assert_eq!(errors.properties.len(), 1);
+
+        let mut object_then_array =
+            Errors::Object(ObjectErrors::new(vec!["object error"], properties));
+        object_then_array.merge(Errors::Array(ArrayErrors::new(vec!["array error"], items)));
+        let Errors::Object(errors) = object_then_array else {
+            panic!("object errors must take precedence")
+        };
+        assert_eq!(errors.errors, ["object error", "array error"]);
+        assert_eq!(errors.properties.len(), 1);
     }
 }

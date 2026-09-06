@@ -1092,4 +1092,270 @@ mod issue125 {
         let borrowed_keys = IndexMap::from([("borrowed", Child { value: 0 })]);
         assert!(borrowed_keys.validate().is_err());
     }
+
+    #[test]
+    fn nested_maps_merge_errors_for_aliased_keys() {
+        #[derive(Eq, Hash, PartialEq)]
+        struct AliasedKey(u8);
+
+        impl AsRef<str> for AliasedKey {
+            fn as_ref(&self) -> &str {
+                "same"
+            }
+        }
+
+        let values = IndexMap::from([
+            (AliasedKey(1), Child { value: 0 }),
+            (AliasedKey(2), Child { value: 0 }),
+        ]);
+        let errors = serde_json::to_value(values.validate().unwrap_err()).unwrap();
+
+        assert_eq!(
+            errors["properties"]["same"]["properties"]["value"]["errors"],
+            json!(["The number must be `>= 1`.", "The number must be `>= 1`."])
+        );
+    }
+
+    #[derive(Debug, Validate)]
+    #[allow(clippy::box_collection)]
+    struct ArrayValidatorWrappers<'a> {
+        #[validate(min_items = 3)]
+        #[validate(max_items = 1)]
+        #[validate(unique_items)]
+        boxed_vec: Box<Vec<i32>>,
+        #[validate(min_items = 3)]
+        #[validate(max_items = 1)]
+        #[validate(unique_items)]
+        borrowed_vec: &'a Vec<i32>,
+        #[validate(min_items = 3)]
+        #[validate(max_items = 1)]
+        #[validate(unique_items)]
+        cow_slice: std::borrow::Cow<'a, [i32]>,
+    }
+
+    #[test]
+    fn standard_wrappers_support_array_validators() {
+        let borrowed_vec = vec![1, 1];
+        let errors = serde_json::to_value(
+            ArrayValidatorWrappers {
+                boxed_vec: Box::new(vec![1, 1]),
+                borrowed_vec: &borrowed_vec,
+                cow_slice: std::borrow::Cow::Borrowed(&[1, 1]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+
+        for field in ["boxed_vec", "borrowed_vec", "cow_slice"] {
+            assert_eq!(
+                errors["properties"][field]["errors"]
+                    .as_array()
+                    .unwrap()
+                    .len(),
+                3
+            );
+        }
+    }
+
+    #[derive(Debug, Clone, Validate)]
+    struct WrappedChild {
+        #[validate(minimum = 1)]
+        value: i32,
+    }
+
+    #[derive(Debug, Validate)]
+    #[allow(clippy::box_collection)]
+    struct NestedValidatorWrappers<'a> {
+        #[validate]
+        boxed_vec: Option<Box<Vec<WrappedChild>>>,
+        #[validate]
+        borrowed_vec: Option<&'a Vec<WrappedChild>>,
+        #[validate]
+        cow_slice: Option<std::borrow::Cow<'a, [WrappedChild]>>,
+    }
+
+    #[test]
+    fn standard_wrappers_support_nested_validation() {
+        let borrowed_vec = vec![WrappedChild { value: 0 }];
+        let errors = serde_json::to_value(
+            NestedValidatorWrappers {
+                boxed_vec: Some(Box::new(vec![WrappedChild { value: 0 }])),
+                borrowed_vec: Some(&borrowed_vec),
+                cow_slice: Some(std::borrow::Cow::Owned(vec![WrappedChild { value: 0 }])),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+
+        for field in ["boxed_vec", "borrowed_vec", "cow_slice"] {
+            assert!(errors["properties"].get(field).is_some(), "missing {field}");
+        }
+    }
+
+    #[derive(Debug, Validate)]
+    struct IndexMapPropertyConstraints {
+        #[validate(min_properties = 1)]
+        #[validate(max_properties = 1)]
+        values: IndexMap<String, i32>,
+    }
+
+    #[test]
+    fn index_map_supports_property_count_validators() {
+        assert!(IndexMapPropertyConstraints {
+            values: IndexMap::from([("one".to_owned(), 1)]),
+        }
+        .validate()
+        .is_ok());
+        assert!(IndexMapPropertyConstraints {
+            values: IndexMap::new(),
+        }
+        .validate()
+        .is_err());
+        assert!(IndexMapPropertyConstraints {
+            values: IndexMap::from([("one".to_owned(), 1), ("two".to_owned(), 2)]),
+        }
+        .validate()
+        .is_err());
+    }
+
+    #[derive(Debug, Eq, Hash, PartialEq)]
+    struct AliasedKey(u8);
+
+    impl AsRef<str> for AliasedKey {
+        fn as_ref(&self) -> &str {
+            "same"
+        }
+    }
+
+    #[derive(Debug)]
+    struct DataDependentValidation(bool);
+
+    impl Validate for DataDependentValidation {
+        fn validate(&self) -> Result<(), serde_valid::validation::Errors> {
+            use serde_valid::validation::{
+                ArrayErrors, Error, Errors, ItemErrorsMap, ObjectErrors, PropertyErrorsMap,
+            };
+
+            if self.0 {
+                Err(Errors::Object(ObjectErrors::new(
+                    vec![Error::Custom("object error".to_owned())],
+                    PropertyErrorsMap::from([(
+                        "property".into(),
+                        Errors::NewType(vec![Error::Custom("property error".to_owned())]),
+                    )]),
+                )))
+            } else {
+                Err(Errors::Array(ArrayErrors::new(
+                    vec![Error::Custom("array error".to_owned())],
+                    ItemErrorsMap::from([(
+                        0,
+                        Errors::NewType(vec![Error::Custom("item error".to_owned())]),
+                    )]),
+                )))
+            }
+        }
+    }
+
+    #[test]
+    fn aliased_map_keys_with_different_error_shapes_do_not_panic() {
+        let index_map = IndexMap::from([
+            (AliasedKey(1), DataDependentValidation(false)),
+            (AliasedKey(2), DataDependentValidation(true)),
+        ]);
+        let index_map_errors = serde_json::to_value(index_map.validate().unwrap_err()).unwrap();
+        assert_eq!(
+            index_map_errors["properties"]["same"],
+            json!({
+                "errors": ["array error", "object error"],
+                "properties": {
+                    "property": { "errors": ["property error"] }
+                }
+            })
+        );
+
+        let hash_map = HashMap::from([
+            (AliasedKey(1), DataDependentValidation(false)),
+            (AliasedKey(2), DataDependentValidation(true)),
+        ]);
+        let hash_map_errors = serde_json::to_value(hash_map.validate().unwrap_err()).unwrap();
+        let errors = hash_map_errors["properties"]["same"]["errors"]
+            .as_array()
+            .unwrap();
+        assert!(errors.contains(&json!("array error")));
+        assert!(errors.contains(&json!("object error")));
+        assert!(hash_map_errors["properties"]["same"]["properties"]["property"].is_object());
+    }
+
+    #[derive(Debug)]
+    struct MixedCompositedShape(bool);
+
+    impl serde_valid::validation::ValidateCompositedMinimum<i32> for MixedCompositedShape {
+        fn validate_composited_minimum(
+            &self,
+            minimum: i32,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinimumError>> {
+            use serde_valid::validation::Composited;
+
+            if self.0 {
+                Err(Composited::Object(IndexMap::from([(
+                    "property".into(),
+                    vec![Composited::Single(serde_valid::MinimumError::new(minimum))],
+                )])))
+            } else {
+                Err(Composited::Array(IndexMap::from([(
+                    0,
+                    Composited::Single(serde_valid::MinimumError::new(minimum)),
+                )])))
+            }
+        }
+    }
+
+    impl serde_valid::validation::ValidateCompositedMaximum<i32> for MixedCompositedShape {
+        fn validate_composited_maximum(
+            &self,
+            maximum: i32,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaximumError>> {
+            use serde_valid::validation::Composited;
+
+            Err(Composited::Object(IndexMap::from([(
+                "property".into(),
+                vec![Composited::Single(serde_valid::MaximumError::new(maximum))],
+            )])))
+        }
+    }
+
+    #[derive(Debug, Validate)]
+    struct MixedCompositedConstraints {
+        #[validate(minimum = 1)]
+        #[validate(maximum = 2)]
+        direct: MixedCompositedShape,
+        #[validate(minimum = 1)]
+        aliased: IndexMap<AliasedKey, MixedCompositedShape>,
+    }
+
+    #[test]
+    fn mixed_composited_error_shapes_use_object_precedence_without_panicking() {
+        let errors = serde_json::to_value(
+            MixedCompositedConstraints {
+                direct: MixedCompositedShape(false),
+                aliased: IndexMap::from([
+                    (AliasedKey(1), MixedCompositedShape(false)),
+                    (AliasedKey(2), MixedCompositedShape(true)),
+                ]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+
+        assert!(errors["properties"]["direct"]["items"].is_null());
+        assert!(errors["properties"]["direct"]["properties"]["property"].is_object());
+        assert!(errors["properties"]["aliased"]["properties"]["same"]["items"].is_null());
+        assert!(
+            errors["properties"]["aliased"]["properties"]["same"]["properties"]["property"]
+                .is_object()
+        );
+    }
 }

@@ -15,64 +15,24 @@ pub fn object_errors_tokens() -> TokenStream {
             __property_vec_errors_map
                 .into_iter()
                 .map(|(field, errors)| {
-                    let mut __field_items_errors = vec![];
-                    let mut __field_properties_errors = vec![];
-                    let mut __field_errors: ::serde_valid::validation::VecErrors = errors
+                    let __field_errors = errors
                         .into_iter()
-                        .filter_map(|error| match error {
+                        .map(|error| match error {
                             ::serde_valid::validation::Error::Items(__array_errors) => {
-                                __field_items_errors.push(__array_errors);
-                                None
+                                ::serde_valid::validation::Errors::Array(__array_errors)
                             }
                             ::serde_valid::validation::Error::Properties(__object_errors) => {
-                                __field_properties_errors.push(__object_errors);
-                                None
+                                ::serde_valid::validation::Errors::Object(__object_errors)
                             }
-                            _ => Some(error),
+                            error => ::serde_valid::validation::Errors::NewType(vec![error]),
                         })
-                        .collect();
+                        .reduce(|mut errors, other| {
+                            errors.merge(other);
+                            errors
+                        })
+                        .unwrap_or_else(|| ::serde_valid::validation::Errors::NewType(Vec::new()));
 
-                    if !__field_properties_errors.is_empty() {
-                        let __object_errors = __field_properties_errors
-                            .into_iter()
-                            .reduce(|mut a, b| {
-                                a.merge(b);
-                                a
-                            })
-                            .unwrap();
-                        __field_errors.extend(__object_errors.errors);
-
-                        (
-                            field,
-                            ::serde_valid::validation::Errors::Object(
-                                ::serde_valid::validation::ObjectErrors::new(
-                                    __field_errors,
-                                    __object_errors.properties,
-                                ),
-                            ),
-                        )
-                    } else if !__field_items_errors.is_empty() {
-                        let __array_errors = __field_items_errors
-                            .into_iter()
-                            .reduce(|a, b| a.merge(b))
-                            .unwrap();
-                        __field_errors.extend(__array_errors.errors);
-
-                        (
-                            field,
-                            ::serde_valid::validation::Errors::Array(
-                                ::serde_valid::validation::error::ArrayErrors::new(
-                                    __field_errors,
-                                    __array_errors.items,
-                                ),
-                            ),
-                        )
-                    } else {
-                        (
-                            field,
-                            ::serde_valid::validation::Errors::NewType(__field_errors),
-                        )
-                    }
+                    (field, __field_errors)
                 })
                 .collect()
         )
@@ -86,64 +46,24 @@ pub fn array_errors_tokens() -> TokenStream {
             __item_vec_errors_map
                 .into_iter()
                 .map(|(index, errors)| {
-                    let mut __field_items_errors = vec![];
-                    let mut __field_properties_errors = vec![];
-                    let mut __field_errors: ::serde_valid::validation::VecErrors = errors
+                    let __field_errors = errors
                         .into_iter()
-                        .filter_map(|error| match error {
+                        .map(|error| match error {
                             ::serde_valid::validation::Error::Items(__array_errors) => {
-                                __field_items_errors.push(__array_errors);
-                                None
+                                ::serde_valid::validation::Errors::Array(__array_errors)
                             }
                             ::serde_valid::validation::Error::Properties(__object_errors) => {
-                                __field_properties_errors.push(__object_errors);
-                                None
+                                ::serde_valid::validation::Errors::Object(__object_errors)
                             }
-                            _ => Some(error),
+                            error => ::serde_valid::validation::Errors::NewType(vec![error]),
                         })
-                        .collect();
+                        .reduce(|mut errors, other| {
+                            errors.merge(other);
+                            errors
+                        })
+                        .unwrap_or_else(|| ::serde_valid::validation::Errors::NewType(Vec::new()));
 
-                    if !__field_properties_errors.is_empty() {
-                        let __object_errors = __field_properties_errors
-                            .into_iter()
-                            .reduce(|mut a, b| {
-                                a.merge(b);
-                                a
-                            })
-                            .unwrap();
-                        __field_errors.extend(__object_errors.errors);
-
-                        (
-                            index,
-                            ::serde_valid::validation::Errors::Object(
-                                ::serde_valid::validation::ObjectErrors::new(
-                                    __field_errors,
-                                    __object_errors.properties,
-                                ),
-                            ),
-                        )
-                    } else if !__field_items_errors.is_empty() {
-                        let __array_errors = __field_items_errors
-                            .into_iter()
-                            .reduce(|a, b| a.merge(b))
-                            .unwrap();
-                        __field_errors.extend(__array_errors.errors);
-
-                        (
-                            index,
-                            ::serde_valid::validation::Errors::Array(
-                                ::serde_valid::validation::error::ArrayErrors::new(
-                                    __field_errors,
-                                    __array_errors.items,
-                                ),
-                            ),
-                        )
-                    } else {
-                        (
-                            index,
-                            ::serde_valid::validation::Errors::NewType(__field_errors),
-                        )
-                    }
+                    (index, __field_errors)
                 })
                 .collect()
         )

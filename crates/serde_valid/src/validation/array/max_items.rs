@@ -64,18 +64,6 @@ impl<T> ValidateMaxItems for [T] {
     }
 }
 
-impl<T> ValidateMaxItems for &[T] {
-    fn validate_max_items(&self, max_items: usize) -> Result<(), crate::MaxItemsError> {
-        self.as_ref().validate_max_items(max_items)
-    }
-}
-
-impl<T> ValidateMaxItems for Box<[T]> {
-    fn validate_max_items(&self, max_items: usize) -> Result<(), crate::MaxItemsError> {
-        self.as_ref().validate_max_items(max_items)
-    }
-}
-
 impl<T, const N: usize> ValidateMaxItems for [T; N] {
     fn validate_max_items(&self, max_items: usize) -> Result<(), crate::MaxItemsError> {
         if max_items >= self.len() {
@@ -83,18 +71,6 @@ impl<T, const N: usize> ValidateMaxItems for [T; N] {
         } else {
             Err(crate::MaxItemsError::new(max_items))
         }
-    }
-}
-
-impl<T, const N: usize> ValidateMaxItems for &[T; N] {
-    fn validate_max_items(&self, max_items: usize) -> Result<(), crate::MaxItemsError> {
-        self.as_ref().validate_max_items(max_items)
-    }
-}
-
-impl<T, const N: usize> ValidateMaxItems for Box<[T; N]> {
-    fn validate_max_items(&self, max_items: usize) -> Result<(), crate::MaxItemsError> {
-        self.as_ref().validate_max_items(max_items)
     }
 }
 
