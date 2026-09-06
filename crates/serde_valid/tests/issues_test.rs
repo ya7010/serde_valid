@@ -1314,6 +1314,168 @@ mod issue125 {
         }
     }
 
+    #[derive(Debug)]
+    struct InherentMethodShadow<T>(T);
+
+    impl<T> std::ops::Deref for InherentMethodShadow<T> {
+        type Target = T;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    #[allow(dead_code)]
+    impl<T> InherentMethodShadow<T> {
+        fn validate_composited_enum<C>(
+            &self,
+            _candidates: &[C],
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::EnumError>> {
+            Ok(())
+        }
+
+        fn validate_composited_multiple_of<A>(
+            &self,
+            _multiple_of: A,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MultipleOfError>> {
+            Ok(())
+        }
+
+        fn validate_composited_minimum<A>(
+            &self,
+            _minimum: A,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinimumError>> {
+            Ok(())
+        }
+
+        fn validate_composited_maximum<A>(
+            &self,
+            _maximum: A,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaximumError>> {
+            Ok(())
+        }
+
+        fn validate_composited_exclusive_minimum<A>(
+            &self,
+            _minimum: A,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::ExclusiveMinimumError>>
+        {
+            Ok(())
+        }
+
+        fn validate_composited_exclusive_maximum<A>(
+            &self,
+            _maximum: A,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::ExclusiveMaximumError>>
+        {
+            Ok(())
+        }
+
+        fn validate_composited_min_properties(
+            &self,
+            _minimum: usize,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinPropertiesError>>
+        {
+            Ok(())
+        }
+
+        fn validate_composited_max_properties(
+            &self,
+            _maximum: usize,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaxPropertiesError>>
+        {
+            Ok(())
+        }
+
+        fn validate_composited_min_length(
+            &self,
+            _minimum: usize,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinLengthError>> {
+            Ok(())
+        }
+
+        fn validate_composited_max_length(
+            &self,
+            _maximum: usize,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaxLengthError>> {
+            Ok(())
+        }
+
+        fn validate_composited_pattern(
+            &self,
+            _pattern: &serde_valid::export::regex::Regex,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::PatternError>> {
+            Ok(())
+        }
+    }
+
+    #[derive(Debug, Validate)]
+    struct InherentMethodShadowConstraints {
+        #[validate(r#enum = [1, 2])]
+        enum_values: InherentMethodShadow<Vec<i32>>,
+        #[validate(multiple_of = 2)]
+        multiple_of: InherentMethodShadow<Vec<i32>>,
+        #[validate(minimum = 1)]
+        minimum: InherentMethodShadow<Vec<i32>>,
+        #[validate(maximum = 1)]
+        maximum: InherentMethodShadow<Vec<i32>>,
+        #[validate(exclusive_minimum = 1)]
+        exclusive_minimum: InherentMethodShadow<Vec<i32>>,
+        #[validate(exclusive_maximum = 1)]
+        exclusive_maximum: InherentMethodShadow<Vec<i32>>,
+        #[validate(min_properties = 1)]
+        min_properties: InherentMethodShadow<HashMap<String, i32>>,
+        #[validate(max_properties = 1)]
+        max_properties: InherentMethodShadow<HashMap<String, i32>>,
+        #[validate(min_length = 1)]
+        min_length: InherentMethodShadow<String>,
+        #[validate(max_length = 1)]
+        max_length: InherentMethodShadow<String>,
+        #[validate(pattern = "^[a-z]+$")]
+        pattern: InherentMethodShadow<String>,
+    }
+
+    #[test]
+    fn derive_dispatch_ignores_inherent_validator_method_names() {
+        let errors = serde_json::to_value(
+            InherentMethodShadowConstraints {
+                enum_values: InherentMethodShadow(vec![3]),
+                multiple_of: InherentMethodShadow(vec![3]),
+                minimum: InherentMethodShadow(vec![0]),
+                maximum: InherentMethodShadow(vec![2]),
+                exclusive_minimum: InherentMethodShadow(vec![1]),
+                exclusive_maximum: InherentMethodShadow(vec![1]),
+                min_properties: InherentMethodShadow(HashMap::new()),
+                max_properties: InherentMethodShadow(HashMap::from([
+                    ("one".to_owned(), 1),
+                    ("two".to_owned(), 2),
+                ])),
+                min_length: InherentMethodShadow(String::new()),
+                max_length: InherentMethodShadow("xx".to_owned()),
+                pattern: InherentMethodShadow("123".to_owned()),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+
+        for field in [
+            "enum_values",
+            "multiple_of",
+            "minimum",
+            "maximum",
+            "exclusive_minimum",
+            "exclusive_maximum",
+            "min_properties",
+            "max_properties",
+            "min_length",
+            "max_length",
+            "pattern",
+        ] {
+            assert!(errors["properties"].get(field).is_some(), "missing {field}");
+        }
+    }
+
     #[derive(Debug, Clone, Validate)]
     struct WrappedChild {
         #[validate(minimum = 1)]

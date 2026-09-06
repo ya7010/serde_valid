@@ -31,12 +31,17 @@ fn inner_extract_string_pattern_validator(
         &format!("{}_PATTERN", field_ident).to_uppercase(),
         field_ident.span(),
     );
+    let pattern_variable = syn::Ident::new("__pattern", field_ident.span());
+    let validate = quote_composited_autoderef!(
+        fixed field_ident, pattern_variable, &::serde_valid::export::regex::Regex,
+        ValidateCompositedPattern, validate_composited_pattern,
+        __serde_valid_autoderef_validate_composited_pattern, PatternError
+    );
 
     Ok(quote!(
         static #pattern_ident : ::serde_valid::export::once_cell::sync::OnceCell<::serde_valid::export::regex::Regex> = ::serde_valid::export::once_cell::sync::OnceCell::new();
-        let __pattern = #pattern_ident.get_or_init(|| ::serde_valid::export::regex::Regex::new(#pattern).unwrap());
-        use ::serde_valid::validation::ValidateCompositedPattern as _;
-        if let Err(__composited_error_params) = (#field_ident).validate_composited_pattern(__pattern) {
+        let #pattern_variable = #pattern_ident.get_or_init(|| ::serde_valid::export::regex::Regex::new(#pattern).unwrap());
+        if let Err(__composited_error_params) = #validate {
             use ::serde_valid::validation::IntoError;
 
             #errors
