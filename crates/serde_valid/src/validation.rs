@@ -139,7 +139,9 @@ macro_rules! impl_composited_validation_1args {
             ) -> Result<(), Composited<$Error>>;
         }
 
-        impl<T: ?Sized> $ValidateCompositedTrait for T
+        // Keep the blanket impl `Sized`: downstream crates may already provide
+        // both traits explicitly for their own dynamically sized types.
+        impl<T> $ValidateCompositedTrait for T
         where
             T: $ValidateTrait,
         {
@@ -565,7 +567,9 @@ macro_rules! impl_generic_composited_validation_1args {
         $Error:ident,
         $type:ty
     ) => {
-        impl<T: ?Sized> $ValidateCompositedTrait<$type> for T
+        // Keep the blanket impl `Sized`: downstream crates may already provide
+        // both traits explicitly for their own dynamically sized types.
+        impl<T> $ValidateCompositedTrait<$type> for T
         where
             T: $ValidateTrait<$type>,
         {
@@ -581,6 +585,29 @@ macro_rules! impl_generic_composited_validation_1args {
 }
 
 pub(crate) use impl_generic_composited_validation_1args;
+
+// These foreign DSTs cannot receive conflicting downstream implementations.
+macro_rules! impl_unsized_composited_validation_1args {
+    (
+        $ValidateCompositedTrait:ident::$validate_composited_method:ident,
+        $ValidateTrait:ident::$validate_method:ident,
+        $limit_type:ty,
+        $Error:ty,
+        [$($type:ty),+ $(,)?]
+    ) => {
+        $(
+            impl $ValidateCompositedTrait for $type {
+                fn $validate_composited_method(
+                    &self,
+                    limit: $limit_type,
+                ) -> Result<(), Composited<$Error>> {
+                    <$type as $ValidateTrait>::$validate_method(self, limit)
+                        .map_err(Composited::Single)
+                }
+            }
+        )+
+    };
+}
 
 // Number
 impl_composited_validation_1args!(
@@ -637,6 +664,14 @@ impl_composited_validation_1args!(
         V: ValidateCompositedMaxLength;
 );
 
+impl_unsized_composited_validation_1args!(
+    ValidateCompositedMaxLength::validate_composited_max_length,
+    ValidateMaxLength::validate_max_length,
+    usize,
+    MaxLengthError,
+    [str, std::ffi::OsStr, std::path::Path]
+);
+
 impl_composited_validation_1args!(
     pub trait ValidateCompositedMinLength {
         fn validate_composited_min_length(
@@ -651,6 +686,14 @@ impl_composited_validation_1args!(
         V: ValidateCompositedMinLength;
 );
 
+impl_unsized_composited_validation_1args!(
+    ValidateCompositedMinLength::validate_composited_min_length,
+    ValidateMinLength::validate_min_length,
+    usize,
+    MinLengthError,
+    [str, std::ffi::OsStr, std::path::Path]
+);
+
 impl_composited_validation_1args!(
     pub trait ValidateCompositedPattern {
         fn validate_composited_pattern(
@@ -663,6 +706,14 @@ impl_composited_validation_1args!(
     impl<K, V> ValidateCompositedPattern for std::collections::HashMap<K, V>
     where
         V: ValidateCompositedPattern;
+);
+
+impl_unsized_composited_validation_1args!(
+    ValidateCompositedPattern::validate_composited_pattern,
+    ValidatePattern::validate_pattern,
+    &regex::Regex,
+    PatternError,
+    [str, std::ffi::OsStr, std::path::Path]
 );
 
 // Object

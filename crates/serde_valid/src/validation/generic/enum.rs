@@ -61,7 +61,8 @@ macro_rules! impl_validate_generic_enumerate_literal {
             }
         }
 
-        impl<T: ?Sized> ValidateCompositedEnum<&[$type]> for T
+        // Keep the blanket impl `Sized` to preserve downstream coherence.
+        impl<T> ValidateCompositedEnum<&[$type]> for T
         where
             T: ValidateEnum<$type>,
         {
@@ -207,7 +208,8 @@ impl ValidateEnum<&'static str> for std::path::Path {
     }
 }
 
-impl<T: ?Sized> ValidateCompositedEnum<&[&'static str]> for T
+// Keep the blanket impl `Sized` to preserve downstream coherence.
+impl<T> ValidateCompositedEnum<&[&'static str]> for T
 where
     T: ValidateEnum<&'static str>,
 {
@@ -219,6 +221,24 @@ where
             .map_err(crate::validation::Composited::Single)
     }
 }
+
+macro_rules! impl_unsized_composited_enum {
+    ($($type:ty),+ $(,)?) => {
+        $(
+            impl<'a> ValidateCompositedEnum<&'a [&'static str]> for $type {
+                fn validate_composited_enum(
+                    &self,
+                    limit: &'a [&'static str],
+                ) -> Result<(), crate::validation::Composited<EnumError>> {
+                    <$type as ValidateEnum<&'static str>>::validate_enum(self, limit)
+                        .map_err(crate::validation::Composited::Single)
+                }
+            }
+        )+
+    };
+}
+
+impl_unsized_composited_enum!(str, std::ffi::OsStr, std::path::Path);
 
 #[cfg(test)]
 mod tests {

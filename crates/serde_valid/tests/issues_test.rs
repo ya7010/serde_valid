@@ -144,11 +144,126 @@ mod issue107 {
 }
 
 mod issue125 {
+    #![allow(non_snake_case)]
+
     use indexmap::IndexMap;
     use serde::Deserialize;
     use serde_json::json;
     use serde_valid::{EnumError, Validate, ValidateEnum};
     use std::collections::HashMap;
+
+    #[allow(dead_code)]
+    struct DownstreamUnsized([u8]);
+
+    impl serde_valid::ValidateMaxLength for DownstreamUnsized {
+        fn validate_max_length(
+            &self,
+            _max_length: usize,
+        ) -> Result<(), serde_valid::MaxLengthError> {
+            Ok(())
+        }
+    }
+
+    impl serde_valid::validation::ValidateCompositedMaxLength for DownstreamUnsized {
+        fn validate_composited_max_length(
+            &self,
+            _max_length: usize,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaxLengthError>> {
+            Ok(())
+        }
+    }
+
+    impl serde_valid::ValidateMinimum<i32> for DownstreamUnsized {
+        fn validate_minimum(&self, _minimum: i32) -> Result<(), serde_valid::MinimumError> {
+            Ok(())
+        }
+    }
+
+    impl serde_valid::validation::ValidateCompositedMinimum<i32> for DownstreamUnsized {
+        fn validate_composited_minimum(
+            &self,
+            _minimum: i32,
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinimumError>> {
+            Ok(())
+        }
+    }
+
+    impl serde_valid::ValidateEnum<i32> for DownstreamUnsized {
+        fn validate_enum(&self, _candidates: &[i32]) -> Result<(), serde_valid::EnumError> {
+            Ok(())
+        }
+    }
+
+    impl<'a> serde_valid::validation::ValidateCompositedEnum<&'a [i32]> for DownstreamUnsized {
+        fn validate_composited_enum(
+            &self,
+            _candidates: &'a [i32],
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::EnumError>> {
+            Ok(())
+        }
+    }
+
+    #[allow(deprecated)]
+    impl serde_valid::ValidateEnumerate<i32> for DownstreamUnsized {
+        fn validate_enumerate(&self, _candidates: &[i32]) -> Result<(), serde_valid::EnumError> {
+            Ok(())
+        }
+    }
+
+    #[allow(deprecated)]
+    impl<'a> serde_valid::validation::ValidateCompositedEnumerate<&'a [i32]> for DownstreamUnsized {
+        fn validate_composited_enumerate(
+            &self,
+            _candidates: &'a [i32],
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::EnumError>> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn downstream_unsized_types_can_keep_explicit_composited_impls() {
+        fn assert_impl<T: ?Sized>()
+        where
+            T: serde_valid::ValidateMaxLength
+                + serde_valid::validation::ValidateCompositedMaxLength
+                + serde_valid::ValidateMinimum<i32>
+                + serde_valid::validation::ValidateCompositedMinimum<i32>
+                + serde_valid::ValidateEnum<i32>
+                + serde_valid::ValidateEnumerate<i32>,
+            for<'a> T: serde_valid::validation::ValidateCompositedEnum<&'a [i32]>
+                + serde_valid::validation::ValidateCompositedEnumerate<&'a [i32]>,
+        {
+        }
+
+        assert_impl::<DownstreamUnsized>();
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn foreign_dst_terminals_keep_composited_validation_support() {
+        fn assert_string_validators<T: ?Sized>()
+        where
+            T: serde_valid::validation::ValidateCompositedMaxLength
+                + serde_valid::validation::ValidateCompositedMinLength
+                + serde_valid::validation::ValidateCompositedPattern,
+        {
+        }
+
+        fn assert_enum_validators<T: ?Sized>()
+        where
+            for<'a> T: serde_valid::validation::ValidateCompositedEnum<&'a [&'static str]>
+                + serde_valid::validation::ValidateCompositedEnumerate<&'a [&'static str]>,
+        {
+        }
+
+        assert_string_validators::<str>();
+        assert_string_validators::<std::ffi::OsStr>();
+        assert_string_validators::<std::path::Path>();
+        assert_enum_validators::<str>();
+        assert_enum_validators::<std::ffi::OsStr>();
+        assert_enum_validators::<std::path::Path>();
+    }
 
     #[derive(Debug, Deserialize, Validate)]
     struct Child {
@@ -252,6 +367,59 @@ mod issue125 {
         .to_string();
         assert!(!enum_errors.contains("must match the pattern"));
         assert!(enum_errors.contains("must be in"));
+    }
+
+    #[allow(non_snake_case)]
+    #[derive(Validate)]
+    struct PatternIdentifierHygiene {
+        #[validate(pattern = "^a$")]
+        #[validate(pattern = "^b$")]
+        value: String,
+        #[validate(pattern = "^a$")]
+        foo: String,
+        #[validate(pattern = "^b$")]
+        FOO: String,
+        #[validate(pattern = "^a$")]
+        r#type: String,
+        #[validate(pattern = "^a$")]
+        __pattern: String,
+        #[validate(pattern = "^a$")]
+        __SERDE_VALID_PATTERN: String,
+    }
+
+    #[test]
+    fn pattern_validators_use_field_independent_scoped_identifiers() {
+        let errors = serde_json::to_value(
+            PatternIdentifierHygiene {
+                value: "invalid".to_owned(),
+                foo: "invalid".to_owned(),
+                FOO: "invalid".to_owned(),
+                r#type: "invalid".to_owned(),
+                __pattern: "invalid".to_owned(),
+                __SERDE_VALID_PATTERN: "invalid".to_owned(),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            errors["properties"]["value"]["errors"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+        for field in ["foo", "FOO", "r#type", "__pattern", "__SERDE_VALID_PATTERN"] {
+            let field_errors = errors["properties"][field]["errors"]
+                .as_array()
+                .unwrap_or_else(|| panic!("missing pattern error for {field}: {errors}"));
+            assert_eq!(
+                field_errors.len(),
+                1,
+                "missing pattern error for {field}: {errors}"
+            );
+        }
     }
 
     #[derive(Debug, Validate)]
@@ -1372,6 +1540,18 @@ mod issue125 {
 
     #[allow(dead_code)]
     impl<T> InherentMethodShadow<T> {
+        fn validate_min_items(&self, _minimum: usize) -> Result<(), serde_valid::MinItemsError> {
+            Ok(())
+        }
+
+        fn validate_max_items(&self, _maximum: usize) -> Result<(), serde_valid::MaxItemsError> {
+            Ok(())
+        }
+
+        fn validate_unique_items(&self) -> Result<(), serde_valid::UniqueItemsError> {
+            Ok(())
+        }
+
         fn validate(&self) -> Result<(), serde_valid::validation::Errors> {
             Ok(())
         }

@@ -27,11 +27,17 @@ fn inner_extract_string_pattern_validator(
     let rename = rename_map.get(field_name).unwrap_or(&field_key);
     let errors = field.errors_variable();
     let pattern = get_str(validation_value)?;
+    let field_ident_name = field_ident.to_string();
+    let field_ident_name = field_ident_name
+        .strip_prefix("r#")
+        .unwrap_or(&field_ident_name);
     let pattern_ident = syn::Ident::new(
-        &format!("{}_PATTERN", field_ident).to_uppercase(),
+        &format!("{field_ident_name}_PATTERN").to_uppercase(),
         field_ident.span(),
     );
-    let pattern_variable = syn::Ident::new("__pattern", field_ident.span());
+    let pattern_variable = quote!(
+        #pattern_ident.get_or_init(|| ::serde_valid::export::regex::Regex::new(#pattern).unwrap())
+    );
     let validate = quote_composited_autoderef!(
         fixed field_ident, pattern_variable, &::serde_valid::export::regex::Regex,
         ValidateCompositedPattern, validate_composited_pattern,
@@ -39,15 +45,16 @@ fn inner_extract_string_pattern_validator(
     );
 
     Ok(quote!(
-        static #pattern_ident : ::serde_valid::export::once_cell::sync::OnceCell<::serde_valid::export::regex::Regex> = ::serde_valid::export::once_cell::sync::OnceCell::new();
-        let #pattern_variable = #pattern_ident.get_or_init(|| ::serde_valid::export::regex::Regex::new(#pattern).unwrap());
-        if let Err(__composited_error_params) = #validate {
-            use ::serde_valid::validation::IntoError;
+        {
+            static #pattern_ident : ::serde_valid::export::once_cell::sync::OnceCell<::serde_valid::export::regex::Regex> = ::serde_valid::export::once_cell::sync::OnceCell::new();
+            if let Err(__composited_error_params) = #validate {
+                use ::serde_valid::validation::IntoError;
 
-            #errors
-                .entry(#rename)
-                .or_default()
-                .push(__composited_error_params.into_error_by(#message_format));
+                #errors
+                    .entry(#rename)
+                    .or_default()
+                    .push(__composited_error_params.into_error_by(#message_format));
+            }
         }
     ))
 }
