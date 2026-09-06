@@ -7,6 +7,18 @@ pub use nested_meta::NestedMeta;
 use proc_macro2::TokenStream;
 pub use single_ident_path::SingleIdentPath;
 
+pub fn rule_vec_errors_ident() -> syn::Ident {
+    syn::Ident::new("__rule_vec_errors", proc_macro2::Span::mixed_site())
+}
+
+pub fn property_vec_errors_map_ident() -> syn::Ident {
+    syn::Ident::new("__property_vec_errors_map", proc_macro2::Span::mixed_site())
+}
+
+pub fn item_vec_errors_map_ident() -> syn::Ident {
+    syn::Ident::new("__item_vec_errors_map", proc_macro2::Span::mixed_site())
+}
+
 pub type CommaSeparatedTokenStreams = syn::punctuated::Punctuated<TokenStream, syn::token::Comma>;
 pub type CommaSeparatedNestedMetas = syn::punctuated::Punctuated<NestedMeta, syn::token::Comma>;
 pub type CommaSeparatedMetas = syn::punctuated::Punctuated<syn::Meta, syn::token::Comma>;

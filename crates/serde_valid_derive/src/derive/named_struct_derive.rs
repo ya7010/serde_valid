@@ -46,6 +46,8 @@ pub fn expand_named_struct_derive(
     };
 
     let fields_errors = object_errors_tokens();
+    let rule_vec_errors = crate::types::rule_vec_errors_ident();
+    let property_vec_errors_map = crate::types::property_vec_errors_map_ident();
 
     let warnings = warnings
         .into_iter()
@@ -56,15 +58,15 @@ pub fn expand_named_struct_derive(
     if errors.is_empty() {
         Ok(quote!(
             impl #impl_generics ::serde_valid::Validate for #ident #type_generics #where_clause {
-                fn validate(&self) -> std::result::Result<(), ::serde_valid::validation::Errors> {
+                fn validate(&self) -> ::std::result::Result<(), ::serde_valid::validation::Errors> {
                     #(#warnings)*
-                    let mut __rule_vec_errors = ::serde_valid::validation::VecErrors::new();
-                    let mut __property_vec_errors_map = ::serde_valid::validation::PropertyVecErrorsMap::new();
+                    let mut #rule_vec_errors = ::serde_valid::validation::VecErrors::new();
+                    let mut #property_vec_errors_map = ::serde_valid::validation::PropertyVecErrorsMap::new();
 
                     #field_validates
                     #struct_validations
 
-                    if __rule_vec_errors.is_empty() && __property_vec_errors_map.is_empty() {
+                    if #rule_vec_errors.is_empty() && #property_vec_errors_map.is_empty() {
                         Ok(())
                     } else {
                         Err(#fields_errors)

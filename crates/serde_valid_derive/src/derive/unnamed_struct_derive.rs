@@ -50,6 +50,8 @@ pub fn expand_unnamed_struct_derive(
     } else {
         new_type_errors_tokens()
     };
+    let rule_vec_errors = crate::types::rule_vec_errors_ident();
+    let item_vec_errors_map = crate::types::item_vec_errors_map_ident();
 
     let warnings = warnings
         .into_iter()
@@ -61,14 +63,14 @@ pub fn expand_unnamed_struct_derive(
         Ok(quote!(
             #(#warnings)*
             impl #impl_generics ::serde_valid::Validate for #ident #type_generics #where_clause {
-                fn validate(&self) -> std::result::Result<(), ::serde_valid::validation::Errors> {
-                    let mut __rule_vec_errors = ::serde_valid::validation::VecErrors::new();
-                    let mut __item_vec_errors_map = ::serde_valid::validation::ItemVecErrorsMap::new();
+                fn validate(&self) -> ::std::result::Result<(), ::serde_valid::validation::Errors> {
+                    let mut #rule_vec_errors = ::serde_valid::validation::VecErrors::new();
+                    let mut #item_vec_errors_map = ::serde_valid::validation::ItemVecErrorsMap::new();
 
                     #field_validates
                     #struct_validations
 
-                    if __rule_vec_errors.is_empty() && __item_vec_errors_map.is_empty() {
+                    if #rule_vec_errors.is_empty() && #item_vec_errors_map.is_empty() {
                         Ok(())
                     } else {
                         Err(#fields_errors)

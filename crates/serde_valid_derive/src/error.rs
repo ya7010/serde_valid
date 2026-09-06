@@ -9,10 +9,12 @@ use quote::quote;
 use syn::spanned::Spanned;
 
 pub fn object_errors_tokens() -> TokenStream {
+    let rule_vec_errors = crate::types::rule_vec_errors_ident();
+    let property_vec_errors_map = crate::types::property_vec_errors_map_ident();
     quote!(::serde_valid::validation::Errors::Object(
         ::serde_valid::validation::ObjectErrors::new(
-            __rule_vec_errors,
-            __property_vec_errors_map
+            #rule_vec_errors,
+            #property_vec_errors_map
                 .into_iter()
                 .map(|(field, errors)| {
                     let __field_errors = errors
@@ -40,10 +42,12 @@ pub fn object_errors_tokens() -> TokenStream {
 }
 
 pub fn array_errors_tokens() -> TokenStream {
+    let rule_vec_errors = crate::types::rule_vec_errors_ident();
+    let item_vec_errors_map = crate::types::item_vec_errors_map_ident();
     quote!(::serde_valid::validation::Errors::Array(
         ::serde_valid::validation::error::ArrayErrors::new(
-            __rule_vec_errors,
-            __item_vec_errors_map
+            #rule_vec_errors,
+            #item_vec_errors_map
                 .into_iter()
                 .map(|(index, errors)| {
                     let __field_errors = errors
@@ -71,11 +75,13 @@ pub fn array_errors_tokens() -> TokenStream {
 }
 
 pub fn new_type_errors_tokens() -> TokenStream {
+    let rule_vec_errors = crate::types::rule_vec_errors_ident();
+    let item_vec_errors_map = crate::types::item_vec_errors_map_ident();
     quote!(::serde_valid::validation::Errors::NewType(
-        __rule_vec_errors
+        #rule_vec_errors
             .into_iter()
             .chain(
-                __item_vec_errors_map
+                #item_vec_errors_map
                     .remove(&0)
                     .unwrap_or(vec![])
                     .into_iter()
