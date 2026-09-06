@@ -32,46 +32,22 @@ pub enum Composited<Error> {
 }
 
 fn merge_errors(errors: Vec<crate::validation::error::Error>) -> crate::validation::error::Errors {
-    let mut item_errors = vec![];
-    let mut property_errors = vec![];
-    let mut errors = errors
+    errors
         .into_iter()
-        .filter_map(|error| match error {
+        .map(|error| match error {
             crate::validation::error::Error::Items(errors) => {
-                item_errors.push(errors);
-                None
+                crate::validation::error::Errors::Array(errors)
             }
             crate::validation::error::Error::Properties(errors) => {
-                property_errors.push(errors);
-                None
+                crate::validation::error::Errors::Object(errors)
             }
-            error => Some(error),
+            error => crate::validation::error::Errors::NewType(vec![error]),
         })
-        .collect::<Vec<_>>();
-
-    if !property_errors.is_empty() {
-        let property_errors = property_errors
-            .into_iter()
-            .reduce(|mut a, b| {
-                a.merge(b);
-                a
-            })
-            .unwrap();
-        errors.extend(property_errors.errors);
-        crate::validation::error::Errors::Object(crate::validation::error::ObjectErrors::new(
-            errors,
-            property_errors.properties,
-        ))
-    } else if !item_errors.is_empty() {
-        let item_errors = item_errors.into_iter().reduce(|a, b| a.merge(b)).unwrap();
-        errors.extend(item_errors.errors);
-        crate::validation::error::Errors::Array(crate::validation::error::ArrayErrors::new(
-            errors,
-            item_errors.items,
-        ))
-    } else {
-        crate::validation::error::Errors::NewType(errors)
-    }
+        .reduce(|mut errors, other| {
+            errors.merge(other);
+            errors
+        })
+        .unwrap_or_else(|| crate::validation::error::Errors::NewType(Vec::new()))
 }
 
 macro_rules! impl_into_error {

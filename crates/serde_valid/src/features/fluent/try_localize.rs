@@ -31,6 +31,25 @@ impl TryLocalize for Errors<crate::validation::Error> {
             Errors::Array(array) => Ok(Errors::Array(array.try_localize(bundle)?)),
             Errors::Object(object) => Ok(Errors::Object(object.try_localize(bundle)?)),
             Errors::NewType(newtype) => Ok(Errors::NewType(newtype.try_localize(bundle)?)),
+            Errors::Mixed(mixed) => {
+                let mut localization_errors = Vec::new();
+                let errors = mixed.errors.try_localize(bundle).map_err(|errors| {
+                    localization_errors.extend(errors);
+                });
+                let items = mixed.items.try_localize(bundle).map_err(|errors| {
+                    localization_errors.extend(errors);
+                });
+                let properties = mixed.properties.try_localize(bundle).map_err(|errors| {
+                    localization_errors.extend(errors);
+                });
+
+                match (errors, items, properties) {
+                    (Ok(errors), Ok(items), Ok(properties)) => Ok(Errors::Mixed(Box::new(
+                        crate::validation::MixedErrors::new(errors, items, properties),
+                    ))),
+                    _ => Err(localization_errors),
+                }
+            }
         }
     }
 }

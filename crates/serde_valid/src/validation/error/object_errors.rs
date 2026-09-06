@@ -29,10 +29,7 @@ impl<E> ObjectErrors<E> {
     }
 }
 
-impl<E> ObjectErrors<E>
-where
-    E: Clone,
-{
+impl<E> ObjectErrors<E> {
     pub fn merge(&mut self, other: ObjectErrors<E>) {
         self.errors.extend(other.errors);
 

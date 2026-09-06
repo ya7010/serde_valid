@@ -15,8 +15,8 @@ pub use composited::Composited;
 
 pub use array::{ValidateMaxItems, ValidateMinItems, ValidateUniqueItems};
 pub use error::{
-    ArrayErrors, Error, Errors, IntoError, ItemErrorsMap, ItemVecErrorsMap, ObjectErrors,
-    PropertyErrorsMap, PropertyVecErrorsMap, VecErrors,
+    ArrayErrors, Error, Errors, IntoError, ItemErrorsMap, ItemVecErrorsMap, MixedErrors,
+    ObjectErrors, PropertyErrorsMap, PropertyVecErrorsMap, VecErrors,
 };
 pub use generic::ValidateEnum;
 #[allow(deprecated)]

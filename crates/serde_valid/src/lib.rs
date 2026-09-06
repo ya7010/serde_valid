@@ -609,6 +609,33 @@ pub trait Validate {
     fn validate(&self) -> std::result::Result<(), self::validation::Errors>;
 }
 
+impl<T> Validate for &T
+where
+    T: Validate + ?Sized,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        (*self).validate()
+    }
+}
+
+impl<T> Validate for Box<T>
+where
+    T: Validate + ?Sized,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        self.as_ref().validate()
+    }
+}
+
+impl<T> Validate for Cow<'_, T>
+where
+    T: ToOwned + Validate + ?Sized,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        self.as_ref().validate()
+    }
+}
+
 impl<T> Validate for Vec<T>
 where
     T: Validate,
@@ -678,53 +705,24 @@ where
     }
 }
 
-impl<T> Validate for &[T]
-where
-    T: Validate,
-{
-    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
-        self.as_ref().validate()
-    }
-}
-
-impl<T> Validate for Box<[T]>
-where
-    T: Validate,
-{
-    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
-        self.as_ref().validate()
-    }
-}
-
-impl<T, const N: usize> Validate for &[T; N]
-where
-    T: Validate,
-{
-    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
-        self.as_ref().validate()
-    }
-}
-
-impl<T, const N: usize> Validate for Box<[T; N]>
-where
-    T: Validate,
-{
-    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
-        self.as_ref().validate()
-    }
-}
-
 impl<K, V> Validate for HashMap<K, V>
 where
     K: AsRef<str>,
     V: Validate,
 {
     fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
-        let mut items = IndexMap::new();
+        let mut items: self::validation::PropertyErrorsMap<self::validation::Error> =
+            IndexMap::new();
 
         for (key, value) in self.iter() {
             if let Err(errors) = value.validate() {
-                items.insert(Cow::Owned(key.as_ref().to_owned()), errors);
+                let key = Cow::Owned(key.as_ref().to_owned());
+                match items.get_mut(&key) {
+                    Some(existing) => existing.merge(errors),
+                    None => {
+                        items.insert(key, errors);
+                    }
+                }
             }
         }
 
@@ -744,11 +742,18 @@ where
     V: Validate,
 {
     fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
-        let mut items = IndexMap::new();
+        let mut items: self::validation::PropertyErrorsMap<self::validation::Error> =
+            IndexMap::new();
 
         for (key, value) in self.iter() {
             if let Err(errors) = value.validate() {
-                items.insert(Cow::Owned(key.as_ref().to_owned()), errors);
+                let key = Cow::Owned(key.as_ref().to_owned());
+                match items.get_mut(&key) {
+                    Some(existing) => existing.merge(errors),
+                    None => {
+                        items.insert(key, errors);
+                    }
+                }
             }
         }
 

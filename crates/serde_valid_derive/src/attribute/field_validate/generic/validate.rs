@@ -30,6 +30,19 @@ pub fn extract_generic_validate_validator(
                 ::serde_valid::validation::Errors::NewType(__new_type_errors) => {
                     #errors.entry(#rename).or_default().extend(__new_type_errors);
                 }
+                ::serde_valid::validation::Errors::Mixed(__mixed_errors) => {
+                    let __errors = #errors.entry(#rename).or_default();
+                    __errors.extend(__mixed_errors.errors);
+                    __errors.push(::serde_valid::validation::Error::Items(
+                        ::serde_valid::validation::ArrayErrors::new(vec![], __mixed_errors.items)
+                    ));
+                    __errors.push(::serde_valid::validation::Error::Properties(
+                        ::serde_valid::validation::ObjectErrors::new(
+                            vec![],
+                            __mixed_errors.properties,
+                        )
+                    ));
+                }
             }
         }
     )))

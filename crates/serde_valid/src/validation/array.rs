@@ -10,6 +10,33 @@ use crate::{MaxItemsError, MinItemsError};
 
 macro_rules! impl_validate_array_length_items {
     ($ValidateTrait:ident, $validate_method:ident, $Error:ident) => {
+        impl<T> $ValidateTrait for &T
+        where
+            T: $ValidateTrait + ?Sized,
+        {
+            fn $validate_method(&self, limit: usize) -> Result<(), $Error> {
+                (*self).$validate_method(limit)
+            }
+        }
+
+        impl<T> $ValidateTrait for Box<T>
+        where
+            T: $ValidateTrait + ?Sized,
+        {
+            fn $validate_method(&self, limit: usize) -> Result<(), $Error> {
+                self.as_ref().$validate_method(limit)
+            }
+        }
+
+        impl<T> $ValidateTrait for std::borrow::Cow<'_, T>
+        where
+            T: std::borrow::ToOwned + $ValidateTrait + ?Sized,
+        {
+            fn $validate_method(&self, limit: usize) -> Result<(), $Error> {
+                self.as_ref().$validate_method(limit)
+            }
+        }
+
         impl<T> $ValidateTrait for Option<T>
         where
             T: $ValidateTrait,

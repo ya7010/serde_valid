@@ -1,10 +1,11 @@
-use super::{ArrayErrors, ObjectErrors, VecErrors};
+use super::{ArrayErrors, ItemErrorsMap, MixedErrors, ObjectErrors, PropertyErrorsMap, VecErrors};
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum Errors<E = crate::validation::Error> {
     Array(ArrayErrors<E>),
     Object(ObjectErrors<E>),
     NewType(VecErrors<E>),
+    Mixed(Box<MixedErrors<E>>),
 }
 
 impl<E> serde::Serialize for Errors<E>
@@ -26,62 +27,95 @@ where
 
                 serde::Serialize::serialize(&NewTypeErrors { errors: n }, serializer)
             }
+            Self::Mixed(mixed) => serde::Serialize::serialize(mixed, serializer),
         }
     }
 }
 
-impl<E> Errors<E>
-where
-    E: Clone,
-{
+impl<E> Errors<E> {
     pub fn merge(&mut self, other: Errors<E>) {
-        match self {
-            Errors::Array(a) => match other {
-                Errors::Array(b) => {
-                    a.errors.extend(b.errors);
+        let current = std::mem::replace(self, Errors::NewType(Vec::new()));
+        let mut parts = ErrorParts::from(current);
+        parts.merge(ErrorParts::from(other));
+        *self = parts.into();
+    }
+}
 
-                    for (index, item) in b.items {
-                        match a.items.get_mut(&index) {
-                            Some(errors) => errors.merge(item),
-                            None => {
-                                a.items.insert(index, item);
-                            }
-                        };
-                    }
-                }
-                Errors::Object(_) => {
-                    unreachable!("conflict Array and Object in serde_valid::validation::Errors")
-                }
-                Errors::NewType(errors) => {
-                    a.errors.extend(errors);
-                }
+struct ErrorParts<E> {
+    errors: VecErrors<E>,
+    items: Option<ItemErrorsMap<E>>,
+    properties: Option<PropertyErrorsMap<E>>,
+}
+
+impl<E> ErrorParts<E> {
+    fn merge(&mut self, other: Self) {
+        self.errors.extend(other.errors);
+        merge_structural_errors(&mut self.items, other.items);
+        merge_structural_errors(&mut self.properties, other.properties);
+    }
+}
+
+fn merge_structural_errors<K, E>(
+    target: &mut Option<indexmap::IndexMap<K, Errors<E>>>,
+    source: Option<indexmap::IndexMap<K, Errors<E>>>,
+) where
+    K: std::hash::Hash + Eq,
+{
+    let Some(source) = source else {
+        return;
+    };
+
+    let Some(target) = target else {
+        *target = Some(source);
+        return;
+    };
+
+    for (key, errors) in source {
+        match target.get_mut(&key) {
+            Some(existing) => existing.merge(errors),
+            None => {
+                target.insert(key, errors);
+            }
+        }
+    }
+}
+
+impl<E> From<Errors<E>> for ErrorParts<E> {
+    fn from(errors: Errors<E>) -> Self {
+        match errors {
+            Errors::Array(errors) => Self {
+                errors: errors.errors,
+                items: Some(errors.items),
+                properties: None,
             },
-            Errors::NewType(a) => match other {
-                Errors::Array(b) => {
-                    a.extend(b.errors);
-                    *self = Errors::Array(ArrayErrors::new(a.to_vec(), b.items));
-                }
-                Errors::Object(mut b) => {
-                    let mut errors = a.to_vec();
-                    errors.extend(b.errors);
-                    b.errors = errors;
-                    *self = Errors::Object(b);
-                }
-                Errors::NewType(b) => {
-                    a.extend(b);
-                }
+            Errors::Object(errors) => Self {
+                errors: errors.errors,
+                items: None,
+                properties: Some(errors.properties),
             },
-            Errors::Object(a) => match other {
-                Errors::Array(_) => {
-                    unreachable!("conflict Object and Array in serde_valid::validation::Errors")
-                }
-                Errors::Object(b) => {
-                    a.merge(b);
-                }
-                Errors::NewType(errors) => {
-                    a.errors.extend(errors);
-                }
+            Errors::NewType(errors) => Self {
+                errors,
+                items: None,
+                properties: None,
             },
+            Errors::Mixed(errors) => Self {
+                errors: errors.errors,
+                items: Some(errors.items),
+                properties: Some(errors.properties),
+            },
+        }
+    }
+}
+
+impl<E> From<ErrorParts<E>> for Errors<E> {
+    fn from(parts: ErrorParts<E>) -> Self {
+        match (parts.items, parts.properties) {
+            (Some(items), Some(properties)) => {
+                Errors::Mixed(Box::new(MixedErrors::new(parts.errors, items, properties)))
+            }
+            (Some(items), None) => Errors::Array(ArrayErrors::new(parts.errors, items)),
+            (None, Some(properties)) => Errors::Object(ObjectErrors::new(parts.errors, properties)),
+            (None, None) => Errors::NewType(parts.errors),
         }
     }
 }
@@ -102,6 +136,7 @@ where
                 let value = serde_json::json!({ "errors": errors });
                 std::fmt::Display::fmt(&value, f)
             }
+            Self::Mixed(errors) => std::fmt::Display::fmt(errors, f),
         }
     }
 }
@@ -127,7 +162,7 @@ mod tests {
     }
 
     #[test]
-    fn merging_object_errors_does_not_clone_existing_errors() {
+    fn merging_errors_does_not_clone_existing_errors() {
         let clone_count = Arc::new(AtomicUsize::new(0));
         let mut errors = Errors::Object(ObjectErrors::new(
             vec![CloneTracker(Arc::clone(&clone_count))],
@@ -140,5 +175,31 @@ mod tests {
         )));
 
         assert_eq!(clone_count.load(Ordering::Relaxed), 0);
+
+        let mut errors = Errors::NewType(vec![CloneTracker(Arc::clone(&clone_count))]);
+        errors.merge(Errors::Array(ArrayErrors::new(
+            Vec::new(),
+            ItemErrorsMap::new(),
+        )));
+        assert_eq!(clone_count.load(Ordering::Relaxed), 0);
+
+        let mut errors = Errors::NewType(vec![CloneTracker(Arc::clone(&clone_count))]);
+        errors.merge(Errors::Object(ObjectErrors::new(
+            Vec::new(),
+            PropertyErrorsMap::new(),
+        )));
+        assert_eq!(clone_count.load(Ordering::Relaxed), 0);
+    }
+
+    #[test]
+    fn merging_errors_does_not_require_clone() {
+        #[derive(Debug)]
+        struct NotClone;
+
+        let mut errors = Errors::NewType(vec![NotClone]);
+        errors.merge(Errors::Object(ObjectErrors::new(
+            Vec::new(),
+            PropertyErrorsMap::new(),
+        )));
     }
 }

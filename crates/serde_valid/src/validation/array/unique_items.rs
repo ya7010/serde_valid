@@ -43,6 +43,33 @@ pub trait ValidateUniqueItems {
     fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError>;
 }
 
+impl<T> ValidateUniqueItems for &T
+where
+    T: ValidateUniqueItems + ?Sized,
+{
+    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
+        (*self).validate_unique_items()
+    }
+}
+
+impl<T> ValidateUniqueItems for Box<T>
+where
+    T: ValidateUniqueItems + ?Sized,
+{
+    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
+        self.as_ref().validate_unique_items()
+    }
+}
+
+impl<T> ValidateUniqueItems for std::borrow::Cow<'_, T>
+where
+    T: std::borrow::ToOwned + ValidateUniqueItems + ?Sized,
+{
+    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
+        self.as_ref().validate_unique_items()
+    }
+}
+
 impl<T> ValidateUniqueItems for Vec<T>
 where
     T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
@@ -69,24 +96,6 @@ where
     }
 }
 
-impl<T> ValidateUniqueItems for &[T]
-where
-    T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
-{
-    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
-        self.as_ref().validate_unique_items()
-    }
-}
-
-impl<T> ValidateUniqueItems for Box<[T]>
-where
-    T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
-{
-    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
-        self.as_ref().validate_unique_items()
-    }
-}
-
 impl<T, const N: usize> ValidateUniqueItems for [T; N]
 where
     T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
@@ -97,24 +106,6 @@ where
         } else {
             Err(crate::UniqueItemsError {})
         }
-    }
-}
-
-impl<T, const N: usize> ValidateUniqueItems for &[T; N]
-where
-    T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
-{
-    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
-        self.as_ref().validate_unique_items()
-    }
-}
-
-impl<T, const N: usize> ValidateUniqueItems for Box<[T; N]>
-where
-    T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
-{
-    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
-        self.as_ref().validate_unique_items()
     }
 }
 
