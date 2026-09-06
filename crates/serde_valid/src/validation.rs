@@ -30,6 +30,83 @@ pub use object::{ValidateMaxProperties, ValidateMinProperties};
 pub use serde_valid_literal::{Literal, Number, Pattern};
 pub use string::{ValidateMaxLength, ValidateMinLength, ValidatePattern};
 
+macro_rules! impl_composited_wrapper_1args {
+    (
+        [$ValidateCompositedTrait:ident, $validate_composited_method:ident, $limit_type:ty, $Error:ty]
+        [$($generics:tt)*] $wrapper:ty => $inner:ty;
+        [$($bounds:tt)*]
+    ) => {
+        impl<$($generics)*> $ValidateCompositedTrait for $wrapper
+        where
+            $inner: $ValidateCompositedTrait,
+            $($bounds)*
+        {
+            fn $validate_composited_method(
+                &self,
+                limit: $limit_type,
+            ) -> Result<(), Composited<$Error>> {
+                let inner: &$inner = &**self;
+                $ValidateCompositedTrait::$validate_composited_method(inner, limit)
+            }
+        }
+    };
+}
+
+macro_rules! impl_generic_composited_wrapper_1args {
+    (
+        [$ValidateCompositedTrait:ident, $validate_composited_method:ident, $Error:ty]
+        [$($generics:tt)*] $wrapper:ty => $inner:ty;
+        [$($bounds:tt)*]
+    ) => {
+        #[allow(deprecated)]
+        impl<$($generics)*, C> $ValidateCompositedTrait<C> for $wrapper
+        where
+            C: Copy,
+            $inner: $ValidateCompositedTrait<C>,
+            $($bounds)*
+        {
+            fn $validate_composited_method(
+                &self,
+                limit: C,
+            ) -> Result<(), Composited<$Error>> {
+                let inner: &$inner = &**self;
+                $ValidateCompositedTrait::$validate_composited_method(inner, limit)
+            }
+        }
+    };
+}
+
+// Keep the supported transparent wrappers identical for every composited validator.
+// A fully generic wrapper impl overlaps the scalar blanket impl, so stable Rust
+// requires this closed list of standard container shapes.
+macro_rules! for_each_composited_wrapper {
+    ($callback:ident [$($context:tt)*]) => {
+        $callback!([$($context)*] [T] &[T] => [T]; []);
+        $callback!([$($context)*] [T] Box<[T]> => [T]; []);
+        $callback!([$($context)*] [T, const N: usize] &[T; N] => [T; N]; []);
+        $callback!([$($context)*] [T, const N: usize] Box<[T; N]> => [T; N]; []);
+        $callback!([$($context)*] [T] &Vec<T> => Vec<T>; []);
+        $callback!([$($context)*] [T] Box<Vec<T>> => Vec<T>; []);
+        $callback!([$($context)*] [T] &Option<T> => Option<T>; []);
+        $callback!([$($context)*] [T] Box<Option<T>> => Option<T>; []);
+        $callback!([
+            $($context)*
+        ] [K, V] &std::collections::HashMap<K, V> => std::collections::HashMap<K, V>; []);
+        $callback!([
+            $($context)*
+        ] [K, V] Box<std::collections::HashMap<K, V>> => std::collections::HashMap<K, V>; []);
+        $callback!([
+            $($context)*
+        ] [K, V] &indexmap::IndexMap<K, V> => indexmap::IndexMap<K, V>; []);
+        $callback!([
+            $($context)*
+        ] [K, V] Box<indexmap::IndexMap<K, V>> => indexmap::IndexMap<K, V>; []);
+        $callback!([
+            $($context)*
+        ] ['a, T] std::borrow::Cow<'a, [T]> => [T]; [[T]: std::borrow::ToOwned]);
+    };
+}
+
 macro_rules! impl_composited_validation_1args {
     (
         pub trait $ValidateCompositedTrait:ident {
@@ -141,77 +218,12 @@ macro_rules! impl_composited_validation_1args {
             }
         }
 
-        impl<T> $ValidateCompositedTrait for &[T]
-        where
-            T: $ValidateCompositedTrait,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: $limit_type,
-            ) -> Result<(), Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
-
-        impl<T> $ValidateCompositedTrait for Box<[T]>
-        where
-            T: $ValidateCompositedTrait,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: $limit_type,
-            ) -> Result<(), Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
-
-        impl<T, const N: usize> $ValidateCompositedTrait for &[T; N]
-        where
-            T: $ValidateCompositedTrait,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: $limit_type,
-            ) -> Result<(), Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
-
-        impl<T, const N: usize> $ValidateCompositedTrait for Box<[T; N]>
-        where
-            T: $ValidateCompositedTrait,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: $limit_type,
-            ) -> Result<(), Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
-
-        impl<T> $ValidateCompositedTrait for Box<Vec<T>>
-        where
-            T: $ValidateCompositedTrait,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: $limit_type,
-            ) -> Result<(), Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
-
-        impl<T> $ValidateCompositedTrait for Box<Option<T>>
-        where
-            T: $ValidateCompositedTrait,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: $limit_type,
-            ) -> Result<(), Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
+        for_each_composited_wrapper!(impl_composited_wrapper_1args [
+            $ValidateCompositedTrait,
+            $validate_composited_method,
+            $limit_type,
+            $Error
+        ]);
 
         impl<T> $ValidateCompositedTrait for Option<T>
         where
@@ -504,89 +516,11 @@ macro_rules! impl_composited_validation_1args {
             }
         }
 
-        $(#[$impl_meta])*
-        impl<T, U> $ValidateCompositedTrait<T> for &[U]
-        where
-            T: Copy,
-            U: $ValidateCompositedTrait<T>,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: T,
-            ) -> Result<(), crate::validation::Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
-
-        $(#[$impl_meta])*
-        impl<T, U> $ValidateCompositedTrait<T> for Box<[U]>
-        where
-            T: Copy,
-            U: $ValidateCompositedTrait<T>,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: T,
-            ) -> Result<(), crate::validation::Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
-
-        $(#[$impl_meta])*
-        impl<T, U, const N: usize> $ValidateCompositedTrait<T> for &[U; N]
-        where
-            T: Copy,
-            U: $ValidateCompositedTrait<T>,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: T,
-            ) -> Result<(), crate::validation::Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
-
-        $(#[$impl_meta])*
-        impl<T, U, const N: usize> $ValidateCompositedTrait<T> for Box<[U; N]>
-        where
-            T: Copy,
-            U: $ValidateCompositedTrait<T>,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: T,
-            ) -> Result<(), crate::validation::Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
-
-        $(#[$impl_meta])*
-        impl<T, U> $ValidateCompositedTrait<T> for Box<Vec<U>>
-        where
-            T: Copy,
-            U: $ValidateCompositedTrait<T>,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: T,
-            ) -> Result<(), crate::validation::Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
-
-        $(#[$impl_meta])*
-        impl<T, U> $ValidateCompositedTrait<T> for Box<Option<U>>
-        where
-            T: Copy,
-            U: $ValidateCompositedTrait<T>,
-        {
-            fn $validate_composited_method(
-                &self,
-                $limit: T,
-            ) -> Result<(), crate::validation::Composited<$Error>> {
-                self.as_ref().$validate_composited_method($limit)
-            }
-        }
+        for_each_composited_wrapper!(impl_generic_composited_wrapper_1args [
+            $ValidateCompositedTrait,
+            $validate_composited_method,
+            $Error
+        ]);
 
         $(#[$impl_meta])*
         impl<T, U> $ValidateCompositedTrait<T> for Option<U>
