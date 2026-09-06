@@ -1,19 +1,22 @@
 #![allow(dead_code)]
 #![deny(unfulfilled_lint_expectations)]
 
-#[expect(deprecated)]
 #[derive(serde_valid::Validate)]
 enum NamedVariant {
     Value {
+        #[expect(deprecated)]
         #[validate(enumerate = ["a"])]
         value: String,
     },
 }
 
-#[expect(deprecated)]
 #[derive(serde_valid::Validate)]
 enum TupleVariant {
-    Value(#[validate(enumerate = ["a"])] String),
+    Value(
+        #[expect(deprecated)]
+        #[validate(enumerate = ["a"])]
+        String,
+    ),
 }
 
 #[test]
