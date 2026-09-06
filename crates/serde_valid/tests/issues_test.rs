@@ -1314,6 +1314,51 @@ mod issue125 {
         }
     }
 
+    #[derive(Debug, Validate)]
+    struct AutoderefArrayValidatorWrappers {
+        #[validate(min_items = 3)]
+        #[validate(max_items = 1)]
+        #[validate(unique_items)]
+        rc_vec: std::rc::Rc<Vec<i32>>,
+        #[validate(min_items = 3)]
+        #[validate(max_items = 1)]
+        #[validate(unique_items)]
+        arc_vec: std::sync::Arc<Vec<i32>>,
+        #[validate(min_items = 3)]
+        #[validate(max_items = 1)]
+        #[validate(unique_items)]
+        pinned_vec: std::pin::Pin<Box<Vec<i32>>>,
+        #[validate(min_items = 3)]
+        #[validate(max_items = 1)]
+        #[validate(unique_items)]
+        custom_vec: InherentMethodShadow<Vec<i32>>,
+    }
+
+    #[test]
+    fn autoderef_wrappers_support_array_validators() {
+        let errors = serde_json::to_value(
+            AutoderefArrayValidatorWrappers {
+                rc_vec: std::rc::Rc::new(vec![1, 1]),
+                arc_vec: std::sync::Arc::new(vec![1, 1]),
+                pinned_vec: Box::pin(vec![1, 1]),
+                custom_vec: InherentMethodShadow(vec![1, 1]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+
+        for field in ["rc_vec", "arc_vec", "pinned_vec", "custom_vec"] {
+            assert_eq!(
+                errors["properties"][field]["errors"]
+                    .as_array()
+                    .unwrap()
+                    .len(),
+                3
+            );
+        }
+    }
+
     #[derive(Debug)]
     struct InherentMethodShadow<T>(T);
 
@@ -1327,6 +1372,10 @@ mod issue125 {
 
     #[allow(dead_code)]
     impl<T> InherentMethodShadow<T> {
+        fn validate(&self) -> Result<(), serde_valid::validation::Errors> {
+            Ok(())
+        }
+
         fn validate_composited_enum<C>(
             &self,
             _candidates: &[C],
@@ -1411,6 +1460,8 @@ mod issue125 {
 
     #[derive(Debug, Validate)]
     struct InherentMethodShadowConstraints {
+        #[validate]
+        nested: InherentMethodShadow<WrappedChild>,
         #[validate(r#enum = [1, 2])]
         enum_values: InherentMethodShadow<Vec<i32>>,
         #[validate(multiple_of = 2)]
@@ -1439,6 +1490,7 @@ mod issue125 {
     fn derive_dispatch_ignores_inherent_validator_method_names() {
         let errors = serde_json::to_value(
             InherentMethodShadowConstraints {
+                nested: InherentMethodShadow(WrappedChild { value: 0 }),
                 enum_values: InherentMethodShadow(vec![3]),
                 multiple_of: InherentMethodShadow(vec![3]),
                 minimum: InherentMethodShadow(vec![0]),
@@ -1460,6 +1512,7 @@ mod issue125 {
         .unwrap();
 
         for field in [
+            "nested",
             "enum_values",
             "multiple_of",
             "minimum",
@@ -1473,6 +1526,65 @@ mod issue125 {
             "pattern",
         ] {
             assert!(errors["properties"].get(field).is_some(), "missing {field}");
+        }
+    }
+
+    struct StaticEnumCandidates;
+
+    impl serde_valid::validation::ValidateCompositedEnum<&'static [i32]> for StaticEnumCandidates {
+        fn validate_composited_enum(
+            &self,
+            candidates: &'static [i32],
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::EnumError>> {
+            Err(serde_valid::validation::Composited::Single(
+                serde_valid::EnumError::new(candidates),
+            ))
+        }
+    }
+
+    #[derive(Validate)]
+    struct LifetimeSpecificEnumConstraint {
+        #[validate(r#enum = [1, 2])]
+        value: StaticEnumCandidates,
+    }
+
+    #[test]
+    fn enum_autoderef_preserves_lifetime_specific_trait_impls() {
+        assert!(LifetimeSpecificEnumConstraint {
+            value: StaticEnumCandidates,
+        }
+        .validate()
+        .is_err());
+    }
+
+    #[derive(Validate)]
+    struct DstAutoderefConstraints {
+        #[validate(min_length = 1)]
+        min_length: std::rc::Rc<str>,
+        #[validate(pattern = "^[a-z]+$")]
+        pattern: std::rc::Rc<str>,
+        #[validate(r#enum = ["allowed"])]
+        enum_value: std::rc::Rc<str>,
+    }
+
+    #[test]
+    fn autoderef_supports_dynamically_sized_targets() {
+        let errors = serde_json::to_value(
+            DstAutoderefConstraints {
+                min_length: std::rc::Rc::from(""),
+                pattern: std::rc::Rc::from("123"),
+                enum_value: std::rc::Rc::from("denied"),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap();
+
+        for field in ["min_length", "pattern", "enum_value"] {
+            assert!(
+                errors["properties"].get(field).is_some(),
+                "missing {field}: {errors}"
+            );
         }
     }
 

@@ -1,3 +1,6 @@
+// Method syntax is used only for selecting an autoderef receiver. The generated
+// helper names live in serde_valid's internal namespace, and each helper uses
+// trait-qualified dispatch once the receiver has been selected.
 macro_rules! quote_composited_autoderef {
     (
         generic $receiver:ident, $argument:ident,
@@ -81,26 +84,27 @@ macro_rules! quote_composited_autoderef {
         $autoderef_method:ident, $Error:ident
     ) => {
         quote::quote!({
-            trait __SerdeValidCompositedAutoderef<__Candidate> {
+            trait __SerdeValidCompositedAutoderef<'__candidate, __Candidate> {
                 fn $autoderef_method(
                     &self,
-                    candidates: &[__Candidate],
+                    candidates: &'__candidate [__Candidate],
                 ) -> ::std::result::Result<
                     (),
                     ::serde_valid::validation::Composited<::serde_valid::$Error>,
                 >;
             }
 
-            impl<__Receiver, __Candidate> __SerdeValidCompositedAutoderef<__Candidate>
-                for __Receiver
+            impl<'__candidate, __Receiver, __Candidate>
+                __SerdeValidCompositedAutoderef<'__candidate, __Candidate> for __Receiver
             where
-                __Receiver: for<'__candidate> ::serde_valid::validation::$ValidateCompositedTrait<
+                __Candidate: '__candidate,
+                __Receiver: ::serde_valid::validation::$ValidateCompositedTrait<
                         &'__candidate [__Candidate],
                     > + ?::std::marker::Sized,
             {
                 fn $autoderef_method(
                     &self,
-                    candidates: &[__Candidate],
+                    candidates: &'__candidate [__Candidate],
                 ) -> ::std::result::Result<
                     (),
                     ::serde_valid::validation::Composited<::serde_valid::$Error>,
@@ -113,6 +117,59 @@ macro_rules! quote_composited_autoderef {
             }
 
             (#$receiver).$autoderef_method(&[#$candidates])
+        })
+    };
+}
+
+macro_rules! quote_validation_autoderef {
+    (
+        zero $receiver:ident,
+        $ValidateTrait:ident, $validate_method:ident,
+        $autoderef_method:ident, $Error:ty
+    ) => {
+        quote::quote!({
+            trait __SerdeValidAutoderef {
+                fn $autoderef_method(&self) -> ::std::result::Result<(), $Error>;
+            }
+
+            impl<__Receiver> __SerdeValidAutoderef for __Receiver
+            where
+                __Receiver: ::serde_valid::$ValidateTrait + ?::std::marker::Sized,
+            {
+                fn $autoderef_method(&self) -> ::std::result::Result<(), $Error> {
+                    ::serde_valid::$ValidateTrait::$validate_method(self)
+                }
+            }
+
+            (#$receiver).$autoderef_method()
+        })
+    };
+    (
+        fixed $receiver:ident, $argument:ident, $Argument:ty,
+        $ValidateTrait:ident, $validate_method:ident,
+        $autoderef_method:ident, $Error:ty
+    ) => {
+        quote::quote!({
+            trait __SerdeValidAutoderef {
+                fn $autoderef_method(
+                    &self,
+                    argument: $Argument,
+                ) -> ::std::result::Result<(), $Error>;
+            }
+
+            impl<__Receiver> __SerdeValidAutoderef for __Receiver
+            where
+                __Receiver: ::serde_valid::$ValidateTrait + ?::std::marker::Sized,
+            {
+                fn $autoderef_method(
+                    &self,
+                    argument: $Argument,
+                ) -> ::std::result::Result<(), $Error> {
+                    ::serde_valid::$ValidateTrait::$validate_method(self, argument)
+                }
+            }
+
+            (#$receiver).$autoderef_method(#$argument)
         })
     };
 }
