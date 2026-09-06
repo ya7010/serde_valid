@@ -16,7 +16,7 @@ pub fn object_errors_tokens() -> TokenStream {
                 .into_iter()
                 .map(|(field, errors)| {
                     let mut __field_items_errors = vec![];
-                    let mut __field_properties_errors = None;
+                    let mut __field_properties_errors = vec![];
                     let mut __field_errors: ::serde_valid::validation::VecErrors = errors
                         .into_iter()
                         .filter_map(|error| match error {
@@ -25,14 +25,21 @@ pub fn object_errors_tokens() -> TokenStream {
                                 None
                             }
                             ::serde_valid::validation::Error::Properties(__object_errors) => {
-                                __field_properties_errors = Some(__object_errors);
+                                __field_properties_errors.push(__object_errors);
                                 None
                             }
                             _ => Some(error),
                         })
                         .collect();
 
-                    if let Some(__object_errors) = __field_properties_errors {
+                    if !__field_properties_errors.is_empty() {
+                        let __object_errors = __field_properties_errors
+                            .into_iter()
+                            .reduce(|mut a, b| {
+                                a.merge(b);
+                                a
+                            })
+                            .unwrap();
                         __field_errors.extend(__object_errors.errors);
 
                         (
@@ -80,7 +87,7 @@ pub fn array_errors_tokens() -> TokenStream {
                 .into_iter()
                 .map(|(index, errors)| {
                     let mut __field_items_errors = vec![];
-                    let mut __field_properties_errors = None;
+                    let mut __field_properties_errors = vec![];
                     let mut __field_errors: ::serde_valid::validation::VecErrors = errors
                         .into_iter()
                         .filter_map(|error| match error {
@@ -89,14 +96,21 @@ pub fn array_errors_tokens() -> TokenStream {
                                 None
                             }
                             ::serde_valid::validation::Error::Properties(__object_errors) => {
-                                __field_properties_errors = Some(__object_errors);
+                                __field_properties_errors.push(__object_errors);
                                 None
                             }
                             _ => Some(error),
                         })
                         .collect();
 
-                    if let Some(__object_errors) = __field_properties_errors {
+                    if !__field_properties_errors.is_empty() {
+                        let __object_errors = __field_properties_errors
+                            .into_iter()
+                            .reduce(|mut a, b| {
+                                a.merge(b);
+                                a
+                            })
+                            .unwrap();
                         __field_errors.extend(__object_errors.errors);
 
                         (
