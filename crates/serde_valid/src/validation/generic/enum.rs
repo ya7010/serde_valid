@@ -176,6 +176,24 @@ where
     }
 }
 
+impl<C, T> ValidateEnum<C> for std::rc::Rc<T>
+where
+    T: ValidateEnum<C> + ?Sized,
+{
+    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
+        self.as_ref().validate_enum(candidates)
+    }
+}
+
+impl<C, T> ValidateEnum<C> for std::sync::Arc<T>
+where
+    T: ValidateEnum<C> + ?Sized,
+{
+    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
+        self.as_ref().validate_enum(candidates)
+    }
+}
+
 macro_rules! impl_validate_generic_enumerate_path {
     ($type:ty) => {
         impl ValidateEnum<&'static str> for $type {

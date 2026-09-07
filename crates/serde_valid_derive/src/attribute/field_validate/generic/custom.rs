@@ -71,12 +71,13 @@ fn inner_extract_generic_custom_validator(
     custom_fn_name: &TokenStream,
     errors: &TokenStream,
 ) -> Result<Validator, crate::Errors> {
+    let inner_errors = crate::types::generated_ident("__serde_valid_errors");
     Ok(quote!(
-        if let ::std::result::Result::Err(__errors) = ::serde_valid::validation::custom::wrap_into_vec_errors(#custom_fn_name(#field_ident)) {
+        if let ::std::result::Result::Err(#inner_errors) = ::serde_valid::validation::custom::wrap_into_vec_errors(#custom_fn_name(#field_ident)) {
             #errors
                 .entry(#rename)
                 .or_default()
-                .extend(__errors);
+                .extend(#inner_errors);
         };
     ))
 }

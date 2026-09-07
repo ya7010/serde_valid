@@ -13,9 +13,7 @@ macro_rules! extract_numeric_range_validator{
         $extract_validator:ident,
         $inner_extract_validator:ident,
         $ValidateCompositedTrait:ident,
-        $validate_composited_method:ident,
-        $autoderef_method:ident,
-        $Error:ident
+        $validate_composited_method:ident
     ) => {
         pub fn $extract_validator(
             field: &impl Field,
@@ -37,20 +35,21 @@ macro_rules! extract_numeric_range_validator{
             let field_key = field.key();
             let rename = rename_map.get(field_name).unwrap_or(&field_key);
             let errors = field.errors_variable();
-            let validate = quote_composited_autoderef!(
-                generic field_ident, validation_value,
-                $ValidateCompositedTrait, $validate_composited_method,
-                $autoderef_method, $Error
+            let validate = quote_composited_validation!(
+                field_ident, validation_value,
+                $ValidateCompositedTrait, $validate_composited_method
             );
+            let error_params =
+                crate::types::generated_ident("__serde_valid_composited_error_params");
 
             Ok(quote!(
-                if let ::std::result::Result::Err(__composited_error_params) = #validate {
+                if let ::std::result::Result::Err(#error_params) = #validate {
                     use ::serde_valid::validation::IntoError;
 
                     #errors
                         .entry(#rename)
                         .or_default()
-                        .push(__composited_error_params.into_error_by(#message_format));
+                        .push(#error_params.into_error_by(#message_format));
                 }
             ))
         }
@@ -61,31 +60,23 @@ extract_numeric_range_validator!(
     extract_numeric_maximum_validator,
     inner_extract_numeric_maximum_validator,
     ValidateCompositedMaximum,
-    validate_composited_maximum,
-    __serde_valid_autoderef_validate_composited_maximum,
-    MaximumError
+    validate_composited_maximum
 );
 extract_numeric_range_validator!(
     extract_numeric_minimum_validator,
     inner_extract_numeric_minimum_validator,
     ValidateCompositedMinimum,
-    validate_composited_minimum,
-    __serde_valid_autoderef_validate_composited_minimum,
-    MinimumError
+    validate_composited_minimum
 );
 extract_numeric_range_validator!(
     extract_numeric_exclusive_maximum_validator,
     inner_extract_numeric_exclusive_maximum_validator,
     ValidateCompositedExclusiveMaximum,
-    validate_composited_exclusive_maximum,
-    __serde_valid_autoderef_validate_composited_exclusive_maximum,
-    ExclusiveMaximumError
+    validate_composited_exclusive_maximum
 );
 extract_numeric_range_validator!(
     extract_numeric_exclusive_minimum_validator,
     inner_extract_numeric_exclusive_minimum_validator,
     ValidateCompositedExclusiveMinimum,
-    validate_composited_exclusive_minimum,
-    __serde_valid_autoderef_validate_composited_exclusive_minimum,
-    ExclusiveMinimumError
+    validate_composited_exclusive_minimum
 );

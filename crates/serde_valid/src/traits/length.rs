@@ -13,6 +13,24 @@ where
     }
 }
 
+impl<T> Length for std::rc::Rc<T>
+where
+    T: Length + ?Sized,
+{
+    fn length(&self) -> usize {
+        self.as_ref().length()
+    }
+}
+
+impl<T> Length for std::sync::Arc<T>
+where
+    T: Length + ?Sized,
+{
+    fn length(&self) -> usize {
+        self.as_ref().length()
+    }
+}
+
 macro_rules! impl_for_str {
     ($ty:ty) => {
         impl Length for $ty {

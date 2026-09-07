@@ -5,6 +5,7 @@ use std::borrow::Cow;
 #[derive(Debug, Clone)]
 pub struct NamedField<'a> {
     name: String,
+    ident: syn::Ident,
     field: Cow<'a, syn::Field>,
 }
 
@@ -13,8 +14,12 @@ impl<'a> NamedField<'a> {
         let Some(ident) = field.ident.as_ref() else {
             return Err(crate::Error::named_fields_struct_required(field));
         };
+        let name = ident.to_string();
+        let ident_name = name.strip_prefix("r#").unwrap_or(&name);
+        let generated_ident = crate::types::generated_ident(&format!("__serde_valid_{ident_name}"));
         Ok(Self {
-            name: ident.to_string(),
+            name,
+            ident: generated_ident,
             field: Cow::Borrowed(field),
         })
     }
@@ -26,7 +31,7 @@ impl Field for NamedField<'_> {
     }
 
     fn ident(&self) -> &syn::Ident {
-        self.field.ident.as_ref().unwrap()
+        &self.ident
     }
 
     fn key(&self) -> proc_macro2::TokenStream {
@@ -40,7 +45,7 @@ impl Field for NamedField<'_> {
     }
 
     fn getter_token(&self) -> proc_macro2::TokenStream {
-        let ident = self.ident();
+        let ident = self.field.ident.as_ref().unwrap();
         quote!(#ident)
     }
 

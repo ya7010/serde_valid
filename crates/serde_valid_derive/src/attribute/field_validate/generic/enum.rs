@@ -27,20 +27,23 @@ fn inner_extract_generic_enum_validator(
     let field_key = field.key();
     let rename = rename_map.get(field_name).unwrap_or(&field_key);
     let errors = field.errors_variable();
-    let validate = quote_composited_autoderef!(
-        slice field_ident, lits,
-        ValidateCompositedEnum, validate_composited_enum,
-        __serde_valid_autoderef_validate_composited_enum, EnumError
+    let candidates = quote!(&[#lits]);
+    let validate = quote_composited_validation!(
+        field_ident,
+        candidates,
+        ValidateCompositedEnum,
+        validate_composited_enum
     );
+    let error_params = crate::types::generated_ident("__serde_valid_composited_error_params");
 
     Ok(quote!(
-        if let ::std::result::Result::Err(__composited_error_params) = #validate {
+        if let ::std::result::Result::Err(#error_params) = #validate {
             use ::serde_valid::validation::IntoError;
 
             #errors
                 .entry(#rename)
                 .or_default()
-                .push(__composited_error_params.into_error_by(#message_format));
+                .push(#error_params.into_error_by(#message_format));
         }
     ))
 }

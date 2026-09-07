@@ -15,9 +15,7 @@ macro_rules! extract_array_length_validator{
         $extract_validator:ident,
         $inner_extract_validator:ident,
         $ValidateTrait:ident,
-        $validate_method:ident,
-        $autoderef_method:ident,
-        $Error:ident
+        $validate_method:ident
     ) => {
         pub fn $extract_validator(
             field: &impl Field,
@@ -40,20 +38,20 @@ macro_rules! extract_array_length_validator{
             let rename = rename_map.get(field_name).unwrap_or(&field_key);
             let limit = get_numeric(validation_value)?;
             let errors = field.errors_variable();
-            let validate = quote_validation_autoderef!(
-                fixed field_ident, limit, usize,
-                $ValidateTrait, $validate_method,
-                $autoderef_method, ::serde_valid::$Error
+            let validate = quote_validation!(
+                field_ident, limit,
+                $ValidateTrait, $validate_method
             );
+            let error_params = crate::types::generated_ident("__serde_valid_error_params");
 
             Ok(quote!(
-                if let ::std::result::Result::Err(error_params) = #validate {
+                if let ::std::result::Result::Err(#error_params) = #validate {
                     #errors
                         .entry(#rename)
                         .or_default()
                         .push(::serde_valid::validation::Error::$ErrorType(
                             ::serde_valid::validation::error::Message::new(
-                                error_params,
+                                #error_params,
                                 #message_format,
                             )
                         ));
@@ -68,16 +66,12 @@ extract_array_length_validator!(
     extract_array_max_items_validator,
     inner_extract_array_max_items_validator,
     ValidateMaxItems,
-    validate_max_items,
-    __serde_valid_autoderef_validate_max_items,
-    MaxItemsError
+    validate_max_items
 );
 extract_array_length_validator!(
     MinItems,
     extract_array_min_items_validator,
     inner_extract_array_min_items_validator,
     ValidateMinItems,
-    validate_min_items,
-    __serde_valid_autoderef_validate_min_items,
-    MinItemsError
+    validate_min_items
 );

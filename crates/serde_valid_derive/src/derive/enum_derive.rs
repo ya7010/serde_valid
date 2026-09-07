@@ -51,7 +51,13 @@ pub fn expand_enum_validate_derive(
                     }
                 }
             }
-            syn::Fields::Unit => WithWarnings::new(Validator::new()),
+            syn::Fields::Unit => match expand_enum_unit_variant_validation(ident, input, variant) {
+                Ok(variant_validates_and_rules) => variant_validates_and_rules,
+                Err(variant_errors) => {
+                    errors.extend(variant_errors);
+                    WithWarnings::new(Validator::new())
+                }
+            },
         })
         .collect::<Vec<_>>();
 
@@ -111,13 +117,15 @@ fn expand_enum_variant_named_fields_validation(
     let validates = match collect_named_fields_validators_list(named_fields, &rename_map) {
         Ok(field_validators_list) => {
             TokenStream::from_iter(field_validators_list.iter().map(|validators| {
+                warnings.extend(validators.warnings.clone());
                 let field_ident = validators.ident();
+                let field_getter = validators.getter_token();
 
                 if let Some(token) = validators.get_tokens() {
-                    fields_idents.push(quote!(#field_ident));
+                    fields_idents.push(quote!(#field_getter: #field_ident));
                     quote!(#token)
                 } else {
-                    fields_idents.push(quote!(#field_ident: _));
+                    fields_idents.push(quote!(#field_getter: _));
                     quote!()
                 }
             }))
@@ -180,6 +188,7 @@ fn expand_enum_variant_unnamed_fields_varidation(
     let validates = match collect_unnamed_fields_validators_list(unnamed_fields) {
         Ok(field_validators_list) => {
             TokenStream::from_iter(field_validators_list.iter().map(|validators| {
+                warnings.extend(validators.warnings.clone());
                 let field_ident = validators.ident();
 
                 if let Some(token) = validators.get_tokens() {
@@ -226,5 +235,74 @@ fn expand_enum_variant_unnamed_fields_varidation(
         })
     } else {
         Err(errors)
+    }
+}
+
+fn expand_enum_unit_variant_validation(
+    ident: &syn::Ident,
+    input: &syn::DeriveInput,
+    variant: &syn::Variant,
+) -> Result<WithWarnings<Validator>, crate::Errors> {
+    let WithWarnings {
+        data: enum_validates,
+        warnings,
+    } = collect_variant_custom_from_variant(&input.attrs)?;
+    let variant_ident = &variant.ident;
+    let rule_vec_errors = crate::types::rule_vec_errors_ident();
+
+    Ok(WithWarnings {
+        data: quote!(
+            if let #ident::#variant_ident = &self {
+                let mut #rule_vec_errors = ::serde_valid::validation::VecErrors::new();
+
+                #enum_validates
+
+                if !#rule_vec_errors.is_empty() {
+                    ::std::result::Result::Err(
+                        ::serde_valid::validation::Errors::NewType(#rule_vec_errors)
+                    )?
+                }
+            }
+        ),
+        warnings,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn expand(input: syn::DeriveInput) -> String {
+        let syn::Data::Enum(data) = &input.data else {
+            unreachable!();
+        };
+        expand_enum_validate_derive(&input, &data.variants)
+            .unwrap()
+            .to_string()
+    }
+
+    #[test]
+    fn named_variant_field_warnings_are_emitted() {
+        let tokens = expand(syn::parse_quote! {
+            enum Input {
+                Value {
+                    #[validate(enumerate = ["a"])]
+                    value: String,
+                }
+            }
+        });
+
+        assert!(tokens.contains("deprecated"));
+    }
+
+    #[test]
+    fn tuple_variant_field_warnings_are_emitted() {
+        let tokens = expand(syn::parse_quote! {
+            enum Input {
+                Value(#[validate(enumerate = ["a"])] String),
+            }
+        });
+
+        assert!(tokens.contains("deprecated"));
     }
 }

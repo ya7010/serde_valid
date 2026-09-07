@@ -38,22 +38,24 @@ fn inner_extract_string_pattern_validator(
     let pattern_variable = quote!(
         #pattern_ident.get_or_init(|| ::serde_valid::export::regex::Regex::new(#pattern).unwrap())
     );
-    let validate = quote_composited_autoderef!(
-        fixed field_ident, pattern_variable, &::serde_valid::export::regex::Regex,
-        ValidateCompositedPattern, validate_composited_pattern,
-        __serde_valid_autoderef_validate_composited_pattern, PatternError
+    let validate = quote_composited_validation!(
+        field_ident,
+        pattern_variable,
+        ValidateCompositedPattern,
+        validate_composited_pattern
     );
+    let error_params = crate::types::generated_ident("__serde_valid_composited_error_params");
 
     Ok(quote!(
         {
             static #pattern_ident : ::serde_valid::export::once_cell::sync::OnceCell<::serde_valid::export::regex::Regex> = ::serde_valid::export::once_cell::sync::OnceCell::new();
-            if let ::std::result::Result::Err(__composited_error_params) = #validate {
+            if let ::std::result::Result::Err(#error_params) = #validate {
                 use ::serde_valid::validation::IntoError;
 
                 #errors
                     .entry(#rename)
                     .or_default()
-                    .push(__composited_error_params.into_error_by(#message_format));
+                    .push(#error_params.into_error_by(#message_format));
             }
         }
     ))

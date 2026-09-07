@@ -328,6 +328,12 @@ mod wrapper_trait_compile_checks {
                 $assertion::<Box<[$item; 1]>>();
                 $assertion::<&'static Vec<$item>>();
                 $assertion::<Box<Vec<$item>>>();
+                $assertion::<Box<Box<Vec<$item>>>>();
+                $assertion::<&'static Box<Vec<$item>>>();
+                $assertion::<Box<&'static Vec<$item>>>();
+                $assertion::<std::rc::Rc<Vec<$item>>>();
+                $assertion::<std::sync::Arc<Vec<$item>>>();
+                $assertion::<std::pin::Pin<Box<Vec<$item>>>>();
                 $assertion::<&'static Option<$item>>();
                 $assertion::<Box<Option<$item>>>();
                 $assertion::<&'static HashMap<String, $item>>();
@@ -340,6 +346,7 @@ mod wrapper_trait_compile_checks {
                 $assertion::<Cow<'static, HashMap<String, $item>>>();
                 $assertion::<Cow<'static, IndexMap<String, $item>>>();
                 $assertion::<Cow<'static, [$item]>>();
+                $assertion::<Box<Cow<'static, [$item]>>>();
             };
         }
 
@@ -1803,7 +1810,7 @@ mod issue125 {
     }
 
     #[derive(Debug, Validate)]
-    struct AutoderefArrayValidatorWrappers {
+    struct ForwardedArrayValidatorWrappers {
         #[validate(min_items = 3)]
         #[validate(max_items = 1)]
         #[validate(unique_items)]
@@ -1823,9 +1830,9 @@ mod issue125 {
     }
 
     #[test]
-    fn autoderef_wrappers_support_array_validators() {
+    fn forwarded_wrappers_support_array_validators() {
         let errors = serde_json::to_value(
-            AutoderefArrayValidatorWrappers {
+            ForwardedArrayValidatorWrappers {
                 rc_vec: std::rc::Rc::new(vec![1, 1]),
                 arc_vec: std::sync::Arc::new(vec![1, 1]),
                 pinned_vec: Box::pin(vec![1, 1]),
@@ -1857,6 +1864,147 @@ mod issue125 {
             &self.0
         }
     }
+
+    impl<T> serde_valid::Validate for InherentMethodShadow<T>
+    where
+        T: serde_valid::Validate,
+    {
+        fn validate(&self) -> Result<(), serde_valid::validation::Errors> {
+            serde_valid::Validate::validate(&self.0)
+        }
+    }
+
+    macro_rules! impl_inherent_method_shadow_validation {
+        ($Trait:ident, $method:ident, $Error:ident) => {
+            impl<T> serde_valid::$Trait for InherentMethodShadow<T>
+            where
+                T: serde_valid::$Trait,
+            {
+                fn $method(&self) -> Result<(), serde_valid::$Error> {
+                    serde_valid::$Trait::$method(&self.0)
+                }
+            }
+        };
+        ($Trait:ident, $method:ident, $Argument:ty, $Error:ident) => {
+            impl<T> serde_valid::$Trait for InherentMethodShadow<T>
+            where
+                T: serde_valid::$Trait,
+            {
+                fn $method(&self, argument: $Argument) -> Result<(), serde_valid::$Error> {
+                    serde_valid::$Trait::$method(&self.0, argument)
+                }
+            }
+        };
+    }
+
+    impl_inherent_method_shadow_validation!(
+        ValidateMinItems,
+        validate_min_items,
+        usize,
+        MinItemsError
+    );
+    impl_inherent_method_shadow_validation!(
+        ValidateMaxItems,
+        validate_max_items,
+        usize,
+        MaxItemsError
+    );
+    impl_inherent_method_shadow_validation!(
+        ValidateUniqueItems,
+        validate_unique_items,
+        UniqueItemsError
+    );
+
+    macro_rules! impl_inherent_method_shadow_composited_validation {
+        ($Trait:ident, $method:ident, $Argument:ty, $Error:ident) => {
+            impl<T> serde_valid::validation::$Trait for InherentMethodShadow<T>
+            where
+                T: serde_valid::validation::$Trait,
+            {
+                fn $method(
+                    &self,
+                    argument: $Argument,
+                ) -> Result<(), serde_valid::validation::Composited<serde_valid::$Error>> {
+                    serde_valid::validation::$Trait::$method(&self.0, argument)
+                }
+            }
+        };
+        (generic $Trait:ident, $method:ident, $Error:ident) => {
+            impl<C, T> serde_valid::validation::$Trait<C> for InherentMethodShadow<T>
+            where
+                C: Copy,
+                T: serde_valid::validation::$Trait<C>,
+            {
+                fn $method(
+                    &self,
+                    argument: C,
+                ) -> Result<(), serde_valid::validation::Composited<serde_valid::$Error>> {
+                    serde_valid::validation::$Trait::$method(&self.0, argument)
+                }
+            }
+        };
+    }
+
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedEnum,
+        validate_composited_enum,
+        EnumError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedMultipleOf,
+        validate_composited_multiple_of,
+        MultipleOfError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedMinimum,
+        validate_composited_minimum,
+        MinimumError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedMaximum,
+        validate_composited_maximum,
+        MaximumError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedExclusiveMinimum,
+        validate_composited_exclusive_minimum,
+        ExclusiveMinimumError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedExclusiveMaximum,
+        validate_composited_exclusive_maximum,
+        ExclusiveMaximumError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        ValidateCompositedMinProperties,
+        validate_composited_min_properties,
+        usize,
+        MinPropertiesError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        ValidateCompositedMaxProperties,
+        validate_composited_max_properties,
+        usize,
+        MaxPropertiesError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        ValidateCompositedMinLength,
+        validate_composited_min_length,
+        usize,
+        MinLengthError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        ValidateCompositedMaxLength,
+        validate_composited_max_length,
+        usize,
+        MaxLengthError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        ValidateCompositedPattern,
+        validate_composited_pattern,
+        &serde_valid::export::regex::Regex,
+        PatternError
+    );
 
     #[allow(dead_code)]
     impl<T> InherentMethodShadow<T> {
@@ -2049,7 +2197,7 @@ mod issue125 {
     }
 
     #[test]
-    fn enum_autoderef_preserves_lifetime_specific_trait_impls() {
+    fn enum_dispatch_preserves_lifetime_specific_trait_impls() {
         assert!(LifetimeSpecificEnumConstraint {
             value: StaticEnumCandidates,
         }
@@ -2058,7 +2206,7 @@ mod issue125 {
     }
 
     #[derive(Validate)]
-    struct DstAutoderefConstraints {
+    struct DstForwardingConstraints {
         #[validate(min_length = 1)]
         min_length: std::rc::Rc<str>,
         #[validate(pattern = "^[a-z]+$")]
@@ -2068,9 +2216,9 @@ mod issue125 {
     }
 
     #[test]
-    fn autoderef_supports_dynamically_sized_targets() {
+    fn standard_forwarding_supports_dynamically_sized_targets() {
         let errors = serde_json::to_value(
-            DstAutoderefConstraints {
+            DstForwardingConstraints {
                 min_length: std::rc::Rc::from(""),
                 pattern: std::rc::Rc::from("123"),
                 enum_value: std::rc::Rc::from("denied"),

@@ -14,9 +14,7 @@ macro_rules! extract_string_length_validator{
         $extract_validator:ident,
         $inner_extract_validator:ident,
         $ValidateCompositedTrait:ident,
-        $validate_composited_method:ident,
-        $autoderef_method:ident,
-        $Error:ident
+        $validate_composited_method:ident
     ) => {
         pub fn $extract_validator(
             field: &impl Field,
@@ -39,20 +37,21 @@ macro_rules! extract_string_length_validator{
             let rename = rename_map.get(field_name).unwrap_or(&field_key);
             let errors = field.errors_variable();
             let limit = get_numeric(validation_value)?;
-            let validate = quote_composited_autoderef!(
-                fixed field_ident, limit, usize,
-                $ValidateCompositedTrait, $validate_composited_method,
-                $autoderef_method, $Error
+            let validate = quote_composited_validation!(
+                field_ident, limit,
+                $ValidateCompositedTrait, $validate_composited_method
             );
+            let error_params =
+                crate::types::generated_ident("__serde_valid_composited_error_params");
 
             Ok(quote!(
-                if let ::std::result::Result::Err(__composited_error_params) = #validate {
+                if let ::std::result::Result::Err(#error_params) = #validate {
                     use ::serde_valid::validation::IntoError;
 
                     #errors
                         .entry(#rename)
                         .or_default()
-                        .push(__composited_error_params.into_error_by(#message_format));
+                        .push(#error_params.into_error_by(#message_format));
                 }
             ))
         }
@@ -63,15 +62,11 @@ extract_string_length_validator!(
     extract_string_max_length_validator,
     inner_extract_string_max_length_validator,
     ValidateCompositedMaxLength,
-    validate_composited_max_length,
-    __serde_valid_autoderef_validate_composited_max_length,
-    MaxLengthError
+    validate_composited_max_length
 );
 extract_string_length_validator!(
     extract_string_min_length_validator,
     inner_extract_string_min_length_validator,
     ValidateCompositedMinLength,
-    validate_composited_min_length,
-    __serde_valid_autoderef_validate_composited_min_length,
-    MinLengthError
+    validate_composited_min_length
 );
