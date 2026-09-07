@@ -25,6 +25,21 @@ where
     }
 }
 
+macro_rules! impl_for_pin_pointer {
+    ($pointer:ty) => {
+        impl<T> Size for std::pin::Pin<$pointer>
+        where
+            T: Size + ?Sized,
+        {
+            fn size(&self) -> usize {
+                self.as_ref().get_ref().size()
+            }
+        }
+    };
+}
+
+for_each_standard_pin_pointer!(impl_for_pin_pointer);
+
 impl<K, V> Size for HashMap<K, V> {
     fn size(&self) -> usize {
         self.len()

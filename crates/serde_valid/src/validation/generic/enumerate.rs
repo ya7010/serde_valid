@@ -161,6 +161,21 @@ where
     }
 }
 
+macro_rules! impl_validate_enumerate_for_pin_pointer {
+    ($pointer:ty) => {
+        impl<C, T> ValidateEnumerate<C> for std::pin::Pin<$pointer>
+        where
+            T: ValidateEnumerate<C> + ?Sized,
+        {
+            fn validate_enumerate(&self, candidates: &[C]) -> Result<(), EnumError> {
+                self.as_ref().get_ref().validate_enumerate(candidates)
+            }
+        }
+    };
+}
+
+for_each_standard_pin_pointer!(impl_validate_enumerate_for_pin_pointer);
+
 macro_rules! impl_validate_generic_enumerate_path {
     ($type:ty) => {
         impl ValidateEnumerate<&'static str> for $type {

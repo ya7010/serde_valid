@@ -31,6 +31,21 @@ where
     }
 }
 
+macro_rules! impl_for_pin_pointer {
+    ($pointer:ty) => {
+        impl<T> Length for std::pin::Pin<$pointer>
+        where
+            T: Length + ?Sized,
+        {
+            fn length(&self) -> usize {
+                self.as_ref().get_ref().length()
+            }
+        }
+    };
+}
+
+for_each_standard_pin_pointer!(impl_for_pin_pointer);
+
 macro_rules! impl_for_str {
     ($ty:ty) => {
         impl Length for $ty {

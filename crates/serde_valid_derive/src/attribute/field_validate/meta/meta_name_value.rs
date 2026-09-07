@@ -128,6 +128,7 @@ pub fn extract_field_validator_from_meta_name_value(
                 note: "🚧 Please use `#[validate(r#enum = ...)]` instead of `#[validate(enumerate = ...)]` 🚧"
                     .to_string(),
                 span: validation.path.span(),
+                lint_attrs: vec![],
             }];
 
             let validator = extract_generic_enum_validator_from_name_value(

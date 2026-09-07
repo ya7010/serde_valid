@@ -13,10 +13,16 @@ pub struct FieldValidators<'a, F: Field + Clone + 'a> {
 
 impl<'a, F: Field + Clone> FieldValidators<'a, F> {
     pub fn new(field: Cow<'a, F>, validators: Vec<WithWarnings<Validator>>) -> Self {
+        let warnings = validators
+            .iter()
+            .flat_map(|validator| validator.warnings.iter())
+            .cloned()
+            .map(|warning| warning.with_lint_attrs(field.attrs()))
+            .collect();
         Self {
             field,
             validators: validators.iter().map(|v| v.data.clone()).collect(),
-            warnings: validators.into_iter().flat_map(|v| v.warnings).collect(),
+            warnings,
         }
     }
 

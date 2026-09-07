@@ -29,6 +29,21 @@ where
     }
 }
 
+macro_rules! impl_for_pin_pointer {
+    ($pointer:ty) => {
+        impl<T> IsMatch for std::pin::Pin<$pointer>
+        where
+            T: IsMatch + ?Sized,
+        {
+            fn is_match(&self, pattern: &regex::Regex) -> bool {
+                self.as_ref().get_ref().is_match(pattern)
+            }
+        }
+    };
+}
+
+for_each_standard_pin_pointer!(impl_for_pin_pointer);
+
 macro_rules! impl_for_str {
     ($ty:ty) => {
         impl IsMatch for $ty {
