@@ -16,6 +16,16 @@ use crate::MaximumError;
 ///     }
 /// }
 ///
+/// impl serde_valid::validation::ValidateCompositedMaximum<i32> for MyType {
+///     fn validate_composited_maximum(
+///         &self,
+///         maximum: i32,
+///     ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaximumError>> {
+///         self.validate_maximum(maximum)
+///             .map_err(serde_valid::validation::Composited::Single)
+///     }
+/// }
+///
 /// #[derive(Validate)]
 /// struct TestStruct {
 ///     #[validate(maximum = 5)]

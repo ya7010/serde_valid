@@ -7,6 +7,24 @@ pub trait Size {
     fn size(&self) -> usize;
 }
 
+impl<T> Size for &T
+where
+    T: Size + ?Sized,
+{
+    fn size(&self) -> usize {
+        (*self).size()
+    }
+}
+
+impl<T> Size for Box<T>
+where
+    T: Size + ?Sized,
+{
+    fn size(&self) -> usize {
+        self.as_ref().size()
+    }
+}
+
 impl<T> Size for std::rc::Rc<T>
 where
     T: Size + ?Sized,
@@ -22,6 +40,25 @@ where
 {
     fn size(&self) -> usize {
         self.as_ref().size()
+    }
+}
+
+impl<T> Size for std::borrow::Cow<'_, T>
+where
+    T: std::borrow::ToOwned + Size + ?Sized,
+{
+    fn size(&self) -> usize {
+        self.as_ref().size()
+    }
+}
+
+impl<P> Size for std::pin::Pin<P>
+where
+    P: std::ops::Deref,
+    P::Target: Size,
+{
+    fn size(&self) -> usize {
+        self.as_ref().get_ref().size()
     }
 }
 

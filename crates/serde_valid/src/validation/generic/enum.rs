@@ -22,6 +22,16 @@ use crate::EnumError;
 ///     }
 /// }
 ///
+/// impl<'a> serde_valid::validation::ValidateCompositedEnum<&'a [&'static str]> for MyType {
+///     fn validate_composited_enum(
+///         &self,
+///         candidates: &'a [&'static str],
+///     ) -> Result<(), serde_valid::validation::Composited<serde_valid::EnumError>> {
+///         self.validate_enum(candidates)
+///             .map_err(serde_valid::validation::Composited::Single)
+///     }
+/// }
+///
 /// #[derive(Validate)]
 /// struct TestStruct {
 ///     #[validate(r#enum = ["1", "2", "3"])]
@@ -61,11 +71,7 @@ macro_rules! impl_validate_generic_enumerate_literal {
             }
         }
 
-        // Keep the blanket impl `Sized` to preserve downstream coherence.
-        impl<T> ValidateCompositedEnum<&[$type]> for T
-        where
-            T: ValidateEnum<$type>,
-        {
+        impl ValidateCompositedEnum<&[$type]> for $type {
             fn validate_composited_enum(
                 &self,
                 limit: &[$type],
@@ -194,6 +200,16 @@ where
     }
 }
 
+impl<C, P> ValidateEnum<C> for std::pin::Pin<P>
+where
+    P: std::ops::Deref,
+    P::Target: ValidateEnum<C>,
+{
+    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
+        self.as_ref().get_ref().validate_enum(candidates)
+    }
+}
+
 macro_rules! impl_validate_generic_enumerate_path {
     ($type:ty) => {
         impl ValidateEnum<&'static str> for $type {
@@ -226,21 +242,7 @@ impl ValidateEnum<&'static str> for std::path::Path {
     }
 }
 
-// Keep the blanket impl `Sized` to preserve downstream coherence.
-impl<T> ValidateCompositedEnum<&[&'static str]> for T
-where
-    T: ValidateEnum<&'static str>,
-{
-    fn validate_composited_enum(
-        &self,
-        limit: &[&'static str],
-    ) -> Result<(), crate::validation::Composited<EnumError>> {
-        self.validate_enum(limit)
-            .map_err(crate::validation::Composited::Single)
-    }
-}
-
-macro_rules! impl_unsized_composited_enum {
+macro_rules! impl_composited_enum_leaves {
     ($($type:ty),+ $(,)?) => {
         $(
             impl<'a> ValidateCompositedEnum<&'a [&'static str]> for $type {
@@ -256,7 +258,14 @@ macro_rules! impl_unsized_composited_enum {
     };
 }
 
-impl_unsized_composited_enum!(str, std::ffi::OsStr, std::path::Path);
+impl_composited_enum_leaves!(
+    str,
+    String,
+    std::ffi::OsStr,
+    std::ffi::OsString,
+    std::path::Path,
+    std::path::PathBuf
+);
 
 #[cfg(test)]
 mod tests {

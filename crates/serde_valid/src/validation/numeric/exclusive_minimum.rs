@@ -18,6 +18,16 @@ use crate::ExclusiveMinimumError;
 ///     }
 /// }
 ///
+/// impl serde_valid::validation::ValidateCompositedExclusiveMinimum<i32> for MyType {
+///     fn validate_composited_exclusive_minimum(
+///         &self,
+///         exclusive_minimum: i32,
+///     ) -> Result<(), serde_valid::validation::Composited<serde_valid::ExclusiveMinimumError>> {
+///         self.validate_exclusive_minimum(exclusive_minimum)
+///             .map_err(serde_valid::validation::Composited::Single)
+///     }
+/// }
+///
 /// #[derive(Validate)]
 /// struct TestStruct {
 ///     #[validate(exclusive_minimum = 5)]

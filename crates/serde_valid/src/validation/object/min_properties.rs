@@ -21,6 +21,16 @@ use crate::{traits::Size, MinPropertiesError};
 ///     }
 /// }
 ///
+/// impl serde_valid::validation::ValidateCompositedMinProperties for MyType {
+///     fn validate_composited_min_properties(
+///         &self,
+///         min_properties: usize,
+///     ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinPropertiesError>> {
+///         self.validate_min_properties(min_properties)
+///             .map_err(serde_valid::validation::Composited::Single)
+///     }
+/// }
+///
 /// #[derive(Validate)]
 /// struct TestStruct {
 ///     #[validate(min_properties = 2)]

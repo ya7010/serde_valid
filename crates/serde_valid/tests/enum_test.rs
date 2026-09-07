@@ -225,6 +225,16 @@ fn enum_numeric_trait() {
         }
     }
 
+    impl<'a> serde_valid::validation::ValidateCompositedEnum<&'a [i32]> for MyType {
+        fn validate_composited_enum(
+            &self,
+            candidates: &'a [i32],
+        ) -> Result<(), serde_valid::validation::Composited<serde_valid::EnumError>> {
+            self.validate_enum(candidates)
+                .map_err(serde_valid::validation::Composited::Single)
+        }
+    }
+
     #[derive(Validate)]
     struct TestStruct {
         #[validate(r#enum = [1, 2, 3], message = "this is custom message.")]
