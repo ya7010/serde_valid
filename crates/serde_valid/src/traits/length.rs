@@ -31,7 +31,10 @@ where
     }
 }
 
-impl Length for std::pin::Pin<Box<str>> {
+impl<T> Length for std::pin::Pin<Box<T>>
+where
+    T: Length + ?Sized,
+{
     fn length(&self) -> usize {
         self.as_ref().get_ref().length()
     }

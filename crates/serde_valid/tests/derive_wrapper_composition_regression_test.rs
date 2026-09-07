@@ -24,6 +24,8 @@ struct AdditionalCompositedWrappers<'a> {
     pinned_option: Pin<Box<Option<i32>>>,
     #[validate(min_length = 2)]
     pinned_str: Pin<Box<str>>,
+    #[validate(min_length = 2)]
+    pinned_string: Pin<Box<String>>,
     #[validate(minimum = 1)]
     rc_borrowed_vec: Rc<&'a Vec<i32>>,
 }
@@ -39,6 +41,7 @@ fn composited_validation_supports_additional_standard_wrapper_shapes() {
             rc_slice: Rc::from([0]),
             pinned_option: Box::pin(Some(0)),
             pinned_str: Pin::from(Box::<str>::from("x")),
+            pinned_string: Box::pin("x".to_owned()),
             rc_borrowed_vec: Rc::new(&borrowed_vec),
         }
         .validate()
@@ -53,6 +56,7 @@ fn composited_validation_supports_additional_standard_wrapper_shapes() {
         "rc_slice",
         "pinned_option",
         "pinned_str",
+        "pinned_string",
         "rc_borrowed_vec",
     ] {
         assert!(
