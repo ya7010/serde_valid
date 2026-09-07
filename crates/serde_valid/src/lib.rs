@@ -571,14 +571,6 @@
 //! );
 //! ```
 
-macro_rules! for_each_standard_pin_pointer {
-    ($callback:ident) => {
-        $callback!(Box<T>);
-        $callback!(std::rc::Rc<T>);
-        $callback!(std::sync::Arc<T>);
-    };
-}
-
 pub mod error;
 mod features;
 pub mod json;

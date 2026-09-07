@@ -49,10 +49,19 @@ pub trait ValidateMinProperties {
     fn validate_min_properties(&self, min_properties: usize) -> Result<(), MinPropertiesError>;
 }
 
-impl<T> ValidateMinProperties for T
-where
-    T: Size,
-{
+macro_rules! impl_validate_min_properties {
+    ($($type:ty),+ $(,)?) => {$(
+        impl<K, V> ValidateMinProperties for $type {
+            fn validate_min_properties(&self, min_properties: usize) -> Result<(), MinPropertiesError> {
+                if min_properties <= self.size() { Ok(()) } else { Err(MinPropertiesError::new(min_properties)) }
+            }
+        }
+    )+};
+}
+
+impl_validate_min_properties!(std::collections::HashMap<K, V>, std::collections::BTreeMap<K, V>, indexmap::IndexMap<K, V>);
+
+impl ValidateMinProperties for serde_json::Map<String, serde_json::Value> {
     fn validate_min_properties(&self, min_properties: usize) -> Result<(), MinPropertiesError> {
         if min_properties <= self.size() {
             Ok(())

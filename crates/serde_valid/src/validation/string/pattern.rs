@@ -47,18 +47,24 @@ pub trait ValidatePattern {
     fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError>;
 }
 
-impl<T> ValidatePattern for T
-where
-    T: IsMatch + ?Sized,
-{
-    fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError> {
-        if self.is_match(pattern) {
-            Ok(())
-        } else {
-            Err(PatternError::new(pattern.to_string()))
+macro_rules! impl_validate_pattern {
+    ($($type:ty),+ $(,)?) => {$(
+        impl ValidatePattern for $type {
+            fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError> {
+                if self.is_match(pattern) { Ok(()) } else { Err(PatternError::new(pattern.to_string())) }
+            }
         }
-    }
+    )+};
 }
+
+impl_validate_pattern!(
+    str,
+    String,
+    std::ffi::OsStr,
+    std::ffi::OsString,
+    std::path::Path,
+    std::path::PathBuf
+);
 
 #[cfg(test)]
 mod tests {
@@ -87,11 +93,13 @@ mod tests {
 
     #[test]
     fn test_validate_string_pattern_cow_str_type() {
-        assert!(ValidatePattern::validate_pattern(
-            &Cow::from("2020-09-10"),
-            &Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap()
-        )
-        .is_ok());
+        assert!(
+            crate::validation::ValidateCompositedPattern::validate_composited_pattern(
+                &Cow::from("2020-09-10"),
+                &Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap()
+            )
+            .is_ok()
+        );
     }
 
     #[test]

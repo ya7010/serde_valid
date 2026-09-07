@@ -1,6 +1,3 @@
-use crate::validation::{impl_generic_composited_validation_1args, ValidateCompositedMultipleOf};
-use crate::MultipleOfError;
-
 /// Multipl validation of the number.
 ///
 /// See <https://json-schema.org/understanding-json-schema/reference/numeric.html#multiples>
@@ -41,10 +38,7 @@ use crate::MultipleOfError;
 ///     .to_string()
 /// );
 /// ```
-pub trait ValidateMultipleOf<T>
-where
-    T: std::cmp::PartialEq + std::ops::Rem<Output = T> + num_traits::Zero,
-{
+pub trait ValidateMultipleOf<T> {
     fn validate_multiple_of(&self, multiple_of: T) -> Result<(), crate::MultipleOfError>;
 }
 
@@ -65,15 +59,6 @@ macro_rules! impl_validate_numeric_multiple_of {
                 }
             }
         }
-
-        impl_generic_composited_validation_1args!(
-            ValidateCompositedMultipleOf,
-            validate_composited_multiple_of,
-            ValidateMultipleOf,
-            validate_multiple_of,
-            MultipleOfError,
-            $type
-        );
     };
 }
 

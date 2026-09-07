@@ -1,6 +1,3 @@
-use crate::validation::{
-    impl_generic_composited_validation_1args, ValidateCompositedExclusiveMinimum,
-};
 use crate::ExclusiveMinimumError;
 
 /// Exclusive minimum validation of the number.
@@ -39,10 +36,7 @@ use crate::ExclusiveMinimumError;
 ///     .to_string()
 /// );
 /// ```
-pub trait ValidateExclusiveMinimum<T>
-where
-    T: PartialOrd + PartialEq,
-{
+pub trait ValidateExclusiveMinimum<T> {
     fn validate_exclusive_minimum(&self, exclusive_minimum: T)
         -> Result<(), ExclusiveMinimumError>;
 }
@@ -61,15 +55,6 @@ macro_rules! impl_validate_numeric_exclusive_minimum {
                 }
             }
         }
-
-        impl_generic_composited_validation_1args!(
-            ValidateCompositedExclusiveMinimum,
-            validate_composited_exclusive_minimum,
-            ValidateExclusiveMinimum,
-            validate_exclusive_minimum,
-            ExclusiveMinimumError,
-            $type
-        );
     };
 }
 

@@ -51,10 +51,19 @@ pub trait ValidateMaxProperties {
     fn validate_max_properties(&self, max_properties: usize) -> Result<(), MaxPropertiesError>;
 }
 
-impl<T> ValidateMaxProperties for T
-where
-    T: Size,
-{
+macro_rules! impl_validate_max_properties {
+    ($($type:ty),+ $(,)?) => {$(
+        impl<K, V> ValidateMaxProperties for $type {
+            fn validate_max_properties(&self, max_properties: usize) -> Result<(), MaxPropertiesError> {
+                if max_properties >= self.size() { Ok(()) } else { Err(MaxPropertiesError::new(max_properties)) }
+            }
+        }
+    )+};
+}
+
+impl_validate_max_properties!(std::collections::HashMap<K, V>, std::collections::BTreeMap<K, V>, indexmap::IndexMap<K, V>);
+
+impl ValidateMaxProperties for serde_json::Map<String, serde_json::Value> {
     fn validate_max_properties(&self, max_properties: usize) -> Result<(), MaxPropertiesError> {
         if max_properties >= self.size() {
             Ok(())

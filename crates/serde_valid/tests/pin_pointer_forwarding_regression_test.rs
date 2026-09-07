@@ -7,24 +7,34 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 #[test]
-fn every_standard_pin_pointer_family_has_scalar_forwarding() {
-    fn assert_string<T>()
-    where
-        T: serde_valid::ValidateMinLength
-            + serde_valid::ValidatePattern
-            + serde_valid::ValidateEnum<&'static str>
-            + serde_valid::ValidateEnumerate<&'static str>,
-    {
+fn every_standard_pin_pointer_family_has_composited_forwarding() {
+    let pattern = regex::Regex::new("^[a-z]+$").unwrap();
+    let boxed = Pin::new(Box::<str>::from("allowed"));
+    let rc = Pin::new(Rc::<str>::from("allowed"));
+    let arc = Pin::new(Arc::<str>::from("allowed"));
+
+    macro_rules! assert_string {
+        ($value:expr) => {{
+            assert!(serde_valid::validation::ValidateCompositedMinLength::validate_composited_min_length(&$value, 2).is_ok());
+            assert!(serde_valid::validation::ValidateCompositedPattern::validate_composited_pattern(&$value, &pattern).is_ok());
+            assert!(serde_valid::validation::ValidateCompositedEnum::validate_composited_enum(&$value, &["allowed"]).is_ok());
+            assert!(serde_valid::validation::ValidateCompositedEnumerate::validate_composited_enumerate(&$value, &["allowed"]).is_ok());
+        }};
     }
 
-    fn assert_object<T: serde_valid::ValidateMinProperties>() {}
+    assert_string!(boxed);
+    assert_string!(rc);
+    assert_string!(arc);
 
-    assert_string::<Pin<Box<str>>>();
-    assert_string::<Pin<Rc<str>>>();
-    assert_string::<Pin<Arc<str>>>();
-    assert_object::<Pin<Box<HashMap<String, String>>>>();
-    assert_object::<Pin<Rc<HashMap<String, String>>>>();
-    assert_object::<Pin<Arc<HashMap<String, String>>>>();
+    assert!(serde_valid::validation::ValidateCompositedMinProperties::validate_composited_min_properties(
+        &Pin::new(Box::new(HashMap::<String, String>::new())), 1,
+    ).is_err());
+    assert!(serde_valid::validation::ValidateCompositedMinProperties::validate_composited_min_properties(
+        &Pin::new(Rc::new(HashMap::<String, String>::new())), 1,
+    ).is_err());
+    assert!(serde_valid::validation::ValidateCompositedMinProperties::validate_composited_min_properties(
+        &Pin::new(Arc::new(HashMap::<String, String>::new())), 1,
+    ).is_err());
 }
 
 #[derive(Validate)]

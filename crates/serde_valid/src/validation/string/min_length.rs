@@ -46,18 +46,24 @@ pub trait ValidateMinLength {
     fn validate_min_length(&self, min_length: usize) -> Result<(), MinLengthError>;
 }
 
-impl<T> ValidateMinLength for T
-where
-    T: Length + ?Sized,
-{
-    fn validate_min_length(&self, min_length: usize) -> Result<(), MinLengthError> {
-        if min_length <= self.length() {
-            Ok(())
-        } else {
-            Err(MinLengthError::new(min_length))
+macro_rules! impl_validate_min_length {
+    ($($type:ty),+ $(,)?) => {$(
+        impl ValidateMinLength for $type {
+            fn validate_min_length(&self, min_length: usize) -> Result<(), MinLengthError> {
+                if min_length <= self.length() { Ok(()) } else { Err(MinLengthError::new(min_length)) }
+            }
         }
-    }
+    )+};
 }
+
+impl_validate_min_length!(
+    str,
+    String,
+    std::ffi::OsStr,
+    std::ffi::OsString,
+    std::path::Path,
+    std::path::PathBuf
+);
 
 #[cfg(test)]
 mod tests {
@@ -68,23 +74,23 @@ mod tests {
 
     #[test]
     fn test_validate_string_min_length_ascii_is_true() {
-        assert!(ValidateMinLength::validate_min_length(&"abcde", 5).is_ok());
-        assert!(ValidateMinLength::validate_min_length(&"abcde", 4).is_ok());
+        assert!(ValidateMinLength::validate_min_length("abcde", 5).is_ok());
+        assert!(ValidateMinLength::validate_min_length("abcde", 4).is_ok());
     }
 
     #[test]
     fn test_validate_string_min_length_unicode_is_true() {
-        assert!(ValidateMinLength::validate_min_length(&"a̐éö̲", 3).is_ok());
+        assert!(ValidateMinLength::validate_min_length("a̐éö̲", 3).is_ok());
     }
 
     #[test]
     fn test_validate_string_min_length_japanese_is_true() {
-        assert!(ValidateMinLength::validate_min_length(&"あ堯", 2).is_ok());
+        assert!(ValidateMinLength::validate_min_length("あ堯", 2).is_ok());
     }
 
     #[test]
     fn test_validate_string_min_length_emoji_is_true() {
-        assert!(ValidateMinLength::validate_min_length(&"😍👺🙋🏽👨‍🎤👨‍👩‍👧‍👦", 5).is_ok());
+        assert!(ValidateMinLength::validate_min_length("😍👺🙋🏽👨‍🎤👨‍👩‍👧‍👦", 5).is_ok());
     }
 
     #[test]
@@ -94,12 +100,18 @@ mod tests {
 
     #[test]
     fn test_validate_string_min_length_cow_str_type() {
-        assert!(ValidateMinLength::validate_min_length(&Cow::from("abcde"), 5).is_ok());
+        assert!(
+            crate::validation::ValidateCompositedMinLength::validate_composited_min_length(
+                &Cow::from("abcde"),
+                5
+            )
+            .is_ok()
+        );
     }
 
     #[test]
     fn test_validate_string_min_length_os_str_type() {
-        assert!(ValidateMinLength::validate_min_length(&OsStr::new("fo�o"), 4).is_ok());
+        assert!(ValidateMinLength::validate_min_length(OsStr::new("fo�o"), 4).is_ok());
     }
 
     #[test]
@@ -109,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_validate_string_min_length_path_type() {
-        assert!(ValidateMinLength::validate_min_length(&Path::new("./foo/bar.txt"), 13).is_ok());
+        assert!(ValidateMinLength::validate_min_length(Path::new("./foo/bar.txt"), 13).is_ok());
     }
 
     #[test]

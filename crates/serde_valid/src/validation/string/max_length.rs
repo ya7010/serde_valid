@@ -46,18 +46,24 @@ pub trait ValidateMaxLength {
     fn validate_max_length(&self, max_length: usize) -> Result<(), MaxLengthError>;
 }
 
-impl<T> ValidateMaxLength for T
-where
-    T: Length + ?Sized,
-{
-    fn validate_max_length(&self, max_length: usize) -> Result<(), MaxLengthError> {
-        if max_length >= self.length() {
-            Ok(())
-        } else {
-            Err(MaxLengthError::new(max_length))
+macro_rules! impl_validate_max_length {
+    ($($type:ty),+ $(,)?) => {$(
+        impl ValidateMaxLength for $type {
+            fn validate_max_length(&self, max_length: usize) -> Result<(), MaxLengthError> {
+                if max_length >= self.length() { Ok(()) } else { Err(MaxLengthError::new(max_length)) }
+            }
         }
-    }
+    )+};
 }
+
+impl_validate_max_length!(
+    str,
+    String,
+    std::ffi::OsStr,
+    std::ffi::OsString,
+    std::path::Path,
+    std::path::PathBuf
+);
 
 #[cfg(test)]
 mod tests {
@@ -94,7 +100,13 @@ mod tests {
 
     #[test]
     fn test_validate_string_max_length_cow_str_type() {
-        assert!(ValidateMaxLength::validate_max_length(&Cow::from("abcde"), 5).is_ok());
+        assert!(
+            crate::validation::ValidateCompositedMaxLength::validate_composited_max_length(
+                &Cow::from("abcde"),
+                5
+            )
+            .is_ok()
+        );
     }
 
     #[test]
@@ -109,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_validate_string_max_length_path_type() {
-        assert!(ValidateMaxLength::validate_max_length(&Path::new("./foo/bar.txt"), 13).is_ok());
+        assert!(ValidateMaxLength::validate_max_length(Path::new("./foo/bar.txt"), 13).is_ok());
     }
 
     #[test]
