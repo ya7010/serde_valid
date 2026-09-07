@@ -87,6 +87,12 @@ macro_rules! for_each_composited_wrapper {
         $callback!([$($context)*] [T, const N: usize] Box<[T; N]> => [T; N]; []);
         $callback!([$($context)*] [T] &Vec<T> => Vec<T>; []);
         $callback!([$($context)*] [T] Box<Vec<T>> => Vec<T>; []);
+        $callback!([$($context)*] [T] Box<Box<Vec<T>>> => Box<Vec<T>>; []);
+        $callback!([$($context)*] ['a, T] &'a Box<Vec<T>> => Box<Vec<T>>; []);
+        $callback!([$($context)*] ['a, T] Box<&'a Vec<T>> => &'a Vec<T>; []);
+        $callback!([$($context)*] [T] std::rc::Rc<Vec<T>> => Vec<T>; []);
+        $callback!([$($context)*] [T] std::sync::Arc<Vec<T>> => Vec<T>; []);
+        $callback!([$($context)*] [T] std::pin::Pin<Box<Vec<T>>> => Vec<T>; []);
         $callback!([$($context)*] [T] &Option<T> => Option<T>; []);
         $callback!([$($context)*] [T] Box<Option<T>> => Option<T>; []);
         $callback!([
@@ -119,6 +125,9 @@ macro_rules! for_each_composited_wrapper {
         $callback!([
             $($context)*
         ] ['a, T] std::borrow::Cow<'a, [T]> => [T]; [[T]: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
+        ] ['a, T] Box<std::borrow::Cow<'a, [T]>> => std::borrow::Cow<'a, [T]>; [[T]: std::borrow::ToOwned]);
     };
 }
 

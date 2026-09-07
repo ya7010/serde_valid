@@ -328,6 +328,12 @@ mod wrapper_trait_compile_checks {
                 $assertion::<Box<[$item; 1]>>();
                 $assertion::<&'static Vec<$item>>();
                 $assertion::<Box<Vec<$item>>>();
+                $assertion::<Box<Box<Vec<$item>>>>();
+                $assertion::<&'static Box<Vec<$item>>>();
+                $assertion::<Box<&'static Vec<$item>>>();
+                $assertion::<std::rc::Rc<Vec<$item>>>();
+                $assertion::<std::sync::Arc<Vec<$item>>>();
+                $assertion::<std::pin::Pin<Box<Vec<$item>>>>();
                 $assertion::<&'static Option<$item>>();
                 $assertion::<Box<Option<$item>>>();
                 $assertion::<&'static HashMap<String, $item>>();
@@ -340,6 +346,7 @@ mod wrapper_trait_compile_checks {
                 $assertion::<Cow<'static, HashMap<String, $item>>>();
                 $assertion::<Cow<'static, IndexMap<String, $item>>>();
                 $assertion::<Cow<'static, [$item]>>();
+                $assertion::<Box<Cow<'static, [$item]>>>();
             };
         }
 
@@ -1084,7 +1091,7 @@ mod issue125 {
         clippy::owned_cow,
         clippy::redundant_allocation
     )]
-    struct CowCompositedWrappers<'a> {
+    struct NestedCompositedWrappers<'a> {
         #[validate(minimum = 1)]
         cow_vec: std::borrow::Cow<'a, Vec<i32>>,
         #[validate(minimum = 1)]
@@ -1095,17 +1102,55 @@ mod issue125 {
         cow_index_map: std::borrow::Cow<'a, IndexMap<String, i32>>,
         #[validate(minimum = 1)]
         cow_array: std::borrow::Cow<'a, [i32; 1]>,
+        #[validate(minimum = 1)]
+        nested_boxed_vec: Box<Box<Vec<i32>>>,
+        #[validate(minimum = 1)]
+        borrowed_boxed_vec: &'a Box<Vec<i32>>,
+        #[validate(minimum = 1)]
+        boxed_borrowed_vec: Box<&'a Vec<i32>>,
+        #[validate(minimum = 1)]
+        boxed_cow_slice: Box<std::borrow::Cow<'a, [i32]>>,
+        #[validate(minimum = 1)]
+        rc_vec: std::rc::Rc<Vec<i32>>,
+        #[validate(minimum = 1)]
+        arc_vec: std::sync::Arc<Vec<i32>>,
+        #[validate(minimum = 1)]
+        pinned_vec: std::pin::Pin<Box<Vec<i32>>>,
+        #[validate(multiple_of = 2)]
+        nested_multiple_of: Box<Box<Vec<i32>>>,
+        #[validate(min_length = 2)]
+        nested_min_length: Box<Box<Vec<String>>>,
+        #[validate(pattern = "^[a-z]+$")]
+        nested_pattern: Box<Box<Vec<String>>>,
+        #[validate(min_properties = 1)]
+        nested_min_properties: Box<Box<Vec<HashMap<String, i32>>>>,
+        #[validate(r#enum = [1, 2])]
+        nested_enum: Box<Box<Vec<i32>>>,
     }
 
     #[test]
-    fn composited_validation_supports_cow_containers() {
+    fn composited_validation_supports_cow_containers_and_nested_wrappers() {
+        let borrowed_vec = vec![0];
+        let borrowed_boxed_vec = Box::new(vec![0]);
         let errors = serde_json::to_value(
-            CowCompositedWrappers {
+            NestedCompositedWrappers {
                 cow_vec: std::borrow::Cow::Owned(vec![0]),
                 cow_option: std::borrow::Cow::Owned(Some(0)),
                 cow_hash_map: std::borrow::Cow::Owned(HashMap::from([("value".to_owned(), 0)])),
                 cow_index_map: std::borrow::Cow::Owned(IndexMap::from([("value".to_owned(), 0)])),
                 cow_array: std::borrow::Cow::Owned([0]),
+                nested_boxed_vec: Box::new(Box::new(vec![0])),
+                borrowed_boxed_vec: &borrowed_boxed_vec,
+                boxed_borrowed_vec: Box::new(&borrowed_vec),
+                boxed_cow_slice: Box::new(std::borrow::Cow::Borrowed(&[0])),
+                rc_vec: std::rc::Rc::new(vec![0]),
+                arc_vec: std::sync::Arc::new(vec![0]),
+                pinned_vec: Box::pin(vec![0]),
+                nested_multiple_of: Box::new(Box::new(vec![3])),
+                nested_min_length: Box::new(Box::new(vec!["x".to_owned()])),
+                nested_pattern: Box::new(Box::new(vec!["123".to_owned()])),
+                nested_min_properties: Box::new(Box::new(vec![HashMap::new()])),
+                nested_enum: Box::new(Box::new(vec![3])),
             }
             .validate()
             .unwrap_err(),
@@ -1118,6 +1163,18 @@ mod issue125 {
             "cow_hash_map",
             "cow_index_map",
             "cow_array",
+            "nested_boxed_vec",
+            "borrowed_boxed_vec",
+            "boxed_borrowed_vec",
+            "boxed_cow_slice",
+            "rc_vec",
+            "arc_vec",
+            "pinned_vec",
+            "nested_multiple_of",
+            "nested_min_length",
+            "nested_pattern",
+            "nested_min_properties",
+            "nested_enum",
         ] {
             assert!(errors["properties"].get(field).is_some(), "missing {field}");
         }

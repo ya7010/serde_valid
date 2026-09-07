@@ -31,16 +31,6 @@ where
     }
 }
 
-impl<P> Length for std::pin::Pin<P>
-where
-    P: std::ops::Deref,
-    P::Target: Length,
-{
-    fn length(&self) -> usize {
-        self.as_ref().get_ref().length()
-    }
-}
-
 macro_rules! impl_for_str {
     ($ty:ty) => {
         impl Length for $ty {

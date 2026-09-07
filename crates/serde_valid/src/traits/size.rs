@@ -25,16 +25,6 @@ where
     }
 }
 
-impl<P> Size for std::pin::Pin<P>
-where
-    P: std::ops::Deref,
-    P::Target: Size,
-{
-    fn size(&self) -> usize {
-        self.as_ref().get_ref().size()
-    }
-}
-
 impl<K, V> Size for HashMap<K, V> {
     fn size(&self) -> usize {
         self.len()
