@@ -88,13 +88,17 @@ macro_rules! for_each_composited_wrapper {
         $callback!([$($context)*] [T] &Vec<T> => Vec<T>; []);
         $callback!([$($context)*] [T] Box<Vec<T>> => Vec<T>; []);
         $callback!([$($context)*] [T] Box<Box<Vec<T>>> => Box<Vec<T>>; []);
+        $callback!([$($context)*] [T] Box<Box<Box<Vec<T>>>> => Box<Box<Vec<T>>>; []);
         $callback!([$($context)*] ['a, T] &'a Box<Vec<T>> => Box<Vec<T>>; []);
         $callback!([$($context)*] ['a, T] Box<&'a Vec<T>> => &'a Vec<T>; []);
         $callback!([$($context)*] [T] std::rc::Rc<Vec<T>> => Vec<T>; []);
+        $callback!([$($context)*] ['a, T] std::rc::Rc<&'a Vec<T>> => &'a Vec<T>; []);
         $callback!([$($context)*] [T] std::sync::Arc<Vec<T>> => Vec<T>; []);
         $callback!([$($context)*] [T] std::pin::Pin<Box<Vec<T>>> => Vec<T>; []);
         $callback!([$($context)*] [T] &Option<T> => Option<T>; []);
         $callback!([$($context)*] [T] Box<Option<T>> => Option<T>; []);
+        $callback!([$($context)*] [T] std::rc::Rc<Option<T>> => Option<T>; []);
+        $callback!([$($context)*] [T] std::pin::Pin<Box<Option<T>>> => Option<T>; []);
         $callback!([
             $($context)*
         ] [K, V] &std::collections::HashMap<K, V> => std::collections::HashMap<K, V>; []);
@@ -128,6 +132,18 @@ macro_rules! for_each_composited_wrapper {
         $callback!([
             $($context)*
         ] ['a, T] Box<std::borrow::Cow<'a, [T]>> => std::borrow::Cow<'a, [T]>; [[T]: std::borrow::ToOwned]);
+    };
+}
+
+// These shapes overlap non-generic scalar validators for some constraints (for
+// example, collection size), so only generate them for candidate-valued
+// composited validators such as numeric constraints and enum membership.
+macro_rules! for_each_generic_composited_wrapper {
+    ($callback:ident [$($context:tt)*]) => {
+        $callback!([$($context)*] [T] std::rc::Rc<[T]> => [T]; []);
+        $callback!([
+            $($context)*
+        ] [K, V] std::sync::Arc<std::collections::HashMap<K, V>> => std::collections::HashMap<K, V>; []);
     };
 }
 
@@ -543,6 +559,11 @@ macro_rules! impl_composited_validation_1args {
         }
 
         for_each_composited_wrapper!(impl_generic_composited_wrapper_1args [
+            $ValidateCompositedTrait,
+            $validate_composited_method,
+            $Error
+        ]);
+        for_each_generic_composited_wrapper!(impl_generic_composited_wrapper_1args [
             $ValidateCompositedTrait,
             $validate_composited_method,
             $Error

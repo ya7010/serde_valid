@@ -14,9 +14,9 @@ impl<'a> NamedField<'a> {
         let Some(ident) = field.ident.as_ref() else {
             return Err(crate::Error::named_fields_struct_required(field));
         };
-        let name = ident.to_string();
-        let ident_name = name.strip_prefix("r#").unwrap_or(&name);
-        let generated_ident = crate::types::generated_ident(&format!("__serde_valid_{ident_name}"));
+        let ident = ident.to_string();
+        let name = ident.strip_prefix("r#").unwrap_or(&ident).to_owned();
+        let generated_ident = crate::types::generated_ident(&format!("__serde_valid_{name}"));
         Ok(Self {
             name,
             ident: generated_ident,

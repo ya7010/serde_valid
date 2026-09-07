@@ -14,7 +14,7 @@ pub fn collect_serde_rename_map(fields: &syn::FieldsNamed) -> Result<RenameMap, 
             if attribute.path().is_ident("serde") {
                 if let Some(rename) = find_rename_from_serde_attributes(attribute) {
                     renames.insert(
-                        field.ident.to_token_stream().to_string(),
+                        named_field.name().clone(),
                         quote!(::std::borrow::Cow::from(#rename)),
                     );
                 }

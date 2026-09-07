@@ -31,6 +31,12 @@ where
     }
 }
 
+impl Length for std::pin::Pin<Box<str>> {
+    fn length(&self) -> usize {
+        self.as_ref().get_ref().length()
+    }
+}
+
 macro_rules! impl_for_str {
     ($ty:ty) => {
         impl Length for $ty {

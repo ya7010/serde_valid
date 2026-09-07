@@ -55,6 +55,7 @@ pub enum Warning {
         ident: syn::Ident,
         note: String,
         span: Span,
+        lint_attrs: Vec<syn::Attribute>,
     },
 }
 
@@ -93,25 +94,57 @@ impl std::cmp::Eq for Warning {}
 impl Warning {
     pub fn add_index(&self, index: usize) -> Self {
         match self {
-            Self::Deprecated { ident, note, span } => Self::Deprecated {
+            Self::Deprecated {
+                ident,
+                note,
+                span,
+                lint_attrs,
+            } => Self::Deprecated {
                 ident: syn::Ident::new(&format!("{}_{}", ident, index), ident.span()),
                 note: note.clone(),
                 span: *span,
+                lint_attrs: lint_attrs.clone(),
             },
         }
+    }
+
+    pub fn with_lint_attrs(mut self, attrs: &[syn::Attribute]) -> Self {
+        let lint_attrs = attrs
+            .iter()
+            .filter(|attr| {
+                ["allow", "warn", "deny", "forbid"]
+                    .iter()
+                    .any(|name| attr.path().is_ident(name))
+            })
+            .cloned()
+            .collect();
+
+        match &mut self {
+            Self::Deprecated {
+                lint_attrs: warning_lint_attrs,
+                ..
+            } => *warning_lint_attrs = lint_attrs,
+        }
+        self
     }
 }
 
 impl ToTokens for Warning {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
-            Self::Deprecated { ident, note, span } => {
+            Self::Deprecated {
+                ident,
+                note,
+                span,
+                lint_attrs,
+            } => {
                 let func_name = syn::Ident::new(
                     &format!("__{}", ident.to_string().to_lowercase()),
                     Span::mixed_site(),
                 );
 
                 quote_spanned!(*span =>
+                    #(#lint_attrs)*
                     {
                         #[allow(dead_code)]
                         #[allow(clippy::let_unit_value)]

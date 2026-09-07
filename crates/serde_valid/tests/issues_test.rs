@@ -737,7 +737,7 @@ mod issue125 {
                 .len(),
             2
         );
-        for field in ["foo", "FOO", "r#type", "__pattern", "__SERDE_VALID_PATTERN"] {
+        for field in ["foo", "FOO", "type", "__pattern", "__SERDE_VALID_PATTERN"] {
             let field_errors = errors["properties"][field]["errors"]
                 .as_array()
                 .unwrap_or_else(|| panic!("missing pattern error for {field}: {errors}"));
