@@ -19,16 +19,6 @@ use crate::{traits::Length, MinLengthError};
 ///     }
 /// }
 ///
-/// impl serde_valid::validation::ValidateCompositedMinLength for MyType {
-///     fn validate_composited_min_length(
-///         &self,
-///         min_length: usize,
-///     ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinLengthError>> {
-///         self.validate_min_length(min_length)
-///             .map_err(serde_valid::validation::Composited::Single)
-///     }
-/// }
-///
 /// #[derive(Validate)]
 /// struct TestStruct {
 ///     #[validate(min_length = 5)]

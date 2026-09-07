@@ -30,151 +30,120 @@ pub use object::{ValidateMaxProperties, ValidateMinProperties};
 pub use serde_valid_literal::{Literal, Number, Pattern};
 pub use string::{ValidateMaxLength, ValidateMinLength, ValidatePattern};
 
-macro_rules! impl_composited_wrappers_1args {
-    ($ValidateCompositedTrait:ident, $validate_composited_method:ident, $limit_type:ty, $Error:ty) => {
-        impl<T> $ValidateCompositedTrait for &T
+macro_rules! impl_composited_wrapper_1args {
+    (
+        [$ValidateCompositedTrait:ident, $validate_composited_method:ident, $limit_type:ty, $Error:ty]
+        [$($generics:tt)*] $wrapper:ty => $inner:ty;
+        [$($bounds:tt)*]
+    ) => {
+        impl<$($generics)*> $ValidateCompositedTrait for $wrapper
         where
-            T: $ValidateCompositedTrait + ?Sized,
+            $inner: $ValidateCompositedTrait,
+            $($bounds)*
         {
             fn $validate_composited_method(
                 &self,
                 limit: $limit_type,
             ) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(*self, limit)
-            }
-        }
-
-        impl<T> $ValidateCompositedTrait for Box<T>
-        where
-            T: $ValidateCompositedTrait + ?Sized,
-        {
-            fn $validate_composited_method(
-                &self,
-                limit: $limit_type,
-            ) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(self.as_ref(), limit)
-            }
-        }
-
-        impl<T> $ValidateCompositedTrait for std::rc::Rc<T>
-        where
-            T: $ValidateCompositedTrait + ?Sized,
-        {
-            fn $validate_composited_method(
-                &self,
-                limit: $limit_type,
-            ) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(self.as_ref(), limit)
-            }
-        }
-
-        impl<T> $ValidateCompositedTrait for std::sync::Arc<T>
-        where
-            T: $ValidateCompositedTrait + ?Sized,
-        {
-            fn $validate_composited_method(
-                &self,
-                limit: $limit_type,
-            ) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(self.as_ref(), limit)
-            }
-        }
-
-        impl<P> $ValidateCompositedTrait for std::pin::Pin<P>
-        where
-            P: std::ops::Deref,
-            P::Target: $ValidateCompositedTrait,
-        {
-            fn $validate_composited_method(
-                &self,
-                limit: $limit_type,
-            ) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(
-                    self.as_ref().get_ref(),
-                    limit,
-                )
-            }
-        }
-
-        impl<T> $ValidateCompositedTrait for std::borrow::Cow<'_, T>
-        where
-            T: std::borrow::ToOwned + $ValidateCompositedTrait + ?Sized,
-        {
-            fn $validate_composited_method(
-                &self,
-                limit: $limit_type,
-            ) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(self.as_ref(), limit)
+                let inner: &$inner = &**self;
+                $ValidateCompositedTrait::$validate_composited_method(inner, limit)
             }
         }
     };
 }
 
-macro_rules! impl_generic_composited_wrappers_1args {
-    ($ValidateCompositedTrait:ident, $validate_composited_method:ident, $Error:ty) => {
+macro_rules! impl_generic_composited_wrapper_1args {
+    (
+        [$ValidateCompositedTrait:ident, $validate_composited_method:ident, $Error:ty]
+        [$($generics:tt)*] $wrapper:ty => $inner:ty;
+        [$($bounds:tt)*]
+    ) => {
         #[allow(deprecated)]
-        impl<C, T> $ValidateCompositedTrait<C> for &T
+        impl<$($generics)*, C> $ValidateCompositedTrait<C> for $wrapper
         where
-            T: $ValidateCompositedTrait<C> + ?Sized,
+            C: Copy,
+            $inner: $ValidateCompositedTrait<C>,
+            $($bounds)*
         {
-            fn $validate_composited_method(&self, limit: C) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(*self, limit)
+            fn $validate_composited_method(
+                &self,
+                limit: C,
+            ) -> Result<(), Composited<$Error>> {
+                let inner: &$inner = &**self;
+                $ValidateCompositedTrait::$validate_composited_method(inner, limit)
             }
         }
+    };
+}
 
-        #[allow(deprecated)]
-        impl<C, T> $ValidateCompositedTrait<C> for Box<T>
-        where
-            T: $ValidateCompositedTrait<C> + ?Sized,
-        {
-            fn $validate_composited_method(&self, limit: C) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(self.as_ref(), limit)
-            }
-        }
+// Keep the supported transparent wrappers identical for every composited validator.
+// A fully generic wrapper impl overlaps the scalar blanket impl, so stable Rust
+// requires this closed list of standard container shapes.
+macro_rules! for_each_composited_wrapper {
+    ($callback:ident [$($context:tt)*]) => {
+        $callback!([$($context)*] [T] &[T] => [T]; []);
+        $callback!([$($context)*] [T] Box<[T]> => [T]; []);
+        $callback!([$($context)*] [T, const N: usize] &[T; N] => [T; N]; []);
+        $callback!([$($context)*] [T, const N: usize] Box<[T; N]> => [T; N]; []);
+        $callback!([$($context)*] [T] &Vec<T> => Vec<T>; []);
+        $callback!([$($context)*] [T] Box<Vec<T>> => Vec<T>; []);
+        $callback!([$($context)*] [T] Box<Box<Vec<T>>> => Box<Vec<T>>; []);
+        $callback!([$($context)*] [T] Box<Box<Box<Vec<T>>>> => Box<Box<Vec<T>>>; []);
+        $callback!([$($context)*] ['a, T] &'a Box<Vec<T>> => Box<Vec<T>>; []);
+        $callback!([$($context)*] ['a, T] Box<&'a Vec<T>> => &'a Vec<T>; []);
+        $callback!([$($context)*] [T] std::rc::Rc<Vec<T>> => Vec<T>; []);
+        $callback!([$($context)*] ['a, T] std::rc::Rc<&'a Vec<T>> => &'a Vec<T>; []);
+        $callback!([$($context)*] [T] std::sync::Arc<Vec<T>> => Vec<T>; []);
+        $callback!([$($context)*] [T] std::pin::Pin<Box<Vec<T>>> => Vec<T>; []);
+        $callback!([$($context)*] [T] &Option<T> => Option<T>; []);
+        $callback!([$($context)*] [T] Box<Option<T>> => Option<T>; []);
+        $callback!([$($context)*] [T] std::rc::Rc<Option<T>> => Option<T>; []);
+        $callback!([$($context)*] [T] std::pin::Pin<Box<Option<T>>> => Option<T>; []);
+        $callback!([
+            $($context)*
+        ] [K, V] &std::collections::HashMap<K, V> => std::collections::HashMap<K, V>; []);
+        $callback!([
+            $($context)*
+        ] [K, V] Box<std::collections::HashMap<K, V>> => std::collections::HashMap<K, V>; []);
+        $callback!([
+            $($context)*
+        ] [K, V] &indexmap::IndexMap<K, V> => indexmap::IndexMap<K, V>; []);
+        $callback!([
+            $($context)*
+        ] [K, V] Box<indexmap::IndexMap<K, V>> => indexmap::IndexMap<K, V>; []);
+        $callback!([
+            $($context)*
+        ] ['a, T] std::borrow::Cow<'a, Vec<T>> => Vec<T>; [Vec<T>: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
+        ] ['a, T] std::borrow::Cow<'a, Option<T>> => Option<T>; [Option<T>: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
+        ] ['a, T, const N: usize] std::borrow::Cow<'a, [T; N]> => [T; N]; [[T; N]: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
+        ] ['a, K, V] std::borrow::Cow<'a, std::collections::HashMap<K, V>> => std::collections::HashMap<K, V>; [std::collections::HashMap<K, V>: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
+        ] ['a, K, V] std::borrow::Cow<'a, indexmap::IndexMap<K, V>> => indexmap::IndexMap<K, V>; [indexmap::IndexMap<K, V>: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
+        ] ['a, T] std::borrow::Cow<'a, [T]> => [T]; [[T]: std::borrow::ToOwned]);
+        $callback!([
+            $($context)*
+        ] ['a, T] Box<std::borrow::Cow<'a, [T]>> => std::borrow::Cow<'a, [T]>; [[T]: std::borrow::ToOwned]);
+    };
+}
 
-        #[allow(deprecated)]
-        impl<C, T> $ValidateCompositedTrait<C> for std::rc::Rc<T>
-        where
-            T: $ValidateCompositedTrait<C> + ?Sized,
-        {
-            fn $validate_composited_method(&self, limit: C) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(self.as_ref(), limit)
-            }
-        }
-
-        #[allow(deprecated)]
-        impl<C, T> $ValidateCompositedTrait<C> for std::sync::Arc<T>
-        where
-            T: $ValidateCompositedTrait<C> + ?Sized,
-        {
-            fn $validate_composited_method(&self, limit: C) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(self.as_ref(), limit)
-            }
-        }
-
-        #[allow(deprecated)]
-        impl<C, P> $ValidateCompositedTrait<C> for std::pin::Pin<P>
-        where
-            P: std::ops::Deref,
-            P::Target: $ValidateCompositedTrait<C>,
-        {
-            fn $validate_composited_method(&self, limit: C) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(
-                    self.as_ref().get_ref(),
-                    limit,
-                )
-            }
-        }
-
-        #[allow(deprecated)]
-        impl<C, T> $ValidateCompositedTrait<C> for std::borrow::Cow<'_, T>
-        where
-            T: std::borrow::ToOwned + $ValidateCompositedTrait<C> + ?Sized,
-        {
-            fn $validate_composited_method(&self, limit: C) -> Result<(), Composited<$Error>> {
-                $ValidateCompositedTrait::$validate_composited_method(self.as_ref(), limit)
-            }
-        }
+// These shapes overlap non-generic scalar validators for some constraints (for
+// example, collection size), so only generate them for candidate-valued
+// composited validators such as numeric constraints and enum membership.
+macro_rules! for_each_generic_composited_wrapper {
+    ($callback:ident [$($context:tt)*]) => {
+        $callback!([$($context)*] [T] std::rc::Rc<[T]> => [T]; []);
+        $callback!([
+            $($context)*
+        ] [K, V] std::sync::Arc<std::collections::HashMap<K, V>> => std::collections::HashMap<K, V>; []);
     };
 }
 
@@ -186,12 +155,28 @@ macro_rules! impl_composited_validation_1args {
                 $limit:ident: $limit_type:ty$(,)*
             ) -> Result<(), Composited<$Error:ty>>;
         }
+        via $ValidateTrait:ident::$validate_method:ident;
     ) => {
         pub trait $ValidateCompositedTrait {
             fn $validate_composited_method(
                 &self,
                 $limit: $limit_type
             ) -> Result<(), Composited<$Error>>;
+        }
+
+        // Keep the blanket impl `Sized`: downstream crates may already provide
+        // both traits explicitly for their own dynamically sized types.
+        impl<T> $ValidateCompositedTrait for T
+        where
+            T: $ValidateTrait,
+        {
+            fn $validate_composited_method(
+                &self,
+                $limit: $limit_type,
+            ) -> Result<(), Composited<$Error>> {
+                self.$validate_method($limit)
+                    .map_err(|error| Composited::Single(error))
+            }
         }
 
         impl<T> $ValidateCompositedTrait for Vec<T>
@@ -275,12 +260,12 @@ macro_rules! impl_composited_validation_1args {
             }
         }
 
-        impl_composited_wrappers_1args!(
+        for_each_composited_wrapper!(impl_composited_wrapper_1args [
             $ValidateCompositedTrait,
             $validate_composited_method,
             $limit_type,
             $Error
-        );
+        ]);
 
         impl<T> $ValidateCompositedTrait for Option<T>
         where
@@ -304,6 +289,7 @@ macro_rules! impl_composited_validation_1args {
                 $limit:ident: $limit_type:ty$(,)*
             ) -> Result<(), Composited<$Error:ty>>;
         }
+        via $ValidateTrait:ident::$validate_method:ident;
 
         impl<K, V> $ValidateCompositedTrait2:ident for std::collections::HashMap<K, V>
         where
@@ -316,6 +302,7 @@ macro_rules! impl_composited_validation_1args {
                     $limit: $limit_type
                 ) -> Result<(), Composited<$Error>>;
             }
+            via $ValidateTrait::$validate_method;
         );
 
         impl<K, V> $ValidateCompositedTrait2 for std::collections::HashMap<K, V>
@@ -571,11 +558,16 @@ macro_rules! impl_composited_validation_1args {
             }
         }
 
-        impl_generic_composited_wrappers_1args!(
+        for_each_composited_wrapper!(impl_generic_composited_wrapper_1args [
             $ValidateCompositedTrait,
             $validate_composited_method,
             $Error
-        );
+        ]);
+        for_each_generic_composited_wrapper!(impl_generic_composited_wrapper_1args [
+            $ValidateCompositedTrait,
+            $validate_composited_method,
+            $Error
+        ]);
 
         $(#[$impl_meta])*
         impl<T, U> $ValidateCompositedTrait<T> for Option<U>
@@ -605,12 +597,17 @@ macro_rules! impl_generic_composited_validation_1args {
         $Error:ident,
         $type:ty
     ) => {
-        impl $ValidateCompositedTrait<$type> for $type {
+        // Keep the blanket impl `Sized`: downstream crates may already provide
+        // both traits explicitly for their own dynamically sized types.
+        impl<T> $ValidateCompositedTrait<$type> for T
+        where
+            T: $ValidateTrait<$type>,
+        {
             fn $validate_composited_method(
                 &self,
                 limit: $type,
             ) -> Result<(), crate::validation::Composited<$Error>> {
-                <$type as $ValidateTrait<$type>>::$validate_method(self, limit)
+                self.$validate_method(limit)
                     .map_err(|error| crate::validation::Composited::Single(error))
             }
         }
@@ -619,9 +616,8 @@ macro_rules! impl_generic_composited_validation_1args {
 
 pub(crate) use impl_generic_composited_validation_1args;
 
-// Scalar leaves bridge their public validator into the recursive composited
-// validator. Transparent wrappers are handled generically above.
-macro_rules! impl_composited_scalar_leaves_1args {
+// These foreign DSTs cannot receive conflicting downstream implementations.
+macro_rules! impl_unsized_composited_validation_1args {
     (
         $ValidateCompositedTrait:ident::$validate_composited_method:ident,
         $ValidateTrait:ident::$validate_method:ident,
@@ -640,38 +636,6 @@ macro_rules! impl_composited_scalar_leaves_1args {
                 }
             }
         )+
-    };
-}
-
-macro_rules! impl_composited_object_leaves {
-    (
-        $ValidateCompositedTrait:ident::$validate_composited_method:ident,
-        $ValidateTrait:ident::$validate_method:ident,
-        $Error:ty
-    ) => {
-        impl<K, V> $ValidateCompositedTrait for std::collections::HashMap<K, V> {
-            fn $validate_composited_method(&self, limit: usize) -> Result<(), Composited<$Error>> {
-                $ValidateTrait::$validate_method(self, limit).map_err(Composited::Single)
-            }
-        }
-
-        impl<K, V> $ValidateCompositedTrait for std::collections::BTreeMap<K, V> {
-            fn $validate_composited_method(&self, limit: usize) -> Result<(), Composited<$Error>> {
-                $ValidateTrait::$validate_method(self, limit).map_err(Composited::Single)
-            }
-        }
-
-        impl<K, V> $ValidateCompositedTrait for indexmap::IndexMap<K, V> {
-            fn $validate_composited_method(&self, limit: usize) -> Result<(), Composited<$Error>> {
-                $ValidateTrait::$validate_method(self, limit).map_err(Composited::Single)
-            }
-        }
-
-        impl $ValidateCompositedTrait for serde_json::Map<String, serde_json::Value> {
-            fn $validate_composited_method(&self, limit: usize) -> Result<(), Composited<$Error>> {
-                $ValidateTrait::$validate_method(self, limit).map_err(Composited::Single)
-            }
-        }
     };
 }
 
@@ -723,25 +687,19 @@ impl_composited_validation_1args!(
             max_length: usize,
         ) -> Result<(), Composited<MaxLengthError>>;
     }
+    via ValidateMaxLength::validate_max_length;
 
     impl<K, V> ValidateCompositedMaxLength for std::collections::HashMap<K, V>
     where
         V: ValidateCompositedMaxLength;
 );
 
-impl_composited_scalar_leaves_1args!(
+impl_unsized_composited_validation_1args!(
     ValidateCompositedMaxLength::validate_composited_max_length,
     ValidateMaxLength::validate_max_length,
     usize,
     MaxLengthError,
-    [
-        str,
-        String,
-        std::ffi::OsStr,
-        std::ffi::OsString,
-        std::path::Path,
-        std::path::PathBuf
-    ]
+    [str, std::ffi::OsStr, std::path::Path]
 );
 
 impl_composited_validation_1args!(
@@ -751,25 +709,19 @@ impl_composited_validation_1args!(
             min_length: usize,
         ) -> Result<(), Composited<MinLengthError>>;
     }
+    via ValidateMinLength::validate_min_length;
 
     impl<K, V> ValidateCompositedMinLength for std::collections::HashMap<K, V>
     where
         V: ValidateCompositedMinLength;
 );
 
-impl_composited_scalar_leaves_1args!(
+impl_unsized_composited_validation_1args!(
     ValidateCompositedMinLength::validate_composited_min_length,
     ValidateMinLength::validate_min_length,
     usize,
     MinLengthError,
-    [
-        str,
-        String,
-        std::ffi::OsStr,
-        std::ffi::OsString,
-        std::path::Path,
-        std::path::PathBuf
-    ]
+    [str, std::ffi::OsStr, std::path::Path]
 );
 
 impl_composited_validation_1args!(
@@ -779,25 +731,19 @@ impl_composited_validation_1args!(
             pattern: &regex::Regex,
         ) -> Result<(), Composited<PatternError>>;
     }
+    via ValidatePattern::validate_pattern;
 
     impl<K, V> ValidateCompositedPattern for std::collections::HashMap<K, V>
     where
         V: ValidateCompositedPattern;
 );
 
-impl_composited_scalar_leaves_1args!(
+impl_unsized_composited_validation_1args!(
     ValidateCompositedPattern::validate_composited_pattern,
     ValidatePattern::validate_pattern,
     &regex::Regex,
     PatternError,
-    [
-        str,
-        String,
-        std::ffi::OsStr,
-        std::ffi::OsString,
-        std::path::Path,
-        std::path::PathBuf
-    ]
+    [str, std::ffi::OsStr, std::path::Path]
 );
 
 // Object
@@ -808,12 +754,7 @@ impl_composited_validation_1args!(
             max_properties: usize,
         ) -> Result<(), Composited<MaxPropertiesError>>;
     }
-);
-
-impl_composited_object_leaves!(
-    ValidateCompositedMaxProperties::validate_composited_max_properties,
-    ValidateMaxProperties::validate_max_properties,
-    MaxPropertiesError
+    via ValidateMaxProperties::validate_max_properties;
 );
 
 impl_composited_validation_1args!(
@@ -823,12 +764,7 @@ impl_composited_validation_1args!(
             min_properties: usize,
         ) -> Result<(), Composited<MinPropertiesError>>;
     }
-);
-
-impl_composited_object_leaves!(
-    ValidateCompositedMinProperties::validate_composited_min_properties,
-    ValidateMinProperties::validate_min_properties,
-    MinPropertiesError
+    via ValidateMinProperties::validate_min_properties;
 );
 
 // Generic

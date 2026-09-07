@@ -291,16 +291,6 @@ fn pattern_trait() {
         }
     }
 
-    impl serde_valid::validation::ValidateCompositedPattern for MyType {
-        fn validate_composited_pattern(
-            &self,
-            pattern: &regex::Regex,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::PatternError>> {
-            self.validate_pattern(pattern)
-                .map_err(serde_valid::validation::Composited::Single)
-        }
-    }
-
     #[derive(Validate)]
     struct TestStruct {
         #[validate(pattern = r"^\d{4}-\d{2}-\d{2}$")]

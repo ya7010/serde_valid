@@ -20,16 +20,6 @@ use crate::MultipleOfError;
 ///     }
 /// }
 ///
-/// impl serde_valid::validation::ValidateCompositedMultipleOf<i32> for MyType {
-///     fn validate_composited_multiple_of(
-///         &self,
-///         multiple_of: i32,
-///     ) -> Result<(), serde_valid::validation::Composited<serde_valid::MultipleOfError>> {
-///         self.validate_multiple_of(multiple_of)
-///             .map_err(serde_valid::validation::Composited::Single)
-///     }
-/// }
-///
 /// #[derive(Validate)]
 /// struct TestStruct {
 ///     #[validate(multiple_of = 5)]

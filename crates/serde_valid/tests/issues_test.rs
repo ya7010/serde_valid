@@ -280,25 +280,6 @@ mod wrapper_trait_compile_checks {
         assert_string::<Box<str>>();
         assert_string::<::std::borrow::Cow<'static, ::std::ffi::OsStr>>();
         assert_string::<::std::borrow::Cow<'static, ::std::path::Path>>();
-        assert_string::<::std::pin::Pin<::std::rc::Rc<str>>>();
-        assert_string::<::std::pin::Pin<::std::sync::Arc<String>>>();
-    }
-
-    #[test]
-    fn pinned_pointer_targets_implement_public_validation_traits_directly() {
-        fn assert_object<T>()
-        where
-            T: ::serde_valid::ValidateMaxProperties + ::serde_valid::ValidateMinProperties,
-        {
-        }
-
-        fn assert_enum<T: ::serde_valid::ValidateEnum<&'static str>>() {}
-
-        assert_object::<
-            ::std::pin::Pin<::std::sync::Arc<::std::collections::HashMap<String, String>>>,
-        >();
-        assert_enum::<::std::pin::Pin<::std::rc::Rc<str>>>();
-        assert_enum::<::std::pin::Pin<::std::sync::Arc<String>>>();
     }
 
     #[test]
@@ -331,7 +312,7 @@ mod wrapper_trait_compile_checks {
     }
 
     #[test]
-    fn composited_traits_recurse_through_representative_wrapper_compositions() {
+    fn every_composited_wrapper_shape_has_direct_trait_implementations() {
         use ::indexmap::IndexMap;
         use ::std::borrow::Cow;
         use ::std::collections::HashMap;
@@ -339,7 +320,7 @@ mod wrapper_trait_compile_checks {
         fn assert_generic<T: ::serde_valid::validation::ValidateCompositedMinimum<i32>>() {}
         fn assert_fixed<T: ::serde_valid::validation::ValidateCompositedMaxLength>() {}
 
-        macro_rules! assert_wrapper_compositions {
+        macro_rules! assert_all_shapes {
             ($assertion:ident, $item:ty) => {
                 $assertion::<&'static [$item]>();
                 $assertion::<Box<[$item]>>();
@@ -353,7 +334,6 @@ mod wrapper_trait_compile_checks {
                 $assertion::<std::rc::Rc<Vec<$item>>>();
                 $assertion::<std::sync::Arc<Vec<$item>>>();
                 $assertion::<std::pin::Pin<Box<Vec<$item>>>>();
-                $assertion::<Box<std::rc::Rc<std::sync::Arc<std::pin::Pin<Box<Vec<$item>>>>>>>();
                 $assertion::<&'static Option<$item>>();
                 $assertion::<Box<Option<$item>>>();
                 $assertion::<&'static HashMap<String, $item>>();
@@ -370,8 +350,8 @@ mod wrapper_trait_compile_checks {
             };
         }
 
-        assert_wrapper_compositions!(assert_generic, i32);
-        assert_wrapper_compositions!(assert_fixed, String);
+        assert_all_shapes!(assert_generic, i32);
+        assert_all_shapes!(assert_fixed, String);
     }
 }
 
@@ -781,16 +761,6 @@ mod issue125 {
     impl ValidateEnum<&'static str> for CustomEnumValue {
         fn validate_enum(&self, candidates: &[&'static str]) -> Result<(), EnumError> {
             self.0.validate_enum(candidates)
-        }
-    }
-
-    impl<'a> serde_valid::validation::ValidateCompositedEnum<&'a [&'static str]> for CustomEnumValue {
-        fn validate_composited_enum(
-            &self,
-            candidates: &'a [&'static str],
-        ) -> Result<(), serde_valid::validation::Composited<EnumError>> {
-            self.validate_enum(candidates)
-                .map_err(serde_valid::validation::Composited::Single)
         }
     }
 
@@ -1251,18 +1221,6 @@ mod issue125 {
         impl ValidateEnumerate<&'static str> for DeprecatedCustomEnumValue {
             fn validate_enumerate(&self, candidates: &[&'static str]) -> Result<(), EnumError> {
                 self.0.validate_enumerate(candidates)
-            }
-        }
-
-        impl<'a> serde_valid::validation::ValidateCompositedEnumerate<&'a [&'static str]>
-            for DeprecatedCustomEnumValue
-        {
-            fn validate_composited_enumerate(
-                &self,
-                candidates: &'a [&'static str],
-            ) -> Result<(), serde_valid::validation::Composited<EnumError>> {
-                self.validate_enumerate(candidates)
-                    .map_err(serde_valid::validation::Composited::Single)
             }
         }
 

@@ -22,16 +22,6 @@ use crate::EnumError;
 ///     }
 /// }
 ///
-/// impl<'a> serde_valid::validation::ValidateCompositedEnum<&'a [&'static str]> for MyType {
-///     fn validate_composited_enum(
-///         &self,
-///         candidates: &'a [&'static str],
-///     ) -> Result<(), serde_valid::validation::Composited<serde_valid::EnumError>> {
-///         self.validate_enum(candidates)
-///             .map_err(serde_valid::validation::Composited::Single)
-///     }
-/// }
-///
 /// #[derive(Validate)]
 /// struct TestStruct {
 ///     #[validate(r#enum = ["1", "2", "3"])]
@@ -71,7 +61,11 @@ macro_rules! impl_validate_generic_enumerate_literal {
             }
         }
 
-        impl ValidateCompositedEnum<&[$type]> for $type {
+        // Keep the blanket impl `Sized` to preserve downstream coherence.
+        impl<T> ValidateCompositedEnum<&[$type]> for T
+        where
+            T: ValidateEnum<$type>,
+        {
             fn validate_composited_enum(
                 &self,
                 limit: &[$type],
@@ -200,15 +194,20 @@ where
     }
 }
 
-impl<C, P> ValidateEnum<C> for std::pin::Pin<P>
-where
-    P: std::ops::Deref,
-    P::Target: ValidateEnum<C>,
-{
-    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
-        self.as_ref().get_ref().validate_enum(candidates)
-    }
+macro_rules! impl_validate_enum_for_pin_pointer {
+    ($pointer:ty) => {
+        impl<C, T> ValidateEnum<C> for std::pin::Pin<$pointer>
+        where
+            T: ValidateEnum<C> + ?Sized,
+        {
+            fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
+                self.as_ref().get_ref().validate_enum(candidates)
+            }
+        }
+    };
 }
+
+for_each_standard_pin_pointer!(impl_validate_enum_for_pin_pointer);
 
 macro_rules! impl_validate_generic_enumerate_path {
     ($type:ty) => {
@@ -242,7 +241,21 @@ impl ValidateEnum<&'static str> for std::path::Path {
     }
 }
 
-macro_rules! impl_composited_enum_leaves {
+// Keep the blanket impl `Sized` to preserve downstream coherence.
+impl<T> ValidateCompositedEnum<&[&'static str]> for T
+where
+    T: ValidateEnum<&'static str>,
+{
+    fn validate_composited_enum(
+        &self,
+        limit: &[&'static str],
+    ) -> Result<(), crate::validation::Composited<EnumError>> {
+        self.validate_enum(limit)
+            .map_err(crate::validation::Composited::Single)
+    }
+}
+
+macro_rules! impl_unsized_composited_enum {
     ($($type:ty),+ $(,)?) => {
         $(
             impl<'a> ValidateCompositedEnum<&'a [&'static str]> for $type {
@@ -258,14 +271,7 @@ macro_rules! impl_composited_enum_leaves {
     };
 }
 
-impl_composited_enum_leaves!(
-    str,
-    String,
-    std::ffi::OsStr,
-    std::ffi::OsString,
-    std::path::Path,
-    std::path::PathBuf
-);
+impl_unsized_composited_enum!(str, std::ffi::OsStr, std::path::Path);
 
 #[cfg(test)]
 mod tests {

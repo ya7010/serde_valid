@@ -7,24 +7,6 @@ pub trait Size {
     fn size(&self) -> usize;
 }
 
-impl<T> Size for &T
-where
-    T: Size + ?Sized,
-{
-    fn size(&self) -> usize {
-        (*self).size()
-    }
-}
-
-impl<T> Size for Box<T>
-where
-    T: Size + ?Sized,
-{
-    fn size(&self) -> usize {
-        self.as_ref().size()
-    }
-}
-
 impl<T> Size for std::rc::Rc<T>
 where
     T: Size + ?Sized,
@@ -43,24 +25,20 @@ where
     }
 }
 
-impl<T> Size for std::borrow::Cow<'_, T>
-where
-    T: std::borrow::ToOwned + Size + ?Sized,
-{
-    fn size(&self) -> usize {
-        self.as_ref().size()
-    }
+macro_rules! impl_for_pin_pointer {
+    ($pointer:ty) => {
+        impl<T> Size for std::pin::Pin<$pointer>
+        where
+            T: Size + ?Sized,
+        {
+            fn size(&self) -> usize {
+                self.as_ref().get_ref().size()
+            }
+        }
+    };
 }
 
-impl<P> Size for std::pin::Pin<P>
-where
-    P: std::ops::Deref,
-    P::Target: Size,
-{
-    fn size(&self) -> usize {
-        self.as_ref().get_ref().size()
-    }
-}
+for_each_standard_pin_pointer!(impl_for_pin_pointer);
 
 impl<K, V> Size for HashMap<K, V> {
     fn size(&self) -> usize {

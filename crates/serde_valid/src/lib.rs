@@ -363,9 +363,7 @@
 //!
 //! ## Validate Traits
 //!
-//! To use a custom scalar type with `Validate`, implement both its validation trait and the
-//! corresponding composited trait. The composited trait distinguishes scalar leaves from
-//! recursively validated containers.
+//! By implementing the validation trait, Your original type can uses Serde Valid validations.
 //!
 //! ```rust
 //! use serde_valid::Validate;
@@ -375,16 +373,6 @@
 //! impl serde_valid::ValidateMaxLength for MyType {
 //!     fn validate_max_length(&self, max_length: usize) -> Result<(), serde_valid::MaxLengthError> {
 //!         self.0.validate_max_length(max_length)
-//!     }
-//! }
-//!
-//! impl serde_valid::validation::ValidateCompositedMaxLength for MyType {
-//!     fn validate_composited_max_length(
-//!         &self,
-//!         max_length: usize,
-//!     ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaxLengthError>> {
-//!         serde_valid::ValidateMaxLength::validate_max_length(self, max_length)
-//!             .map_err(serde_valid::validation::Composited::Single)
 //!     }
 //! }
 //!
@@ -582,6 +570,14 @@
 //!     .to_string()
 //! );
 //! ```
+
+macro_rules! for_each_standard_pin_pointer {
+    ($callback:ident) => {
+        $callback!(Box<T>);
+        $callback!(std::rc::Rc<T>);
+        $callback!(std::sync::Arc<T>);
+    };
+}
 
 pub mod error;
 mod features;

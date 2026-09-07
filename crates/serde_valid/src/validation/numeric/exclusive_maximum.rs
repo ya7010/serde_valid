@@ -18,16 +18,6 @@ use crate::ExclusiveMaximumError;
 ///     }
 /// }
 ///
-/// impl serde_valid::validation::ValidateCompositedExclusiveMaximum<i32> for MyType {
-///     fn validate_composited_exclusive_maximum(
-///         &self,
-///         exclusive_maximum: i32,
-///     ) -> Result<(), serde_valid::validation::Composited<serde_valid::ExclusiveMaximumError>> {
-///         self.validate_exclusive_maximum(exclusive_maximum)
-///             .map_err(serde_valid::validation::Composited::Single)
-///     }
-/// }
-///
 /// #[derive(Validate)]
 /// struct TestStruct {
 ///     #[validate(exclusive_maximum = 5)]

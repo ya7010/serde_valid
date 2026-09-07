@@ -19,16 +19,6 @@ use crate::{traits::Length, MaxLengthError};
 ///     }
 /// }
 ///
-/// impl serde_valid::validation::ValidateCompositedMaxLength for MyType {
-///     fn validate_composited_max_length(
-///         &self,
-///         max_length: usize,
-///     ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaxLengthError>> {
-///         self.validate_max_length(max_length)
-///             .map_err(serde_valid::validation::Composited::Single)
-///     }
-/// }
-///
 /// #[derive(Validate)]
 /// struct TestStruct {
 ///     #[validate(max_length = 5)]

@@ -21,16 +21,6 @@ use crate::{traits::Size, MaxPropertiesError};
 ///     }
 /// }
 ///
-/// impl serde_valid::validation::ValidateCompositedMaxProperties for MyType {
-///     fn validate_composited_max_properties(
-///         &self,
-///         max_properties: usize,
-///     ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaxPropertiesError>> {
-///         self.validate_max_properties(max_properties)
-///             .map_err(serde_valid::validation::Composited::Single)
-///     }
-/// }
-///
 /// #[derive(Validate)]
 /// struct TestStruct {
 ///     #[validate(max_properties = 2)]

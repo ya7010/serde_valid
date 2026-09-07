@@ -28,7 +28,11 @@ macro_rules! impl_validate_generic_enumerate_literal {
             }
         }
 
-        impl ValidateCompositedEnumerate<&[$type]> for $type {
+        // Keep the blanket impl `Sized` to preserve downstream coherence.
+        impl<T> ValidateCompositedEnumerate<&[$type]> for T
+        where
+            T: ValidateEnumerate<$type>,
+        {
             fn validate_composited_enumerate(
                 &self,
                 limit: &[$type],
@@ -157,15 +161,20 @@ where
     }
 }
 
-impl<C, P> ValidateEnumerate<C> for std::pin::Pin<P>
-where
-    P: std::ops::Deref,
-    P::Target: ValidateEnumerate<C>,
-{
-    fn validate_enumerate(&self, candidates: &[C]) -> Result<(), EnumError> {
-        self.as_ref().get_ref().validate_enumerate(candidates)
-    }
+macro_rules! impl_validate_enumerate_for_pin_pointer {
+    ($pointer:ty) => {
+        impl<C, T> ValidateEnumerate<C> for std::pin::Pin<$pointer>
+        where
+            T: ValidateEnumerate<C> + ?Sized,
+        {
+            fn validate_enumerate(&self, candidates: &[C]) -> Result<(), EnumError> {
+                self.as_ref().get_ref().validate_enumerate(candidates)
+            }
+        }
+    };
 }
+
+for_each_standard_pin_pointer!(impl_validate_enumerate_for_pin_pointer);
 
 macro_rules! impl_validate_generic_enumerate_path {
     ($type:ty) => {
@@ -199,7 +208,21 @@ impl ValidateEnumerate<&'static str> for std::path::Path {
     }
 }
 
-macro_rules! impl_composited_enumerate_leaves {
+// Keep the blanket impl `Sized` to preserve downstream coherence.
+impl<T> ValidateCompositedEnumerate<&[&'static str]> for T
+where
+    T: ValidateEnumerate<&'static str>,
+{
+    fn validate_composited_enumerate(
+        &self,
+        limit: &[&'static str],
+    ) -> Result<(), crate::validation::Composited<EnumError>> {
+        self.validate_enumerate(limit)
+            .map_err(crate::validation::Composited::Single)
+    }
+}
+
+macro_rules! impl_unsized_composited_enumerate {
     ($($type:ty),+ $(,)?) => {
         $(
             impl<'a> ValidateCompositedEnumerate<&'a [&'static str]> for $type {
@@ -215,14 +238,7 @@ macro_rules! impl_composited_enumerate_leaves {
     };
 }
 
-impl_composited_enumerate_leaves!(
-    str,
-    String,
-    std::ffi::OsStr,
-    std::ffi::OsString,
-    std::path::Path,
-    std::path::PathBuf
-);
+impl_unsized_composited_enumerate!(str, std::ffi::OsStr, std::path::Path);
 
 #[cfg(test)]
 mod tests {

@@ -16,16 +16,6 @@ use crate::MinimumError;
 ///     }
 /// }
 ///
-/// impl serde_valid::validation::ValidateCompositedMinimum<i32> for MyType {
-///     fn validate_composited_minimum(
-///         &self,
-///         minimum: i32,
-///     ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinimumError>> {
-///         self.validate_minimum(minimum)
-///             .map_err(serde_valid::validation::Composited::Single)
-///     }
-/// }
-///
 /// #[derive(Validate)]
 /// struct TestStruct {
 ///     #[validate(minimum = 5)]
