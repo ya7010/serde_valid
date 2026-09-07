@@ -70,6 +70,34 @@ where
     }
 }
 
+impl<T> ValidateUniqueItems for std::rc::Rc<T>
+where
+    T: ValidateUniqueItems + ?Sized,
+{
+    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
+        self.as_ref().validate_unique_items()
+    }
+}
+
+impl<T> ValidateUniqueItems for std::sync::Arc<T>
+where
+    T: ValidateUniqueItems + ?Sized,
+{
+    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
+        self.as_ref().validate_unique_items()
+    }
+}
+
+impl<P> ValidateUniqueItems for std::pin::Pin<P>
+where
+    P: std::ops::Deref,
+    P::Target: ValidateUniqueItems,
+{
+    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
+        self.as_ref().get_ref().validate_unique_items()
+    }
+}
+
 impl<T> ValidateUniqueItems for Vec<T>
 where
     T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,

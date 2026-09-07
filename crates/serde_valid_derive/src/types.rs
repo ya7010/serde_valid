@@ -11,10 +11,6 @@ pub fn generated_ident(name: &str) -> syn::Ident {
     syn::Ident::new(name, proc_macro2::Span::mixed_site())
 }
 
-pub fn autoderef_method_ident(base: &str, receiver: &syn::Ident) -> syn::Ident {
-    generated_ident(&format!("{base}_{receiver}"))
-}
-
 pub fn rule_vec_errors_ident() -> syn::Ident {
     generated_ident("__rule_vec_errors")
 }

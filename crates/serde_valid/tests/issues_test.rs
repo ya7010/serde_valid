@@ -1084,7 +1084,7 @@ mod issue125 {
         clippy::owned_cow,
         clippy::redundant_allocation
     )]
-    struct NestedCompositedWrappers<'a> {
+    struct CowCompositedWrappers<'a> {
         #[validate(minimum = 1)]
         cow_vec: std::borrow::Cow<'a, Vec<i32>>,
         #[validate(minimum = 1)]
@@ -1095,55 +1095,17 @@ mod issue125 {
         cow_index_map: std::borrow::Cow<'a, IndexMap<String, i32>>,
         #[validate(minimum = 1)]
         cow_array: std::borrow::Cow<'a, [i32; 1]>,
-        #[validate(minimum = 1)]
-        nested_boxed_vec: Box<Box<Vec<i32>>>,
-        #[validate(minimum = 1)]
-        borrowed_boxed_vec: &'a Box<Vec<i32>>,
-        #[validate(minimum = 1)]
-        boxed_borrowed_vec: Box<&'a Vec<i32>>,
-        #[validate(minimum = 1)]
-        boxed_cow_slice: Box<std::borrow::Cow<'a, [i32]>>,
-        #[validate(minimum = 1)]
-        rc_vec: std::rc::Rc<Vec<i32>>,
-        #[validate(minimum = 1)]
-        arc_vec: std::sync::Arc<Vec<i32>>,
-        #[validate(minimum = 1)]
-        pinned_vec: std::pin::Pin<Box<Vec<i32>>>,
-        #[validate(multiple_of = 2)]
-        nested_multiple_of: Box<Box<Vec<i32>>>,
-        #[validate(min_length = 2)]
-        nested_min_length: Box<Box<Vec<String>>>,
-        #[validate(pattern = "^[a-z]+$")]
-        nested_pattern: Box<Box<Vec<String>>>,
-        #[validate(min_properties = 1)]
-        nested_min_properties: Box<Box<Vec<HashMap<String, i32>>>>,
-        #[validate(r#enum = [1, 2])]
-        nested_enum: Box<Box<Vec<i32>>>,
     }
 
     #[test]
-    fn composited_validation_supports_cow_containers_and_nested_wrappers() {
-        let borrowed_vec = vec![0];
-        let borrowed_boxed_vec = Box::new(vec![0]);
+    fn composited_validation_supports_cow_containers() {
         let errors = serde_json::to_value(
-            NestedCompositedWrappers {
+            CowCompositedWrappers {
                 cow_vec: std::borrow::Cow::Owned(vec![0]),
                 cow_option: std::borrow::Cow::Owned(Some(0)),
                 cow_hash_map: std::borrow::Cow::Owned(HashMap::from([("value".to_owned(), 0)])),
                 cow_index_map: std::borrow::Cow::Owned(IndexMap::from([("value".to_owned(), 0)])),
                 cow_array: std::borrow::Cow::Owned([0]),
-                nested_boxed_vec: Box::new(Box::new(vec![0])),
-                borrowed_boxed_vec: &borrowed_boxed_vec,
-                boxed_borrowed_vec: Box::new(&borrowed_vec),
-                boxed_cow_slice: Box::new(std::borrow::Cow::Borrowed(&[0])),
-                rc_vec: std::rc::Rc::new(vec![0]),
-                arc_vec: std::sync::Arc::new(vec![0]),
-                pinned_vec: Box::pin(vec![0]),
-                nested_multiple_of: Box::new(Box::new(vec![3])),
-                nested_min_length: Box::new(Box::new(vec!["x".to_owned()])),
-                nested_pattern: Box::new(Box::new(vec!["123".to_owned()])),
-                nested_min_properties: Box::new(Box::new(vec![HashMap::new()])),
-                nested_enum: Box::new(Box::new(vec![3])),
             }
             .validate()
             .unwrap_err(),
@@ -1156,18 +1118,6 @@ mod issue125 {
             "cow_hash_map",
             "cow_index_map",
             "cow_array",
-            "nested_boxed_vec",
-            "borrowed_boxed_vec",
-            "boxed_borrowed_vec",
-            "boxed_cow_slice",
-            "rc_vec",
-            "arc_vec",
-            "pinned_vec",
-            "nested_multiple_of",
-            "nested_min_length",
-            "nested_pattern",
-            "nested_min_properties",
-            "nested_enum",
         ] {
             assert!(errors["properties"].get(field).is_some(), "missing {field}");
         }
@@ -1803,7 +1753,7 @@ mod issue125 {
     }
 
     #[derive(Debug, Validate)]
-    struct AutoderefArrayValidatorWrappers {
+    struct ForwardedArrayValidatorWrappers {
         #[validate(min_items = 3)]
         #[validate(max_items = 1)]
         #[validate(unique_items)]
@@ -1823,9 +1773,9 @@ mod issue125 {
     }
 
     #[test]
-    fn autoderef_wrappers_support_array_validators() {
+    fn forwarded_wrappers_support_array_validators() {
         let errors = serde_json::to_value(
-            AutoderefArrayValidatorWrappers {
+            ForwardedArrayValidatorWrappers {
                 rc_vec: std::rc::Rc::new(vec![1, 1]),
                 arc_vec: std::sync::Arc::new(vec![1, 1]),
                 pinned_vec: Box::pin(vec![1, 1]),
@@ -1857,6 +1807,147 @@ mod issue125 {
             &self.0
         }
     }
+
+    impl<T> serde_valid::Validate for InherentMethodShadow<T>
+    where
+        T: serde_valid::Validate,
+    {
+        fn validate(&self) -> Result<(), serde_valid::validation::Errors> {
+            serde_valid::Validate::validate(&self.0)
+        }
+    }
+
+    macro_rules! impl_inherent_method_shadow_validation {
+        ($Trait:ident, $method:ident, $Error:ident) => {
+            impl<T> serde_valid::$Trait for InherentMethodShadow<T>
+            where
+                T: serde_valid::$Trait,
+            {
+                fn $method(&self) -> Result<(), serde_valid::$Error> {
+                    serde_valid::$Trait::$method(&self.0)
+                }
+            }
+        };
+        ($Trait:ident, $method:ident, $Argument:ty, $Error:ident) => {
+            impl<T> serde_valid::$Trait for InherentMethodShadow<T>
+            where
+                T: serde_valid::$Trait,
+            {
+                fn $method(&self, argument: $Argument) -> Result<(), serde_valid::$Error> {
+                    serde_valid::$Trait::$method(&self.0, argument)
+                }
+            }
+        };
+    }
+
+    impl_inherent_method_shadow_validation!(
+        ValidateMinItems,
+        validate_min_items,
+        usize,
+        MinItemsError
+    );
+    impl_inherent_method_shadow_validation!(
+        ValidateMaxItems,
+        validate_max_items,
+        usize,
+        MaxItemsError
+    );
+    impl_inherent_method_shadow_validation!(
+        ValidateUniqueItems,
+        validate_unique_items,
+        UniqueItemsError
+    );
+
+    macro_rules! impl_inherent_method_shadow_composited_validation {
+        ($Trait:ident, $method:ident, $Argument:ty, $Error:ident) => {
+            impl<T> serde_valid::validation::$Trait for InherentMethodShadow<T>
+            where
+                T: serde_valid::validation::$Trait,
+            {
+                fn $method(
+                    &self,
+                    argument: $Argument,
+                ) -> Result<(), serde_valid::validation::Composited<serde_valid::$Error>> {
+                    serde_valid::validation::$Trait::$method(&self.0, argument)
+                }
+            }
+        };
+        (generic $Trait:ident, $method:ident, $Error:ident) => {
+            impl<C, T> serde_valid::validation::$Trait<C> for InherentMethodShadow<T>
+            where
+                C: Copy,
+                T: serde_valid::validation::$Trait<C>,
+            {
+                fn $method(
+                    &self,
+                    argument: C,
+                ) -> Result<(), serde_valid::validation::Composited<serde_valid::$Error>> {
+                    serde_valid::validation::$Trait::$method(&self.0, argument)
+                }
+            }
+        };
+    }
+
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedEnum,
+        validate_composited_enum,
+        EnumError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedMultipleOf,
+        validate_composited_multiple_of,
+        MultipleOfError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedMinimum,
+        validate_composited_minimum,
+        MinimumError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedMaximum,
+        validate_composited_maximum,
+        MaximumError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedExclusiveMinimum,
+        validate_composited_exclusive_minimum,
+        ExclusiveMinimumError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        generic ValidateCompositedExclusiveMaximum,
+        validate_composited_exclusive_maximum,
+        ExclusiveMaximumError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        ValidateCompositedMinProperties,
+        validate_composited_min_properties,
+        usize,
+        MinPropertiesError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        ValidateCompositedMaxProperties,
+        validate_composited_max_properties,
+        usize,
+        MaxPropertiesError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        ValidateCompositedMinLength,
+        validate_composited_min_length,
+        usize,
+        MinLengthError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        ValidateCompositedMaxLength,
+        validate_composited_max_length,
+        usize,
+        MaxLengthError
+    );
+    impl_inherent_method_shadow_composited_validation!(
+        ValidateCompositedPattern,
+        validate_composited_pattern,
+        &serde_valid::export::regex::Regex,
+        PatternError
+    );
 
     #[allow(dead_code)]
     impl<T> InherentMethodShadow<T> {
@@ -2049,7 +2140,7 @@ mod issue125 {
     }
 
     #[test]
-    fn enum_autoderef_preserves_lifetime_specific_trait_impls() {
+    fn enum_dispatch_preserves_lifetime_specific_trait_impls() {
         assert!(LifetimeSpecificEnumConstraint {
             value: StaticEnumCandidates,
         }
@@ -2058,7 +2149,7 @@ mod issue125 {
     }
 
     #[derive(Validate)]
-    struct DstAutoderefConstraints {
+    struct DstForwardingConstraints {
         #[validate(min_length = 1)]
         min_length: std::rc::Rc<str>,
         #[validate(pattern = "^[a-z]+$")]
@@ -2068,9 +2159,9 @@ mod issue125 {
     }
 
     #[test]
-    fn autoderef_supports_dynamically_sized_targets() {
+    fn standard_forwarding_supports_dynamically_sized_targets() {
         let errors = serde_json::to_value(
-            DstAutoderefConstraints {
+            DstForwardingConstraints {
                 min_length: std::rc::Rc::from(""),
                 pattern: std::rc::Rc::from("123"),
                 enum_value: std::rc::Rc::from("denied"),

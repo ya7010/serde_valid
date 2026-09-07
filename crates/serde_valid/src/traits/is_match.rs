@@ -11,6 +11,34 @@ where
     }
 }
 
+impl<T> IsMatch for std::rc::Rc<T>
+where
+    T: IsMatch + ?Sized,
+{
+    fn is_match(&self, pattern: &regex::Regex) -> bool {
+        self.as_ref().is_match(pattern)
+    }
+}
+
+impl<T> IsMatch for std::sync::Arc<T>
+where
+    T: IsMatch + ?Sized,
+{
+    fn is_match(&self, pattern: &regex::Regex) -> bool {
+        self.as_ref().is_match(pattern)
+    }
+}
+
+impl<P> IsMatch for std::pin::Pin<P>
+where
+    P: std::ops::Deref,
+    P::Target: IsMatch,
+{
+    fn is_match(&self, pattern: &regex::Regex) -> bool {
+        self.as_ref().get_ref().is_match(pattern)
+    }
+}
+
 macro_rules! impl_for_str {
     ($ty:ty) => {
         impl IsMatch for $ty {

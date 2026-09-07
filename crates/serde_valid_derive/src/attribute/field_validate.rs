@@ -1,197 +1,32 @@
-// Method syntax is used only for selecting an autoderef receiver. The generated
-// helper names live in serde_valid's internal namespace, and each helper uses
-// trait-qualified dispatch once the receiver has been selected.
-macro_rules! quote_composited_autoderef {
+// Keep dispatch trait-qualified. Method syntax would allow an inherent method on
+// the field type to shadow validation, regardless of the generated method's span.
+macro_rules! quote_composited_validation {
     (
-        generic $receiver:ident, $argument:ident,
-        $ValidateCompositedTrait:ident, $validate_composited_method:ident,
-        $autoderef_method:ident, $Error:ident
-    ) => {{
-        let __autoderef_method = crate::types::autoderef_method_ident(
-            stringify!($autoderef_method),
-            $receiver,
-        );
-        quote::quote!({
-            trait __SerdeValidCompositedAutoderef<__Argument> {
-                fn #__autoderef_method(
-                    &self,
-                    argument: __Argument,
-                ) -> ::std::result::Result<
-                    (),
-                    ::serde_valid::validation::Composited<::serde_valid::$Error>,
-                >;
-            }
-
-            impl<__Receiver, __Argument> __SerdeValidCompositedAutoderef<__Argument> for __Receiver
-            where
-                __Receiver: ::serde_valid::validation::$ValidateCompositedTrait<__Argument>
-                    + ?::std::marker::Sized,
-            {
-                fn #__autoderef_method(
-                    &self,
-                    argument: __Argument,
-                ) -> ::std::result::Result<
-                    (),
-                    ::serde_valid::validation::Composited<::serde_valid::$Error>,
-                > {
-                    ::serde_valid::validation::$ValidateCompositedTrait::$validate_composited_method(
-                        self,
-                        argument,
-                    )
-                }
-            }
-
-            (#$receiver).#__autoderef_method(#$argument)
-        })
-    }};
-    (
-        fixed $receiver:ident, $argument:ident, $Argument:ty,
-        $ValidateCompositedTrait:ident, $validate_composited_method:ident,
-        $autoderef_method:ident, $Error:ident
-    ) => {{
-        let __autoderef_method = crate::types::autoderef_method_ident(
-            stringify!($autoderef_method),
-            $receiver,
-        );
-        quote::quote!({
-            trait __SerdeValidCompositedAutoderef {
-                fn #__autoderef_method(
-                    &self,
-                    argument: $Argument,
-                ) -> ::std::result::Result<
-                    (),
-                    ::serde_valid::validation::Composited<::serde_valid::$Error>,
-                >;
-            }
-
-            impl<__Receiver> __SerdeValidCompositedAutoderef for __Receiver
-            where
-                __Receiver: ::serde_valid::validation::$ValidateCompositedTrait
-                    + ?::std::marker::Sized,
-            {
-                fn #__autoderef_method(
-                    &self,
-                    argument: $Argument,
-                ) -> ::std::result::Result<
-                    (),
-                    ::serde_valid::validation::Composited<::serde_valid::$Error>,
-                > {
-                    ::serde_valid::validation::$ValidateCompositedTrait::$validate_composited_method(
-                        self,
-                        argument,
-                    )
-                }
-            }
-
-            (#$receiver).#__autoderef_method(#$argument)
-        })
-    }};
-    (
-        slice $receiver:ident, $candidates:ident,
-        $ValidateCompositedTrait:ident, $validate_composited_method:ident,
-        $autoderef_method:ident, $Error:ident
-    ) => {{
-        let __autoderef_method = crate::types::autoderef_method_ident(
-            stringify!($autoderef_method),
-            $receiver,
-        );
-        quote::quote!({
-            trait __SerdeValidCompositedAutoderef<'__candidate, __Candidate> {
-                fn #__autoderef_method(
-                    &self,
-                    candidates: &'__candidate [__Candidate],
-                ) -> ::std::result::Result<
-                    (),
-                    ::serde_valid::validation::Composited<::serde_valid::$Error>,
-                >;
-            }
-
-            impl<'__candidate, __Receiver, __Candidate>
-                __SerdeValidCompositedAutoderef<'__candidate, __Candidate> for __Receiver
-            where
-                __Candidate: '__candidate,
-                __Receiver: ::serde_valid::validation::$ValidateCompositedTrait<
-                        &'__candidate [__Candidate],
-                    > + ?::std::marker::Sized,
-            {
-                fn #__autoderef_method(
-                    &self,
-                    candidates: &'__candidate [__Candidate],
-                ) -> ::std::result::Result<
-                    (),
-                    ::serde_valid::validation::Composited<::serde_valid::$Error>,
-                > {
-                    ::serde_valid::validation::$ValidateCompositedTrait::$validate_composited_method(
-                        self,
-                        candidates,
-                    )
-                }
-            }
-
-            (#$receiver).#__autoderef_method(&[#$candidates])
-        })
-    }};
+        $receiver:ident, $argument:ident,
+        $ValidateCompositedTrait:ident, $validate_composited_method:ident
+    ) => {
+        quote::quote!(
+            ::serde_valid::validation::$ValidateCompositedTrait::$validate_composited_method(
+                #$receiver,
+                #$argument,
+            )
+        )
+    };
 }
 
-macro_rules! quote_validation_autoderef {
+macro_rules! quote_validation {
     (
         zero $receiver:ident,
-        $ValidateTrait:ident, $validate_method:ident,
-        $autoderef_method:ident, $Error:ty
-    ) => {{
-        let __autoderef_method = crate::types::autoderef_method_ident(
-            stringify!($autoderef_method),
-            $receiver,
-        );
-        quote::quote!({
-            trait __SerdeValidAutoderef {
-                fn #__autoderef_method(&self) -> ::std::result::Result<(), $Error>;
-            }
-
-            impl<__Receiver> __SerdeValidAutoderef for __Receiver
-            where
-                __Receiver: ::serde_valid::$ValidateTrait + ?::std::marker::Sized,
-            {
-                fn #__autoderef_method(&self) -> ::std::result::Result<(), $Error> {
-                    ::serde_valid::$ValidateTrait::$validate_method(self)
-                }
-            }
-
-            (#$receiver).#__autoderef_method()
-        })
-    }};
+        $ValidateTrait:ident, $validate_method:ident
+    ) => {
+        quote::quote!(::serde_valid::$ValidateTrait::$validate_method(#$receiver))
+    };
     (
-        fixed $receiver:ident, $argument:ident, $Argument:ty,
-        $ValidateTrait:ident, $validate_method:ident,
-        $autoderef_method:ident, $Error:ty
-    ) => {{
-        let __autoderef_method = crate::types::autoderef_method_ident(
-            stringify!($autoderef_method),
-            $receiver,
-        );
-        quote::quote!({
-            trait __SerdeValidAutoderef {
-                fn #__autoderef_method(
-                    &self,
-                    argument: $Argument,
-                ) -> ::std::result::Result<(), $Error>;
-            }
-
-            impl<__Receiver> __SerdeValidAutoderef for __Receiver
-            where
-                __Receiver: ::serde_valid::$ValidateTrait + ?::std::marker::Sized,
-            {
-                fn #__autoderef_method(
-                    &self,
-                    argument: $Argument,
-                ) -> ::std::result::Result<(), $Error> {
-                    ::serde_valid::$ValidateTrait::$validate_method(self, argument)
-                }
-            }
-
-            (#$receiver).#__autoderef_method(#$argument)
-        })
-    }};
+        $receiver:ident, $argument:ident,
+        $ValidateTrait:ident, $validate_method:ident
+    ) => {
+        quote::quote!(::serde_valid::$ValidateTrait::$validate_method(#$receiver, #$argument))
+    };
 }
 
 mod array;

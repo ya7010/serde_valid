@@ -143,6 +143,34 @@ where
     }
 }
 
+impl<C, T> ValidateEnumerate<C> for std::rc::Rc<T>
+where
+    T: ValidateEnumerate<C> + ?Sized,
+{
+    fn validate_enumerate(&self, enumerate: &[C]) -> Result<(), EnumError> {
+        self.as_ref().validate_enumerate(enumerate)
+    }
+}
+
+impl<C, T> ValidateEnumerate<C> for std::sync::Arc<T>
+where
+    T: ValidateEnumerate<C> + ?Sized,
+{
+    fn validate_enumerate(&self, enumerate: &[C]) -> Result<(), EnumError> {
+        self.as_ref().validate_enumerate(enumerate)
+    }
+}
+
+impl<C, P> ValidateEnumerate<C> for std::pin::Pin<P>
+where
+    P: std::ops::Deref,
+    P::Target: ValidateEnumerate<C>,
+{
+    fn validate_enumerate(&self, enumerate: &[C]) -> Result<(), EnumError> {
+        self.as_ref().get_ref().validate_enumerate(enumerate)
+    }
+}
+
 macro_rules! impl_validate_generic_enumerate_path {
     ($type:ty) => {
         impl ValidateEnumerate<&'static str> for $type {

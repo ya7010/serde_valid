@@ -37,6 +37,34 @@ macro_rules! impl_validate_array_length_items {
             }
         }
 
+        impl<T> $ValidateTrait for std::rc::Rc<T>
+        where
+            T: $ValidateTrait + ?Sized,
+        {
+            fn $validate_method(&self, limit: usize) -> Result<(), $Error> {
+                self.as_ref().$validate_method(limit)
+            }
+        }
+
+        impl<T> $ValidateTrait for std::sync::Arc<T>
+        where
+            T: $ValidateTrait + ?Sized,
+        {
+            fn $validate_method(&self, limit: usize) -> Result<(), $Error> {
+                self.as_ref().$validate_method(limit)
+            }
+        }
+
+        impl<P> $ValidateTrait for std::pin::Pin<P>
+        where
+            P: std::ops::Deref,
+            P::Target: $ValidateTrait,
+        {
+            fn $validate_method(&self, limit: usize) -> Result<(), $Error> {
+                self.as_ref().get_ref().$validate_method(limit)
+            }
+        }
+
         impl<T> $ValidateTrait for Option<T>
         where
             T: $ValidateTrait,

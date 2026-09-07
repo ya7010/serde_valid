@@ -636,6 +636,34 @@ where
     }
 }
 
+impl<T> Validate for std::rc::Rc<T>
+where
+    T: Validate + ?Sized,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        self.as_ref().validate()
+    }
+}
+
+impl<T> Validate for std::sync::Arc<T>
+where
+    T: Validate + ?Sized,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        self.as_ref().validate()
+    }
+}
+
+impl<P> Validate for std::pin::Pin<P>
+where
+    P: std::ops::Deref,
+    P::Target: Validate,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        self.as_ref().get_ref().validate()
+    }
+}
+
 impl<T> Validate for Vec<T>
 where
     T: Validate,
