@@ -33,8 +33,8 @@ assert_eq!(
 ```
 
 <div class="warning">
-Custom message is not supported in 
-<code> #[validate(custom(???))]</code> validation.
+Custom message is not supported in
+<code>#[validate(custom = ???)]</code> validation.
 
 Custom validation allows you to create error messages without your own validation functions.    
 </div>

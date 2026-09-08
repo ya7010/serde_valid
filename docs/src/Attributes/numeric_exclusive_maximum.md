@@ -1,6 +1,6 @@
 # Numeric: "exclusive_maximum" validation
 
-The `#[validate(exclusive_maximum = ???)]` attribute is used to validate that a number is greater than a given value.
+The `#[validate(exclusive_maximum = ???)]` attribute validates that a number is less than a given value.
 
 ```rust
 # extern crate serde_valid;

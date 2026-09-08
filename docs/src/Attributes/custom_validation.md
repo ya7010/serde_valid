@@ -1,6 +1,6 @@
 # Custom validation
 
-The `#[validate(custom(???))]` attribute allows you to define your own validation logic.
+The `#[validate(custom = ???)]` attribute allows you to define your own validation logic.
 
 ```rust
 # extern crate serde_valid;
@@ -17,9 +17,9 @@ fn user_validation(val: &i32) -> Result<(), serde_valid::validation::Error> {
 
 #[derive(Validate)]
 struct Data (
-    #[validate(custom(user_validation))]
+    #[validate(custom = user_validation)]
     i32,
-    #[validate(custom(|v| user_validation(v)))] // you can also use closures
+    #[validate(custom = |v| user_validation(v))] // you can also use closures
     i32,
 );
 
