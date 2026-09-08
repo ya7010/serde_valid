@@ -587,7 +587,10 @@ pub use error::{
 #[allow(unused_imports)]
 pub use features::*;
 use indexmap::IndexMap;
-use std::{borrow::Cow, collections::HashMap};
+use std::{
+    borrow::Cow,
+    collections::{BTreeMap, HashMap},
+};
 pub use validation::{
     ValidateEnum, ValidateExclusiveMaximum, ValidateExclusiveMinimum, ValidateMaxItems,
     ValidateMaxLength, ValidateMaxProperties, ValidateMaximum, ValidateMinItems, ValidateMinLength,
@@ -630,6 +633,15 @@ where
 {
     fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
         (*self).validate()
+    }
+}
+
+impl<T> Validate for &mut T
+where
+    T: Validate + ?Sized,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        (**self).validate()
     }
 }
 
@@ -748,65 +760,62 @@ where
     }
 }
 
-impl<K, V> Validate for HashMap<K, V>
+fn validate_map<'a, K, V, I>(entries: I) -> std::result::Result<(), self::validation::Errors>
 where
-    K: AsRef<str>,
-    V: Validate,
+    K: ToString + 'a,
+    V: Validate + 'a,
+    I: IntoIterator<Item = (&'a K, &'a V)>,
 {
-    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
-        let mut items: self::validation::PropertyErrorsMap<self::validation::Error> =
-            IndexMap::new();
+    let mut items: self::validation::PropertyErrorsMap<self::validation::Error> = IndexMap::new();
 
-        for (key, value) in self.iter() {
-            if let Err(errors) = value.validate() {
-                let key = Cow::Owned(key.as_ref().to_owned());
-                match items.get_mut(&key) {
-                    Some(existing) => existing.merge(errors),
-                    None => {
-                        items.insert(key, errors);
-                    }
+    for (key, value) in entries {
+        if let Err(errors) = value.validate() {
+            let key = Cow::Owned(key.to_string());
+            match items.get_mut(&key) {
+                Some(existing) => existing.merge(errors),
+                None => {
+                    items.insert(key, errors);
                 }
             }
         }
+    }
 
-        if items.is_empty() {
-            Ok(())
-        } else {
-            Err(self::validation::Errors::Object(
-                validation::error::ObjectErrors::new(vec![], items),
-            ))
-        }
+    if items.is_empty() {
+        Ok(())
+    } else {
+        Err(self::validation::Errors::Object(
+            validation::error::ObjectErrors::new(vec![], items),
+        ))
+    }
+}
+
+impl<K, V> Validate for HashMap<K, V>
+where
+    K: ToString,
+    V: Validate,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        validate_map(self)
+    }
+}
+
+impl<K, V> Validate for BTreeMap<K, V>
+where
+    K: ToString,
+    V: Validate,
+{
+    fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
+        validate_map(self)
     }
 }
 
 impl<K, V> Validate for IndexMap<K, V>
 where
-    K: AsRef<str>,
+    K: ToString,
     V: Validate,
 {
     fn validate(&self) -> std::result::Result<(), self::validation::Errors> {
-        let mut items: self::validation::PropertyErrorsMap<self::validation::Error> =
-            IndexMap::new();
-
-        for (key, value) in self.iter() {
-            if let Err(errors) = value.validate() {
-                let key = Cow::Owned(key.as_ref().to_owned());
-                match items.get_mut(&key) {
-                    Some(existing) => existing.merge(errors),
-                    None => {
-                        items.insert(key, errors);
-                    }
-                }
-            }
-        }
-
-        if items.is_empty() {
-            Ok(())
-        } else {
-            Err(self::validation::Errors::Object(
-                validation::ObjectErrors::new(vec![], items),
-            ))
-        }
+        validate_map(self)
     }
 }
 

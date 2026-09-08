@@ -39,13 +39,13 @@ macro_rules! impl_fixed_recursive {
         impl_fixed_recursive!(@maps $maps, $Trait, $method, $arg, $Error);
     };
     (@maps yes, $Trait:ident, $method:ident, $arg:ty, $Error:ty) => {
-        impl<K: AsRef<str>, V, P> $Trait<composited_path::Map<P>> for std::collections::HashMap<K, V> where V: $Trait<P> {
+        impl<K: ToString, V, P> $Trait<composited_path::Map<P>> for std::collections::HashMap<K, V> where V: $Trait<P> {
             fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> { collect_map(self.iter(), a, |v, a| $Trait::$method(v, a)) }
         }
-        impl<K: AsRef<str>, V, P> $Trait<composited_path::Map<P>> for std::collections::BTreeMap<K, V> where V: $Trait<P> {
+        impl<K: ToString, V, P> $Trait<composited_path::Map<P>> for std::collections::BTreeMap<K, V> where V: $Trait<P> {
             fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> { collect_map(self.iter(), a, |v, a| $Trait::$method(v, a)) }
         }
-        impl<K: AsRef<str>, V, P> $Trait<composited_path::Map<P>> for indexmap::IndexMap<K, V> where V: $Trait<P> {
+        impl<K: ToString, V, P> $Trait<composited_path::Map<P>> for indexmap::IndexMap<K, V> where V: $Trait<P> {
             fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> { collect_map(self.iter(), a, |v, a| $Trait::$method(v, a)) }
         }
     };
@@ -58,7 +58,7 @@ fn collect_map<'a, K, V, A: Copy, E, I, F>(
     mut validate: F,
 ) -> Result<(), Composited<E>>
 where
-    K: AsRef<str> + 'a,
+    K: ToString + 'a,
     V: 'a,
     I: IntoIterator<Item = (&'a K, &'a V)>,
     F: FnMut(&V, A) -> Result<(), Composited<E>>,
@@ -67,7 +67,7 @@ where
     for (key, value) in entries {
         if let Err(error) = validate(value, argument) {
             errors
-                .entry(std::borrow::Cow::Owned(key.as_ref().to_owned()))
+                .entry(std::borrow::Cow::Owned(key.to_string()))
                 .or_insert_with(Vec::new)
                 .push(error);
         }
@@ -227,7 +227,7 @@ macro_rules! define_owned {
                 }
             }
         }
-        impl<C: Clone, K: AsRef<str>, V, P> $Trait<C, composited_path::Map<P>>
+        impl<C: Clone, K: ToString, V, P> $Trait<C, composited_path::Map<P>>
             for std::collections::HashMap<K, V>
         where
             V: $Trait<C, P>,
@@ -236,7 +236,7 @@ macro_rules! define_owned {
                 collect_map_clone(self.iter(), a, |v, a| $Trait::$method(v, a))
             }
         }
-        impl<C: Clone, K: AsRef<str>, V, P> $Trait<C, composited_path::Map<P>>
+        impl<C: Clone, K: ToString, V, P> $Trait<C, composited_path::Map<P>>
             for std::collections::BTreeMap<K, V>
         where
             V: $Trait<C, P>,
@@ -245,7 +245,7 @@ macro_rules! define_owned {
                 collect_map_clone(self.iter(), a, |v, a| $Trait::$method(v, a))
             }
         }
-        impl<C: Clone, K: AsRef<str>, V, P> $Trait<C, composited_path::Map<P>>
+        impl<C: Clone, K: ToString, V, P> $Trait<C, composited_path::Map<P>>
             for indexmap::IndexMap<K, V>
         where
             V: $Trait<C, P>,
@@ -263,7 +263,7 @@ fn collect_map_clone<'a, K, V, A: Clone, E, I, F>(
     mut validate: F,
 ) -> Result<(), Composited<E>>
 where
-    K: AsRef<str> + 'a,
+    K: ToString + 'a,
     V: 'a,
     I: IntoIterator<Item = (&'a K, &'a V)>,
     F: FnMut(&V, A) -> Result<(), Composited<E>>,
@@ -272,7 +272,7 @@ where
     for (key, value) in entries {
         if let Err(error) = validate(value, argument.clone()) {
             errors
-                .entry(std::borrow::Cow::Owned(key.as_ref().to_owned()))
+                .entry(std::borrow::Cow::Owned(key.to_string()))
                 .or_insert_with(Vec::new)
                 .push(error);
         }
@@ -408,7 +408,7 @@ macro_rules! define_slice {
                 }
             }
         }
-        impl<C, K: AsRef<str>, V, P> $Trait<C, composited_path::Map<P>>
+        impl<C, K: ToString, V, P> $Trait<C, composited_path::Map<P>>
             for std::collections::HashMap<K, V>
         where
             V: $Trait<C, P>,
@@ -417,7 +417,7 @@ macro_rules! define_slice {
                 collect_map(self.iter(), a, |v, a| $Trait::$method(v, a))
             }
         }
-        impl<C, K: AsRef<str>, V, P> $Trait<C, composited_path::Map<P>>
+        impl<C, K: ToString, V, P> $Trait<C, composited_path::Map<P>>
             for std::collections::BTreeMap<K, V>
         where
             V: $Trait<C, P>,
@@ -426,7 +426,7 @@ macro_rules! define_slice {
                 collect_map(self.iter(), a, |v, a| $Trait::$method(v, a))
             }
         }
-        impl<C, K: AsRef<str>, V, P> $Trait<C, composited_path::Map<P>> for indexmap::IndexMap<K, V>
+        impl<C, K: ToString, V, P> $Trait<C, composited_path::Map<P>> for indexmap::IndexMap<K, V>
         where
             V: $Trait<C, P>,
         {

@@ -19,6 +19,15 @@ macro_rules! impl_validate_array_length_items {
             }
         }
 
+        impl<T> $ValidateTrait for &mut T
+        where
+            T: $ValidateTrait + ?Sized,
+        {
+            fn $validate_method(&self, limit: usize) -> Result<(), $Error> {
+                (**self).$validate_method(limit)
+            }
+        }
+
         impl<T> $ValidateTrait for Box<T>
         where
             T: $ValidateTrait + ?Sized,
