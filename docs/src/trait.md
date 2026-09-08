@@ -30,6 +30,7 @@ Implement only the scalar trait in the common case. For example, the implementat
 allows `Vec<MyType>`, `Option<MyType>`, and standard transparent pointer wrappers to be used with
 `#[validate(max_length = ...)]`; serde_valid supplies their composited implementations.
 
-The public scalar traits are re-exported from the crate root and are also grouped under
-`serde_valid::traits`. See the [crate API documentation](https://docs.rs/serde_valid/latest/serde_valid/)
-for the complete list.
+The public validation traits are re-exported from the crate root and are also grouped under
+`serde_valid::validation`. Lower-level capability traits such as `Length`, `Size`, and `IsMatch`
+are available under `serde_valid::traits`. See the
+[crate API documentation](https://docs.rs/serde_valid/latest/serde_valid/) for the complete list.
