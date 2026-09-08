@@ -1,9 +1,0 @@
-[book]
-authors = ["ya7010"]
-language = "en"
-multilingual = false
-src = "src"
-title = "serde_valid"
-
-[output.html]
-no-section-label = true
