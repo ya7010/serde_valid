@@ -103,7 +103,7 @@ mod tests {
     #[test]
     fn test_validate_string_pattern_cow_str_type() {
         assert!(
-            crate::validation::ValidateCompositedPattern::validate_composited_pattern(
+            crate::composited::ValidateCompositedPattern::validate_composited_pattern(
                 &Cow::from("2020-09-10"),
                 &Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap()
             )

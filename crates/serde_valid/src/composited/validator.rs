@@ -1,27 +1,15 @@
 #![allow(deprecated)]
 
-use super::{
-    Composited, ValidateEnum, ValidateEnumerate, ValidateExclusiveMaximum,
-    ValidateExclusiveMinimum, ValidateMaxLength, ValidateMaxProperties, ValidateMaximum,
-    ValidateMinLength, ValidateMinProperties, ValidateMinimum, ValidateMultipleOf, ValidatePattern,
+use super::{error::Composited, path as composited_path};
+use crate::validation::{
+    ValidateEnum, ValidateEnumerate, ValidateExclusiveMaximum, ValidateExclusiveMinimum,
+    ValidateMaxLength, ValidateMaxProperties, ValidateMaximum, ValidateMinLength,
+    ValidateMinProperties, ValidateMinimum, ValidateMultipleOf, ValidatePattern,
 };
 use crate::{
     EnumError, ExclusiveMaximumError, ExclusiveMinimumError, MaxLengthError, MaxPropertiesError,
     MaximumError, MinLengthError, MinPropertiesError, MinimumError, MultipleOfError, PatternError,
 };
-
-/// Type-level paths used to select scalar or recursive composited validation.
-///
-/// These types are implementation details. They are public because the path is
-/// an inferred parameter of the public `ValidateComposited*` traits.
-#[doc(hidden)]
-pub mod composited_path {
-    pub struct Scalar;
-    pub struct Transparent<P>(std::marker::PhantomData<fn() -> P>);
-    pub struct Sequence<P>(std::marker::PhantomData<fn() -> P>);
-    pub struct Optional<P>(std::marker::PhantomData<fn() -> P>);
-    pub struct Map<P>(std::marker::PhantomData<fn() -> P>);
-}
 
 macro_rules! impl_fixed_recursive {
     ($Trait:ident, $method:ident, $arg:ty, $Error:ty, maps = $maps:ident) => {
@@ -100,7 +88,7 @@ macro_rules! define_fixed {
             "Implementing the scalar trait is sufficient; transparent wrappers and containers are composed automatically.\n\n",
             "# Examples\n\n",
             "```rust\n",
-            "use serde_valid::validation::", stringify!($Trait), ";\n\n",
+            "use serde_valid::composited::", stringify!($Trait), ";\n\n",
             "let values = ", stringify!($values), ";\n",
             "let result = ", stringify!($Trait), "::", stringify!($method),
             "(&values, ", stringify!($example_arg), ");\n",
@@ -126,7 +114,7 @@ macro_rules! define_owned {
             "Implementing the scalar trait is sufficient; transparent wrappers and containers are composed automatically.\n\n",
             "# Examples\n\n",
             "```rust\n",
-            "use serde_valid::validation::", stringify!($Trait), ";\n\n",
+            "use serde_valid::composited::", stringify!($Trait), ";\n\n",
             "let values = vec![1_i32, 2, 3];\n",
             "let result = ", stringify!($Trait), "::", stringify!($method), "(&values, 2);\n",
             "assert!(result.is_err());\n",
@@ -307,7 +295,7 @@ macro_rules! define_slice {
             "# Examples\n\n",
             "```rust\n",
             "#![allow(deprecated)]\n",
-            "use serde_valid::validation::", stringify!($Trait), ";\n\n",
+            "use serde_valid::composited::", stringify!($Trait), ";\n\n",
             "let values = vec![\"red\", \"blue\"];\n",
             "let result = ", stringify!($Trait), "::", stringify!($method),
             "(&values, &[\"red\", \"green\"]);\n",

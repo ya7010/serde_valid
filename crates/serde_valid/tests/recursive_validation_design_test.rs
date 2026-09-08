@@ -1,6 +1,11 @@
-use serde_valid::validation::{Composited, IntoError, ValidateCompositedEnum};
-use serde_valid::validation::{ValidateCompositedMinProperties, ValidateCompositedMinimum};
-use serde_valid::{MinimumError, Validate, ValidateEnum, ValidateMinProperties, ValidateMinimum};
+use serde_valid::composited::{
+    Composited, ValidateCompositedEnum, ValidateCompositedMinLength,
+    ValidateCompositedMinProperties, ValidateCompositedMinimum,
+};
+use serde_valid::validation::IntoError;
+use serde_valid::{
+    MinLengthError, MinimumError, Validate, ValidateEnum, ValidateMinProperties, ValidateMinimum,
+};
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::pin::Pin;
@@ -8,6 +13,48 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 struct CustomNumber(i32);
+
+struct TransparentWrapper<T>(T);
+
+impl<T, P> ValidateCompositedMinLength<serde_valid::composited::path::Transparent<P>>
+    for TransparentWrapper<T>
+where
+    T: ValidateCompositedMinLength<P>,
+{
+    fn validate_composited_min_length(
+        &self,
+        min_length: usize,
+    ) -> Result<(), Composited<MinLengthError>> {
+        ValidateCompositedMinLength::validate_composited_min_length(&self.0, min_length)
+    }
+}
+
+#[derive(Validate)]
+struct CustomWrappedStrings {
+    #[validate(min_length = 3)]
+    values: TransparentWrapper<Vec<String>>,
+}
+
+#[test]
+fn a_custom_transparent_wrapper_preserves_the_inner_path() {
+    let value = CustomWrappedStrings {
+        values: TransparentWrapper(vec!["long".to_owned(), "x".to_owned()]),
+    };
+    let error = serde_json::to_value(value.validate().unwrap_err()).unwrap();
+
+    assert!(error["properties"]["values"]["items"]["1"].is_object());
+}
+
+#[test]
+fn public_composited_path_markers_are_nameable() {
+    fn assert_path<P>() {}
+
+    assert_path::<serde_valid::composited::path::Scalar>();
+    assert_path::<serde_valid::composited::path::Transparent<()>>();
+    assert_path::<serde_valid::composited::path::Sequence<()>>();
+    assert_path::<serde_valid::composited::path::Optional<()>>();
+    assert_path::<serde_valid::composited::path::Map<()>>();
+}
 
 impl ValidateMinimum<i32> for CustomNumber {
     fn validate_minimum(&self, minimum: i32) -> Result<(), MinimumError> {
@@ -80,7 +127,7 @@ fn every_previously_supported_wrapper_shape_remains_composited() {
     macro_rules! assert_max_length_invalid {
         ($value:expr) => {
             assert!(
-                serde_valid::validation::ValidateCompositedMaxLength::validate_composited_max_length(
+                serde_valid::composited::ValidateCompositedMaxLength::validate_composited_max_length(
                     &$value, 1,
                 )
                 .is_err()

@@ -6,7 +6,7 @@ macro_rules! quote_composited_validation {
         $ValidateCompositedTrait:ident, $validate_composited_method:ident
     ) => {
         quote::quote!(
-            ::serde_valid::validation::$ValidateCompositedTrait::$validate_composited_method(
+            ::serde_valid::composited::$ValidateCompositedTrait::$validate_composited_method(
                 #$receiver,
                 #$argument,
             )
