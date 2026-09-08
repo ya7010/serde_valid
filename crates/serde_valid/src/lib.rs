@@ -42,6 +42,58 @@
 //! - `i128` - support `i128`/`u128` type (default).
 //! - `fluent` - provide localization using [fluent](https://projectfluent.org/).
 //!
+//! ## Migrating from v2 to v3
+//!
+//! Version 3 separates scalar validation from recursive, path-aware validation and removes APIs
+//! that were deprecated in v2.
+//!
+//! ### Replace `enumerate` with `enum`
+//!
+//! | v2 | v3 |
+//! | --- | --- |
+//! | `#[validate(enumerate = [...])]` | `#[validate(r#enum = [...])]` |
+//! | `ValidateEnumerate` | [`ValidateEnum`] |
+//! | `ValidateCompositedEnumerate` | [`composited::ValidateCompositedEnum`] |
+//! | `EnumerateError` | [`EnumError`] |
+//!
+//! The `r#` prefix is Rust raw-identifier syntax because `enum` is a keyword.
+//!
+//! ### Import composited APIs from `serde_valid::composited`
+//!
+//! Composited APIs are no longer exported from `serde_valid::validation`.
+//!
+//! ```text
+//! // v2
+//! use serde_valid::validation::{Composited, ValidateCompositedMinLength};
+//! ```
+//!
+//! ```rust
+//! // v3
+//! use serde_valid::composited::{Composited, ValidateCompositedMinLength};
+//! # let _: Option<Composited<serde_valid::MinLengthError>> = None;
+//! # fn accepts<T: ValidateCompositedMinLength>(_: &T) {}
+//! ```
+//!
+//! Composited validators now have a path type parameter. It defaults to [`composited::path::Scalar`]
+//! for direct scalar use. Standard wrappers and containers compose the path automatically; custom
+//! wrappers forward the appropriate composited validator as shown in [`composited`].
+//!
+//! [`composited::Composited`] also has an `Object` variant so map failures retain their actual
+//! property keys. Exhaustive matches must handle this variant.
+//!
+//! ### Update custom map keys
+//!
+//! Recursive validation for `HashMap`, `BTreeMap`, and `IndexMap` requires `K: ToString`.
+//! Implement [`std::fmt::Display`] for a custom key and ensure distinct keys do not stringify to the
+//! same value unless their errors should be combined.
+//!
+//! ### Keep scalar and composited validation separate
+//!
+//! Some wrappers implemented string and enum capability traits directly in v2. In v3, recursion
+//! for those scalar rules is expressed through composited validation. Implement the scalar trait
+//! for the underlying value, then use derive or the corresponding `ValidateComposited*` trait for
+//! recursive validation. See [`composited`] for supported wrappers and a custom-wrapper example.
+//!
 //! ## Validations
 //!
 //! Serde Valid support standard validation based JSON Schema.
