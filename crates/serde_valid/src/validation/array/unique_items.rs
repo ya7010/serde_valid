@@ -52,6 +52,15 @@ where
     }
 }
 
+impl<T> ValidateUniqueItems for &mut T
+where
+    T: ValidateUniqueItems + ?Sized,
+{
+    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
+        (**self).validate_unique_items()
+    }
+}
+
 impl<T> ValidateUniqueItems for Box<T>
 where
     T: ValidateUniqueItems + ?Sized,

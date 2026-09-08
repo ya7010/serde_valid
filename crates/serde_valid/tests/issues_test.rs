@@ -1439,9 +1439,9 @@ mod issue125 {
         #[derive(Eq, Hash, PartialEq)]
         struct AliasedKey(u8);
 
-        impl AsRef<str> for AliasedKey {
-            fn as_ref(&self) -> &str {
-                "same"
+        impl std::fmt::Display for AliasedKey {
+            fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("same")
             }
         }
 
@@ -1608,13 +1608,13 @@ mod issue125 {
     }
 
     #[test]
-    fn string_like_map_key_contract_supports_owned_and_borrowed_keys() {
+    fn stringifiable_map_key_contract_supports_owned_and_borrowed_keys() {
         #[derive(Eq, Hash, PartialEq)]
         struct CustomKey(String);
 
-        impl AsRef<str> for CustomKey {
-            fn as_ref(&self) -> &str {
-                &self.0
+        impl std::fmt::Display for CustomKey {
+            fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str(&self.0)
             }
         }
 
@@ -1649,9 +1649,9 @@ mod issue125 {
         #[derive(Eq, Hash, PartialEq)]
         struct AliasedKey(u8);
 
-        impl AsRef<str> for AliasedKey {
-            fn as_ref(&self) -> &str {
-                "same"
+        impl std::fmt::Display for AliasedKey {
+            fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("same")
             }
         }
 
@@ -2215,9 +2215,9 @@ mod issue125 {
     #[derive(Debug, Eq, Hash, PartialEq)]
     struct AliasedKey(u8);
 
-    impl AsRef<str> for AliasedKey {
-        fn as_ref(&self) -> &str {
-            "same"
+    impl std::fmt::Display for AliasedKey {
+        fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            formatter.write_str("same")
         }
     }
 
