@@ -2,6 +2,7 @@ use crate::attribute::{MetaListCustomMessage, MetaNameValueCustomMessage, MetaPa
 use crate::types::SingleIdentPath;
 #[cfg(feature = "fluent")]
 use crate::types::{CommaSeparatedNestedMetas, NestedMeta};
+use crate::warning::WithWarnings;
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::str::FromStr;
@@ -13,7 +14,9 @@ pub fn default_message_format() -> MessageFormat {
     quote!(::serde_valid::validation::error::Format::Default)
 }
 
-pub fn extract_custom_message_format(meta: &syn::Meta) -> Result<MessageFormat, crate::Errors> {
+pub fn extract_custom_message_format(
+    meta: &syn::Meta,
+) -> Result<WithWarnings<MessageFormat>, crate::Errors> {
     let custom_message_path = match meta {
         syn::Meta::Path(path) => path,
         syn::Meta::List(list) => &list.path,
@@ -64,7 +67,7 @@ pub fn extract_custom_message_format(meta: &syn::Meta) -> Result<MessageFormat, 
 fn extract_custom_message_format_from_meta_list(
     custom_message_type: &MetaListCustomMessage,
     meta_list: &syn::MetaList,
-) -> Result<MessageFormat, crate::Errors> {
+) -> Result<WithWarnings<MessageFormat>, crate::Errors> {
     match custom_message_type {
         #[cfg(feature = "fluent")]
         message_type @ (MetaListCustomMessage::I18n | MetaListCustomMessage::Fluent) => {
@@ -87,7 +90,7 @@ fn extract_custom_message_format_from_meta_list(
 fn extract_custom_message_format_from_name_value(
     custom_message_type: &MetaNameValueCustomMessage,
     name_value: &syn::MetaNameValue,
-) -> Result<MessageFormat, crate::Errors> {
+) -> Result<WithWarnings<MessageFormat>, crate::Errors> {
     match custom_message_type {
         MetaNameValueCustomMessage::Message => get_message(&name_value.value),
         MetaNameValueCustomMessage::MessageFn => get_message_fn_from_meta_name_value(name_value),
@@ -101,7 +104,7 @@ fn extract_custom_message_format_from_name_value(
 
 fn get_message_fn_from_meta_name_value(
     meta_name_value: &syn::MetaNameValue,
-) -> Result<MessageFormat, crate::Errors> {
+) -> Result<WithWarnings<MessageFormat>, crate::Errors> {
     let fn_define = match &meta_name_value.value {
         syn::Expr::Path(syn::ExprPath { path, .. }) => quote!(#path),
         syn::Expr::Call(call) => quote!(#call),
@@ -111,16 +114,20 @@ fn get_message_fn_from_meta_name_value(
         ])?,
     };
 
-    Ok(quote!(::serde_valid::validation::error::Format::MessageFn(#fn_define)))
+    Ok(WithWarnings::new(
+        quote!(::serde_valid::validation::error::Format::MessageFn(#fn_define)),
+    ))
 }
 
-fn get_message(expr: &syn::Expr) -> Result<MessageFormat, crate::Errors> {
+fn get_message(expr: &syn::Expr) -> Result<WithWarnings<MessageFormat>, crate::Errors> {
     match expr {
-        syn::Expr::Lit(lit) => get_str(&lit.lit).map(|lit_str| {
-            quote!(::serde_valid::validation::error::Format::Message(
-                ::std::string::ToString::to_string(#lit_str)
-            ))
-        }),
+        syn::Expr::Lit(lit) => get_str(&lit.lit)
+            .map(|lit_str| {
+                quote!(::serde_valid::validation::error::Format::Message(
+                    ::std::string::ToString::to_string(#lit_str)
+                ))
+            })
+            .map(WithWarnings::new),
         _ => Err(vec![crate::Error::literal_only(expr)]),
     }
 }
@@ -130,7 +137,7 @@ fn get_fluent_message_from_meta(
     message_type: &MetaListCustomMessage,
     path: &syn::Path,
     fn_define: &CommaSeparatedNestedMetas,
-) -> Result<MessageFormat, crate::Errors> {
+) -> Result<WithWarnings<MessageFormat>, crate::Errors> {
     use quote::ToTokens;
 
     use crate::types::CommaSeparatedTokenStreams;
@@ -141,14 +148,14 @@ fn get_fluent_message_from_meta(
             let id = get_fluent_id(&fn_define[0])
                 .ok_or_else(|| vec![crate::Error::fluent_allow_key(message_type, &fn_define[0])])?;
 
-            Ok(quote!(
+            Ok(WithWarnings::new(quote!(
                 ::serde_valid::validation::error::Format::Fluent(
                     ::serde_valid::fluent::Message{
                         id: #id,
                         args: ::std::vec![]
                     }
                 )
-            ))
+            )))
         }
         _ => {
             let mut errors = vec![];
@@ -170,14 +177,14 @@ fn get_fluent_message_from_meta(
                 })
                 .collect::<CommaSeparatedTokenStreams>();
             if errors.is_empty() {
-                Ok(quote!(
+                Ok(WithWarnings::new(quote!(
                     ::serde_valid::validation::error::Format::Fluent(
                         ::serde_valid::fluent::Message{
                             id: #id,
                             args: ::std::vec![#args]
                         }
                     )
-                ))
+                )))
             } else {
                 Err(errors)
             }
@@ -188,7 +195,7 @@ fn get_fluent_message_from_meta(
 #[cfg(feature = "fluent")]
 fn get_fluent_message_from_call_expr(
     fn_define: &syn::ExprCall,
-) -> Result<MessageFormat, crate::Errors> {
+) -> Result<WithWarnings<MessageFormat>, crate::Errors> {
     use quote::ToTokens;
 
     if fn_define.func.to_token_stream().to_string() != "fluent" {
@@ -220,14 +227,14 @@ fn get_fluent_message_from_call_expr(
     }));
 
     if errors.is_empty() {
-        Ok(quote!(
+        Ok(WithWarnings::new(quote!(
             ::serde_valid::validation::error::Format::Fluent(
                 ::serde_valid::fluent::Message{
                     id: #fluent_id,
                     args: ::std::vec![#fluent_args]
                 }
             )
-        ))
+        )))
     } else {
         Err(errors)
     }

@@ -1,12 +1,13 @@
 use crate::attribute::Validator;
 use crate::serde::rename::RenameMap;
 use crate::types::Field;
+use crate::warning::WithWarnings;
 use quote::quote;
 
 pub fn extract_generic_validate_validator(
     field: &impl Field,
     rename_map: &RenameMap,
-) -> Result<Validator, crate::Errors> {
+) -> Result<WithWarnings<Validator>, crate::Errors> {
     let field_ident = field.ident();
     let field_name = field.name();
     let field_key = field.key();
@@ -21,7 +22,7 @@ pub fn extract_generic_validate_validator(
     let array_errors = crate::types::generated_ident("__serde_valid_array_errors");
     let new_type_errors = crate::types::generated_ident("__serde_valid_new_type_errors");
 
-    Ok(quote!(
+    Ok(WithWarnings::new(quote!(
         if let ::std::result::Result::Err(#inner_errors) = #validate {
             match #inner_errors {
                 ::serde_valid::validation::Errors::Object(#object_errors) => {
@@ -39,5 +40,5 @@ pub fn extract_generic_validate_validator(
                 }
             }
         }
-    ))
+    )))
 }

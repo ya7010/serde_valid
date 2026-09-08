@@ -1,13 +1,13 @@
 pub mod generic;
 mod meta;
 
-use crate::attribute::Validator;
+use crate::{attribute::Validator, warning::WithWarnings};
 
 use self::meta::extract_struct_validator;
 
 pub fn collect_struct_custom_from_named_struct(
     attributes: &[syn::Attribute],
-) -> Result<Vec<Validator>, crate::Errors> {
+) -> Result<WithWarnings<Vec<Validator>>, crate::Errors> {
     let mut errors = vec![];
 
     let validations = attributes
@@ -28,7 +28,7 @@ pub fn collect_struct_custom_from_named_struct(
         .collect::<Vec<_>>();
 
     if errors.is_empty() {
-        Ok(validations)
+        Ok(WithWarnings::from_iter(validations))
     } else {
         Err(errors)
     }

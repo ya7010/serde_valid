@@ -4,6 +4,7 @@ mod derive;
 mod error;
 mod serde;
 mod types;
+mod warning;
 
 use derive::expand_derive;
 use error::to_compile_errors;
