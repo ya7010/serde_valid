@@ -67,6 +67,21 @@ mod tests {
     use std::ffi::{OsStr, OsString};
     use std::path::{Path, PathBuf};
 
+    struct CustomMatch(bool);
+
+    impl IsMatch for CustomMatch {
+        fn is_match(&self, _pattern: &Regex) -> bool {
+            self.0
+        }
+    }
+
+    #[test]
+    fn custom_is_match_implementations_are_validated() {
+        let pattern = Regex::new(".*").unwrap();
+        assert!(ValidatePattern::validate_pattern(&CustomMatch(true), &pattern).is_ok());
+        assert!(ValidatePattern::validate_pattern(&CustomMatch(false), &pattern).is_err());
+    }
+
     #[test]
     fn test_validate_string_pattern_str_type() {
         assert!(ValidatePattern::validate_pattern(
@@ -87,11 +102,13 @@ mod tests {
 
     #[test]
     fn test_validate_string_pattern_cow_str_type() {
-        assert!(ValidatePattern::validate_pattern(
-            &Cow::from("2020-09-10"),
-            &Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap()
-        )
-        .is_ok());
+        assert!(
+            crate::validation::ValidateCompositedPattern::validate_composited_pattern(
+                &Cow::from("2020-09-10"),
+                &Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap()
+            )
+            .is_ok()
+        );
     }
 
     #[test]

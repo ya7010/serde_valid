@@ -571,14 +571,6 @@
 //! );
 //! ```
 
-macro_rules! for_each_standard_pin_pointer {
-    ($callback:ident) => {
-        $callback!(Box<T>);
-        $callback!(std::rc::Rc<T>);
-        $callback!(std::sync::Arc<T>);
-    };
-}
-
 pub mod error;
 mod features;
 pub mod json;
@@ -613,6 +605,24 @@ pub mod export {
     pub use regex;
 }
 
+/// Validates a value and returns its structured validation errors.
+///
+/// Implementations are normally generated with `#[derive(Validate)]`.
+///
+/// # Examples
+///
+/// ```rust
+/// use serde_valid::Validate;
+///
+/// #[derive(Validate)]
+/// struct User {
+///     #[validate(min_length = 1)]
+///     name: String,
+/// }
+///
+/// assert!(User { name: "Alice".to_owned() }.validate().is_ok());
+/// assert!(User { name: String::new() }.validate().is_err());
+/// ```
 pub trait Validate {
     fn validate(&self) -> std::result::Result<(), self::validation::Errors>;
 }

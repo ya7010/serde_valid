@@ -1,4 +1,3 @@
-use crate::validation::{impl_generic_composited_validation_1args, ValidateCompositedMinimum};
 use crate::MinimumError;
 
 /// Minimum validation of the number.
@@ -37,10 +36,7 @@ use crate::MinimumError;
 ///     .to_string()
 /// );
 /// ```
-pub trait ValidateMinimum<T>
-where
-    T: PartialOrd + PartialEq,
-{
+pub trait ValidateMinimum<T> {
     fn validate_minimum(&self, minimum: T) -> Result<(), MinimumError>;
 }
 
@@ -55,15 +51,6 @@ macro_rules! impl_validate_numeric_minimum {
                 }
             }
         }
-
-        impl_generic_composited_validation_1args!(
-            ValidateCompositedMinimum,
-            validate_composited_minimum,
-            ValidateMinimum,
-            validate_minimum,
-            MinimumError,
-            $type
-        );
     };
 }
 

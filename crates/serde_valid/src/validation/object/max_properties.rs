@@ -71,6 +71,20 @@ mod tests {
     use std::collections::BTreeMap;
     use std::collections::HashMap;
 
+    struct CustomSize(usize);
+
+    impl Size for CustomSize {
+        fn size(&self) -> usize {
+            self.0
+        }
+    }
+
+    #[test]
+    fn custom_size_implementations_are_validated() {
+        assert!(ValidateMaxProperties::validate_max_properties(&CustomSize(2), 2).is_ok());
+        assert!(ValidateMaxProperties::validate_max_properties(&CustomSize(3), 2).is_err());
+    }
+
     #[test]
     fn test_validate_object_max_properties_hash_map_type() {
         let mut map = HashMap::new();

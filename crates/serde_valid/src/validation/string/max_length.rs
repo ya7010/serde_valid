@@ -66,6 +66,20 @@ mod tests {
     use std::ffi::{OsStr, OsString};
     use std::path::{Path, PathBuf};
 
+    struct CustomLength(usize);
+
+    impl Length for CustomLength {
+        fn length(&self) -> usize {
+            self.0
+        }
+    }
+
+    #[test]
+    fn custom_length_implementations_are_validated() {
+        assert!(ValidateMaxLength::validate_max_length(&CustomLength(2), 2).is_ok());
+        assert!(ValidateMaxLength::validate_max_length(&CustomLength(3), 2).is_err());
+    }
+
     #[test]
     fn test_validate_string_max_length_ascii_is_true() {
         assert!(ValidateMaxLength::validate_max_length("abcde", 5).is_ok());
@@ -94,7 +108,13 @@ mod tests {
 
     #[test]
     fn test_validate_string_max_length_cow_str_type() {
-        assert!(ValidateMaxLength::validate_max_length(&Cow::from("abcde"), 5).is_ok());
+        assert!(
+            crate::validation::ValidateCompositedMaxLength::validate_composited_max_length(
+                &Cow::from("abcde"),
+                5
+            )
+            .is_ok()
+        );
     }
 
     #[test]
@@ -109,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_validate_string_max_length_path_type() {
-        assert!(ValidateMaxLength::validate_max_length(&Path::new("./foo/bar.txt"), 13).is_ok());
+        assert!(ValidateMaxLength::validate_max_length(Path::new("./foo/bar.txt"), 13).is_ok());
     }
 
     #[test]

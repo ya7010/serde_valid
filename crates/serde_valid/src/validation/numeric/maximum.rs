@@ -1,4 +1,3 @@
-use crate::validation::{impl_generic_composited_validation_1args, ValidateCompositedMaximum};
 use crate::MaximumError;
 
 /// Maximum validation of the number.
@@ -37,10 +36,7 @@ use crate::MaximumError;
 ///     .to_string()
 /// );
 /// ```
-pub trait ValidateMaximum<T>
-where
-    T: PartialOrd + PartialEq,
-{
+pub trait ValidateMaximum<T> {
     fn validate_maximum(&self, maximum: T) -> Result<(), MaximumError>;
 }
 
@@ -55,15 +51,6 @@ macro_rules! impl_validate_numeric_maximum {
                 }
             }
         }
-
-        impl_generic_composited_validation_1args!(
-            ValidateCompositedMaximum,
-            validate_composited_maximum,
-            ValidateMaximum,
-            validate_maximum,
-            MaximumError,
-            $type
-        );
     };
 }
 

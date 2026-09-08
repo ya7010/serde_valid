@@ -266,95 +266,6 @@ mod deprecated_enumerate_warning_hygiene {
     }
 }
 
-mod wrapper_trait_compile_checks {
-    #[test]
-    fn string_wrappers_implement_public_validation_traits_directly() {
-        fn assert_string<T>()
-        where
-            T: ::serde_valid::ValidateMaxLength
-                + ::serde_valid::ValidateMinLength
-                + ::serde_valid::ValidatePattern,
-        {
-        }
-
-        assert_string::<Box<str>>();
-        assert_string::<::std::borrow::Cow<'static, ::std::ffi::OsStr>>();
-        assert_string::<::std::borrow::Cow<'static, ::std::path::Path>>();
-    }
-
-    #[test]
-    fn boxed_slices_implement_public_array_traits_directly() {
-        fn assert_array<T>()
-        where
-            T: ::serde_valid::ValidateMaxItems
-                + ::serde_valid::ValidateMinItems
-                + ::serde_valid::ValidateUniqueItems,
-        {
-        }
-
-        assert_array::<&'static [i32]>();
-        assert_array::<Box<[i32]>>();
-        assert_array::<::std::borrow::Cow<'static, [i32]>>();
-    }
-
-    #[test]
-    fn boxed_slices_keep_generic_and_fixed_composited_forwarding() {
-        fn assert_generic<T: ::serde_valid::validation::ValidateCompositedMinimum<i32>>() {}
-        fn assert_fixed<T>()
-        where
-            T: ::serde_valid::validation::ValidateCompositedMaxLength
-                + ::serde_valid::validation::ValidateCompositedPattern,
-        {
-        }
-
-        assert_generic::<Box<[i32]>>();
-        assert_fixed::<Box<[String]>>();
-    }
-
-    #[test]
-    fn every_composited_wrapper_shape_has_direct_trait_implementations() {
-        use ::indexmap::IndexMap;
-        use ::std::borrow::Cow;
-        use ::std::collections::HashMap;
-
-        fn assert_generic<T: ::serde_valid::validation::ValidateCompositedMinimum<i32>>() {}
-        fn assert_fixed<T: ::serde_valid::validation::ValidateCompositedMaxLength>() {}
-
-        macro_rules! assert_all_shapes {
-            ($assertion:ident, $item:ty) => {
-                $assertion::<&'static [$item]>();
-                $assertion::<Box<[$item]>>();
-                $assertion::<&'static [$item; 1]>();
-                $assertion::<Box<[$item; 1]>>();
-                $assertion::<&'static Vec<$item>>();
-                $assertion::<Box<Vec<$item>>>();
-                $assertion::<Box<Box<Vec<$item>>>>();
-                $assertion::<&'static Box<Vec<$item>>>();
-                $assertion::<Box<&'static Vec<$item>>>();
-                $assertion::<std::rc::Rc<Vec<$item>>>();
-                $assertion::<std::sync::Arc<Vec<$item>>>();
-                $assertion::<std::pin::Pin<Box<Vec<$item>>>>();
-                $assertion::<&'static Option<$item>>();
-                $assertion::<Box<Option<$item>>>();
-                $assertion::<&'static HashMap<String, $item>>();
-                $assertion::<Box<HashMap<String, $item>>>();
-                $assertion::<&'static IndexMap<String, $item>>();
-                $assertion::<Box<IndexMap<String, $item>>>();
-                $assertion::<Cow<'static, Vec<$item>>>();
-                $assertion::<Cow<'static, Option<$item>>>();
-                $assertion::<Cow<'static, [$item; 1]>>();
-                $assertion::<Cow<'static, HashMap<String, $item>>>();
-                $assertion::<Cow<'static, IndexMap<String, $item>>>();
-                $assertion::<Cow<'static, [$item]>>();
-                $assertion::<Box<Cow<'static, [$item]>>>();
-            };
-        }
-
-        assert_all_shapes!(assert_generic, i32);
-        assert_all_shapes!(assert_fixed, String);
-    }
-}
-
 mod issue107 {
     use serde::{Deserialize, Serialize};
     use serde_valid::Validate;
@@ -491,26 +402,8 @@ mod issue125 {
         }
     }
 
-    impl serde_valid::validation::ValidateCompositedMaxLength for DownstreamUnsized {
-        fn validate_composited_max_length(
-            &self,
-            _max_length: usize,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaxLengthError>> {
-            Ok(())
-        }
-    }
-
     impl serde_valid::ValidateMinimum<i32> for DownstreamUnsized {
         fn validate_minimum(&self, _minimum: i32) -> Result<(), serde_valid::MinimumError> {
-            Ok(())
-        }
-    }
-
-    impl serde_valid::validation::ValidateCompositedMinimum<i32> for DownstreamUnsized {
-        fn validate_composited_minimum(
-            &self,
-            _minimum: i32,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinimumError>> {
             Ok(())
         }
     }
@@ -521,45 +414,20 @@ mod issue125 {
         }
     }
 
-    impl<'a> serde_valid::validation::ValidateCompositedEnum<&'a [i32]> for DownstreamUnsized {
-        fn validate_composited_enum(
-            &self,
-            _candidates: &'a [i32],
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::EnumError>> {
-            Ok(())
-        }
-    }
-
-    #[allow(deprecated)]
-    impl serde_valid::ValidateEnumerate<i32> for DownstreamUnsized {
-        fn validate_enumerate(&self, _candidates: &[i32]) -> Result<(), serde_valid::EnumError> {
-            Ok(())
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<'a> serde_valid::validation::ValidateCompositedEnumerate<&'a [i32]> for DownstreamUnsized {
-        fn validate_composited_enumerate(
-            &self,
-            _candidates: &'a [i32],
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::EnumError>> {
-            Ok(())
-        }
-    }
-
     #[test]
     #[allow(deprecated)]
-    fn downstream_unsized_types_can_keep_explicit_composited_impls() {
-        fn assert_impl<T: ?Sized>()
+    fn downstream_unsized_scalar_impls_are_automatically_composited() {
+        fn assert_impl<T>()
         where
-            T: serde_valid::ValidateMaxLength
+            T: ?Sized
+                + serde_valid::ValidateMaxLength
                 + serde_valid::validation::ValidateCompositedMaxLength
                 + serde_valid::ValidateMinimum<i32>
                 + serde_valid::validation::ValidateCompositedMinimum<i32>
                 + serde_valid::ValidateEnum<i32>
-                + serde_valid::ValidateEnumerate<i32>,
-            for<'a> T: serde_valid::validation::ValidateCompositedEnum<&'a [i32]>
-                + serde_valid::validation::ValidateCompositedEnumerate<&'a [i32]>,
+                + serde_valid::ValidateEnumerate<i32>
+                + serde_valid::validation::ValidateCompositedEnum<i32>
+                + serde_valid::validation::ValidateCompositedEnumerate<i32>,
         {
         }
 
@@ -569,18 +437,20 @@ mod issue125 {
     #[test]
     #[allow(deprecated)]
     fn foreign_dst_terminals_keep_composited_validation_support() {
-        fn assert_string_validators<T: ?Sized>()
+        fn assert_string_validators<T>()
         where
-            T: serde_valid::validation::ValidateCompositedMaxLength
+            T: ?Sized
+                + serde_valid::validation::ValidateCompositedMaxLength
                 + serde_valid::validation::ValidateCompositedMinLength
                 + serde_valid::validation::ValidateCompositedPattern,
         {
         }
 
-        fn assert_enum_validators<T: ?Sized>()
+        fn assert_enum_validators<T>()
         where
-            for<'a> T: serde_valid::validation::ValidateCompositedEnum<&'a [&'static str]>
-                + serde_valid::validation::ValidateCompositedEnumerate<&'a [&'static str]>,
+            T: ?Sized
+                + serde_valid::validation::ValidateCompositedEnum<&'static str>
+                + serde_valid::validation::ValidateCompositedEnumerate<&'static str>,
         {
         }
 
@@ -1020,13 +890,31 @@ mod issue125 {
 
         let value = CandidateValue(1);
         let borrowed = &value;
-        assert!(ValidateEnum::<NonCopyCandidate>::validate_enum(&borrowed, &candidates).is_ok());
+        assert!(
+            serde_valid::validation::ValidateCompositedEnum::validate_composited_enum(
+                &borrowed,
+                &candidates
+            )
+            .is_ok()
+        );
 
         let boxed = Box::new(CandidateValue(1));
-        assert!(ValidateEnum::<NonCopyCandidate>::validate_enum(&boxed, &candidates).is_ok());
+        assert!(
+            serde_valid::validation::ValidateCompositedEnum::validate_composited_enum(
+                &boxed,
+                &candidates
+            )
+            .is_ok()
+        );
 
         let cow: std::borrow::Cow<'_, CandidateValue> = std::borrow::Cow::Owned(CandidateValue(1));
-        assert!(ValidateEnum::<NonCopyCandidate>::validate_enum(&cow, &candidates).is_ok());
+        assert!(
+            serde_valid::validation::ValidateCompositedEnum::validate_composited_enum(
+                &cow,
+                &candidates
+            )
+            .is_ok()
+        );
     }
 
     #[derive(Validate)]
@@ -1224,23 +1112,6 @@ mod issue125 {
             }
         }
 
-        fn validate_enumerate<T, C>(value: &T, candidates: &[C]) -> Result<(), EnumError>
-        where
-            T: ValidateEnumerate<C>,
-        {
-            value.validate_enumerate(candidates)
-        }
-
-        fn validate_composited_enumerate<'a, T>(
-            value: &T,
-            candidates: &'a [i32],
-        ) -> Result<(), serde_valid::validation::Composited<EnumError>>
-        where
-            T: ValidateCompositedEnumerate<&'a [i32]>,
-        {
-            value.validate_composited_enumerate(candidates)
-        }
-
         #[test]
         fn boxed_string_remains_supported_by_deprecated_enumerate_validator() {
             assert!(DeprecatedBoxedStringConstraint {
@@ -1254,27 +1125,56 @@ mod issue125 {
             .validate()
             .is_err());
             let custom = Box::new(DeprecatedCustomEnumValue("alpha".to_owned()));
-            assert!(custom.validate_enumerate(&["alpha", "beta"]).is_ok());
+            assert!(ValidateCompositedEnumerate::validate_composited_enumerate(
+                &custom,
+                &["alpha", "beta"]
+            )
+            .is_ok());
             let custom: std::borrow::Cow<'_, DeprecatedCustomEnumValue> =
                 std::borrow::Cow::Owned(DeprecatedCustomEnumValue("alpha".to_owned()));
-            assert!(validate_enumerate(&custom, &["alpha", "beta"]).is_ok());
+            assert!(ValidateCompositedEnumerate::validate_composited_enumerate(
+                &custom,
+                &["alpha", "beta"]
+            )
+            .is_ok());
             let custom: std::borrow::Cow<'_, DeprecatedCustomEnumValue> =
                 std::borrow::Cow::Owned(DeprecatedCustomEnumValue("gamma".to_owned()));
-            assert!(validate_enumerate(&custom, &["alpha", "beta"]).is_err());
+            assert!(ValidateCompositedEnumerate::validate_composited_enumerate(
+                &custom,
+                &["alpha", "beta"]
+            )
+            .is_err());
             let custom = DeprecatedCustomEnumValue("alpha".to_owned());
             let custom = std::borrow::Cow::Borrowed(&custom);
-            assert!(validate_enumerate(&custom, &["alpha", "beta"]).is_ok());
+            assert!(ValidateCompositedEnumerate::validate_composited_enumerate(
+                &custom,
+                &["alpha", "beta"]
+            )
+            .is_ok());
             let custom = DeprecatedCustomEnumValue("gamma".to_owned());
             let custom = std::borrow::Cow::Borrowed(&custom);
-            assert!(validate_enumerate(&custom, &["alpha", "beta"]).is_err());
+            assert!(ValidateCompositedEnumerate::validate_composited_enumerate(
+                &custom,
+                &["alpha", "beta"]
+            )
+            .is_err());
 
             let integer: std::borrow::Cow<'_, i32> = std::borrow::Cow::Owned(1);
-            assert!(validate_enumerate(&integer, &[1, 2]).is_ok());
+            assert!(
+                ValidateCompositedEnumerate::validate_composited_enumerate(&integer, &[1, 2])
+                    .is_ok()
+            );
             let integer: std::borrow::Cow<'_, i32> = std::borrow::Cow::Owned(3);
-            assert!(validate_enumerate(&integer, &[1, 2]).is_err());
+            assert!(
+                ValidateCompositedEnumerate::validate_composited_enumerate(&integer, &[1, 2])
+                    .is_err()
+            );
 
             let values = IndexMap::from([("value".to_owned(), 3)]);
-            assert!(validate_composited_enumerate(&values, &[1, 2]).is_err());
+            assert!(
+                ValidateCompositedEnumerate::validate_composited_enumerate(&values, &[1, 2])
+                    .is_err()
+            );
         }
     }
 
@@ -1810,6 +1710,7 @@ mod issue125 {
     }
 
     #[derive(Debug, Validate)]
+    #[allow(clippy::box_collection)]
     struct ForwardedArrayValidatorWrappers {
         #[validate(min_items = 3)]
         #[validate(max_items = 1)]
@@ -1917,9 +1818,12 @@ mod issue125 {
 
     macro_rules! impl_inherent_method_shadow_composited_validation {
         ($Trait:ident, $method:ident, $Argument:ty, $Error:ident) => {
-            impl<T> serde_valid::validation::$Trait for InherentMethodShadow<T>
+            impl<T, P>
+                serde_valid::validation::$Trait<
+                    serde_valid::validation::composited_path::Transparent<P>,
+                > for InherentMethodShadow<T>
             where
-                T: serde_valid::validation::$Trait,
+                T: serde_valid::validation::$Trait<P>,
             {
                 fn $method(
                     &self,
@@ -1929,11 +1833,14 @@ mod issue125 {
                 }
             }
         };
-        (generic $Trait:ident, $method:ident, $Error:ident) => {
-            impl<C, T> serde_valid::validation::$Trait<C> for InherentMethodShadow<T>
+        (generic_owned $Trait:ident, $method:ident, $Error:ident) => {
+            impl<C, T, P>
+                serde_valid::validation::$Trait<
+                    C,
+                    serde_valid::validation::composited_path::Transparent<P>,
+                > for InherentMethodShadow<T>
             where
-                C: Copy,
-                T: serde_valid::validation::$Trait<C>,
+                T: serde_valid::validation::$Trait<C, P>,
             {
                 fn $method(
                     &self,
@@ -1943,35 +1850,52 @@ mod issue125 {
                 }
             }
         };
+        (generic_slice $Trait:ident, $method:ident, $Error:ident) => {
+            impl<C, T, P>
+                serde_valid::validation::$Trait<
+                    C,
+                    serde_valid::validation::composited_path::Transparent<P>,
+                > for InherentMethodShadow<T>
+            where
+                T: serde_valid::validation::$Trait<C, P>,
+            {
+                fn $method(
+                    &self,
+                    argument: &[C],
+                ) -> Result<(), serde_valid::validation::Composited<serde_valid::$Error>> {
+                    serde_valid::validation::$Trait::$method(&self.0, argument)
+                }
+            }
+        };
     }
 
     impl_inherent_method_shadow_composited_validation!(
-        generic ValidateCompositedEnum,
+        generic_slice ValidateCompositedEnum,
         validate_composited_enum,
         EnumError
     );
     impl_inherent_method_shadow_composited_validation!(
-        generic ValidateCompositedMultipleOf,
+        generic_owned ValidateCompositedMultipleOf,
         validate_composited_multiple_of,
         MultipleOfError
     );
     impl_inherent_method_shadow_composited_validation!(
-        generic ValidateCompositedMinimum,
+        generic_owned ValidateCompositedMinimum,
         validate_composited_minimum,
         MinimumError
     );
     impl_inherent_method_shadow_composited_validation!(
-        generic ValidateCompositedMaximum,
+        generic_owned ValidateCompositedMaximum,
         validate_composited_maximum,
         MaximumError
     );
     impl_inherent_method_shadow_composited_validation!(
-        generic ValidateCompositedExclusiveMinimum,
+        generic_owned ValidateCompositedExclusiveMinimum,
         validate_composited_exclusive_minimum,
         ExclusiveMinimumError
     );
     impl_inherent_method_shadow_composited_validation!(
-        generic ValidateCompositedExclusiveMaximum,
+        generic_owned ValidateCompositedExclusiveMaximum,
         validate_composited_exclusive_maximum,
         ExclusiveMaximumError
     );
@@ -2177,29 +2101,24 @@ mod issue125 {
         }
     }
 
-    struct StaticEnumCandidates;
+    struct CustomScalarEnumValue;
 
-    impl serde_valid::validation::ValidateCompositedEnum<&'static [i32]> for StaticEnumCandidates {
-        fn validate_composited_enum(
-            &self,
-            candidates: &'static [i32],
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::EnumError>> {
-            Err(serde_valid::validation::Composited::Single(
-                serde_valid::EnumError::new(candidates),
-            ))
+    impl serde_valid::ValidateEnum<i32> for CustomScalarEnumValue {
+        fn validate_enum(&self, candidates: &[i32]) -> Result<(), serde_valid::EnumError> {
+            Err(serde_valid::EnumError::new(candidates))
         }
     }
 
     #[derive(Validate)]
-    struct LifetimeSpecificEnumConstraint {
+    struct CustomScalarEnumConstraint {
         #[validate(r#enum = [1, 2])]
-        value: StaticEnumCandidates,
+        value: CustomScalarEnumValue,
     }
 
     #[test]
-    fn enum_dispatch_preserves_lifetime_specific_trait_impls() {
-        assert!(LifetimeSpecificEnumConstraint {
-            value: StaticEnumCandidates,
+    fn derive_promotes_custom_scalar_enum_implementations() {
+        assert!(CustomScalarEnumConstraint {
+            value: CustomScalarEnumValue,
         }
         .validate()
         .is_err());
