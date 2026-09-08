@@ -2101,24 +2101,24 @@ mod issue125 {
         }
     }
 
-    struct StaticEnumCandidates;
+    struct CustomScalarEnumValue;
 
-    impl serde_valid::ValidateEnum<i32> for StaticEnumCandidates {
+    impl serde_valid::ValidateEnum<i32> for CustomScalarEnumValue {
         fn validate_enum(&self, candidates: &[i32]) -> Result<(), serde_valid::EnumError> {
             Err(serde_valid::EnumError::new(candidates))
         }
     }
 
     #[derive(Validate)]
-    struct LifetimeSpecificEnumConstraint {
+    struct CustomScalarEnumConstraint {
         #[validate(r#enum = [1, 2])]
-        value: StaticEnumCandidates,
+        value: CustomScalarEnumValue,
     }
 
     #[test]
-    fn enum_dispatch_preserves_lifetime_specific_trait_impls() {
-        assert!(LifetimeSpecificEnumConstraint {
-            value: StaticEnumCandidates,
+    fn derive_promotes_custom_scalar_enum_implementations() {
+        assert!(CustomScalarEnumConstraint {
+            value: CustomScalarEnumValue,
         }
         .validate()
         .is_err());

@@ -1,6 +1,7 @@
 use serde_valid::validation::{Composited, IntoError, ValidateCompositedEnum};
 use serde_valid::validation::{ValidateCompositedMinProperties, ValidateCompositedMinimum};
 use serde_valid::{MinimumError, Validate, ValidateEnum, ValidateMinProperties, ValidateMinimum};
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::pin::Pin;
 use std::rc::Rc;
@@ -66,6 +67,67 @@ fn previously_missing_standard_wrapper_shapes_are_supported() {
     )]))));
     assert_invalid!(Pin::new(Rc::new(vec![0])));
     assert_invalid!(Pin::new(Arc::new(vec![0])));
+}
+
+#[test]
+fn every_previously_supported_wrapper_shape_remains_composited() {
+    macro_rules! assert_minimum_invalid {
+        ($value:expr) => {
+            assert!(ValidateCompositedMinimum::validate_composited_minimum(&$value, 1).is_err());
+        };
+    }
+
+    macro_rules! assert_max_length_invalid {
+        ($value:expr) => {
+            assert!(
+                serde_valid::validation::ValidateCompositedMaxLength::validate_composited_max_length(
+                    &$value, 1,
+                )
+                .is_err()
+            );
+        };
+    }
+
+    macro_rules! assert_all_shapes {
+        ($assertion:ident, $value:expr) => {
+            $assertion!(&[$value][..]);
+            $assertion!(vec![$value].into_boxed_slice());
+            $assertion!(&[$value]);
+            $assertion!(Box::new([$value]));
+            $assertion!(&vec![$value]);
+            $assertion!(Box::new(vec![$value]));
+            $assertion!(Box::new(Box::new(vec![$value])));
+            $assertion!(&Box::new(vec![$value]));
+            $assertion!(Box::new(&vec![$value]));
+            $assertion!(Rc::new(vec![$value]));
+            $assertion!(Arc::new(vec![$value]));
+            $assertion!(Pin::new(Box::new(vec![$value])));
+            $assertion!(&Some($value));
+            $assertion!(Box::new(Some($value)));
+            $assertion!(&HashMap::from([("key".to_owned(), $value)]));
+            $assertion!(Box::new(HashMap::from([("key".to_owned(), $value)])));
+            $assertion!(&indexmap::IndexMap::from([("key".to_owned(), $value)]));
+            $assertion!(Box::new(indexmap::IndexMap::from([(
+                "key".to_owned(),
+                $value,
+            )])));
+            $assertion!(Cow::<Vec<_>>::Owned(vec![$value]));
+            $assertion!(Cow::<Option<_>>::Owned(Some($value)));
+            $assertion!(Cow::<[_; 1]>::Owned([$value]));
+            $assertion!(Cow::<HashMap<String, _>>::Owned(HashMap::from([(
+                "key".to_owned(),
+                $value,
+            )])));
+            $assertion!(Cow::<indexmap::IndexMap<String, _>>::Owned(
+                indexmap::IndexMap::from([("key".to_owned(), $value)]),
+            ));
+            $assertion!(Cow::<[_]>::Owned(vec![$value]));
+            $assertion!(Box::new(Cow::<[_]>::Owned(vec![$value])));
+        };
+    }
+
+    assert_all_shapes!(assert_minimum_invalid, 0_i32);
+    assert_all_shapes!(assert_max_length_invalid, "too long".to_owned());
 }
 
 #[derive(Clone, Debug)]

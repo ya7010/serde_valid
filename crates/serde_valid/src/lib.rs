@@ -605,6 +605,24 @@ pub mod export {
     pub use regex;
 }
 
+/// Validates a value and returns its structured validation errors.
+///
+/// Implementations are normally generated with `#[derive(Validate)]`.
+///
+/// # Examples
+///
+/// ```rust
+/// use serde_valid::Validate;
+///
+/// #[derive(Validate)]
+/// struct User {
+///     #[validate(min_length = 1)]
+///     name: String,
+/// }
+///
+/// assert!(User { name: "Alice".to_owned() }.validate().is_ok());
+/// assert!(User { name: String::new() }.validate().is_err());
+/// ```
 pub trait Validate {
     fn validate(&self) -> std::result::Result<(), self::validation::Errors>;
 }

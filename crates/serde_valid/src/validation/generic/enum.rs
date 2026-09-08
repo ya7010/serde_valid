@@ -1,6 +1,49 @@
 use crate::EnumError;
 
 /// Enumerated-value validation.
+///
+/// See <https://json-schema.org/understanding-json-schema/reference/generic.html#enumerated-values>
+///
+/// # Examples
+///
+/// ```rust
+/// use serde_json::json;
+/// use serde_valid::{Validate, ValidateEnum};
+///
+/// struct MyType(String);
+///
+/// impl ValidateEnum<&'static str> for MyType {
+///     fn validate_enum(
+///         &self,
+///         candidates: &[&'static str],
+///     ) -> Result<(), serde_valid::EnumError> {
+///         self.0.validate_enum(candidates)
+///     }
+/// }
+///
+/// #[derive(Validate)]
+/// struct TestStruct {
+///     #[validate(r#enum = ["1", "2", "3"])]
+///     val: MyType,
+/// }
+///
+/// let value = TestStruct {
+///     val: MyType("4".to_owned()),
+/// };
+///
+/// assert_eq!(
+///     value.validate().unwrap_err().to_string(),
+///     json!({
+///         "errors": [],
+///         "properties": {
+///             "val": {
+///                 "errors": ["The value must be in [1, 2, 3]."]
+///             }
+///         }
+///     })
+///     .to_string()
+/// );
+/// ```
 pub trait ValidateEnum<C> {
     fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError>;
 }
@@ -99,10 +142,78 @@ mod tests {
     use super::*;
 
     #[test]
-    fn literals_and_string_like_values_are_validated() {
+    fn test_validate_integer_vec_type_is_true() {
         assert!(ValidateEnum::validate_enum(&1, &[1, 2, 3]).is_ok());
-        assert!(ValidateEnum::validate_enum(&0.9, &[0.8, 2.3]).is_err());
-        assert!(ValidateEnum::validate_enum(std::ffi::OsStr::new("a"), &["a", "b"]).is_ok());
-        assert!(ValidateEnum::validate_enum(std::path::Path::new("a"), &["a", "b"]).is_ok());
+    }
+
+    #[test]
+    fn test_validate_integer_vec_type_is_false() {
+        assert!(ValidateEnum::validate_enum(&1, &[2, 3, 4]).is_err());
+    }
+
+    #[test]
+    fn test_validate_float_type_is_true() {
+        assert!(ValidateEnum::validate_enum(&0.9, &[0.9, 2.3, -3.0]).is_ok());
+    }
+
+    #[test]
+    fn test_validate_float_type_is_false() {
+        assert!(ValidateEnum::validate_enum(&0.9, &[0.8, 2.3, -3.0]).is_err());
+    }
+
+    #[test]
+    fn test_validate_unsigned_int_type() {
+        assert!(ValidateEnum::validate_enum(&1_u32, &[0, 1, 2, 3]).is_ok());
+        assert!(ValidateEnum::validate_enum(&4_u32, &[0, 1, 2, 3]).is_err());
+    }
+
+    #[test]
+    fn test_validate_str_type() {
+        assert!(ValidateEnum::validate_enum("a", &["a", "b", "c"]).is_ok());
+        assert!(ValidateEnum::validate_enum("d", &["a", "b", "c"]).is_err());
+    }
+
+    #[test]
+    fn test_validate_string_type() {
+        assert!(ValidateEnum::validate_enum(&"a".to_owned(), &["a", "b", "c"]).is_ok());
+        assert!(ValidateEnum::validate_enum(&"d".to_owned(), &["a", "b", "c"]).is_err());
+    }
+
+    #[test]
+    fn test_validate_char_type() {
+        assert!(ValidateEnum::validate_enum(&'a', &['a', 'b', 'c']).is_ok());
+        assert!(ValidateEnum::validate_enum(&'d', &['a', 'b', 'c']).is_err());
+    }
+
+    #[test]
+    fn test_validate_os_str_type() {
+        assert!(ValidateEnum::validate_enum(std::ffi::OsStr::new("a"), &["a", "b", "c"]).is_ok());
+        assert!(ValidateEnum::validate_enum(std::ffi::OsStr::new("d"), &["a", "b", "c"]).is_err());
+    }
+
+    #[test]
+    fn test_validate_os_string_type() {
+        assert!(
+            ValidateEnum::validate_enum(&std::ffi::OsString::from("a"), &["a", "b", "c"]).is_ok()
+        );
+        assert!(
+            ValidateEnum::validate_enum(&std::ffi::OsString::from("d"), &["a", "b", "c"]).is_err()
+        );
+    }
+
+    #[test]
+    fn test_validate_path_type() {
+        assert!(ValidateEnum::validate_enum(std::path::Path::new("a"), &["a", "b", "c"]).is_ok());
+        assert!(ValidateEnum::validate_enum(std::path::Path::new("d"), &["a", "b", "c"]).is_err());
+    }
+
+    #[test]
+    fn test_validate_path_buf_type() {
+        assert!(
+            ValidateEnum::validate_enum(&std::path::PathBuf::from("a"), &["a", "b", "c"]).is_ok()
+        );
+        assert!(
+            ValidateEnum::validate_enum(&std::path::PathBuf::from("d"), &["a", "b", "c"]).is_err()
+        );
     }
 }

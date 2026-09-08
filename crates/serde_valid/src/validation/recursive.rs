@@ -94,7 +94,19 @@ where
 }
 
 macro_rules! define_fixed {
-    ($Trait:ident, $method:ident, $Base:ident::$base_method:ident, $name:ident: $arg:ty, $Error:ty, maps = $maps:ident) => {
+    ($Trait:ident, $method:ident, $Base:ident::$base_method:ident, $name:ident: $arg:ty, $Error:ty, maps = $maps:ident, example = ($values:expr, $example_arg:expr)) => {
+        #[doc = concat!(
+            "Recursively applies [`", stringify!($Base), "`] and preserves container error paths.\n\n",
+            "Implementing the scalar trait is sufficient; transparent wrappers and containers are composed automatically.\n\n",
+            "# Examples\n\n",
+            "```rust\n",
+            "use serde_valid::validation::", stringify!($Trait), ";\n\n",
+            "let values = ", stringify!($values), ";\n",
+            "let result = ", stringify!($Trait), "::", stringify!($method),
+            "(&values, ", stringify!($example_arg), ");\n",
+            "assert!(result.is_err());\n",
+            "```"
+        )]
         pub trait $Trait<P = composited_path::Scalar> {
             fn $method(&self, $name: $arg) -> Result<(), Composited<$Error>>;
         }
@@ -109,6 +121,17 @@ macro_rules! define_fixed {
 
 macro_rules! define_owned {
     ($Trait:ident, $method:ident, $Base:ident::$base_method:ident, $Error:ty) => {
+        #[doc = concat!(
+            "Recursively applies [`", stringify!($Base), "`] and preserves container error paths.\n\n",
+            "Implementing the scalar trait is sufficient; transparent wrappers and containers are composed automatically.\n\n",
+            "# Examples\n\n",
+            "```rust\n",
+            "use serde_valid::validation::", stringify!($Trait), ";\n\n",
+            "let values = vec![1_i32, 2, 3];\n",
+            "let result = ", stringify!($Trait), "::", stringify!($method), "(&values, 2);\n",
+            "assert!(result.is_err());\n",
+            "```"
+        )]
         pub trait $Trait<C, P = composited_path::Scalar> {
             fn $method(&self, argument: C) -> Result<(), Composited<$Error>>;
         }
@@ -278,6 +301,19 @@ where
 macro_rules! define_slice {
     ($(#[$meta:meta])* $Trait:ident, $method:ident, $Base:ident::$base_method:ident, $Error:ty) => {
         $(#[$meta])*
+        #[doc = concat!(
+            "Recursively applies [`", stringify!($Base), "`] and preserves container error paths.\n\n",
+            "Implementing the scalar trait is sufficient; transparent wrappers and containers are composed automatically.\n\n",
+            "# Examples\n\n",
+            "```rust\n",
+            "#![allow(deprecated)]\n",
+            "use serde_valid::validation::", stringify!($Trait), ";\n\n",
+            "let values = vec![\"red\", \"blue\"];\n",
+            "let result = ", stringify!($Trait), "::", stringify!($method),
+            "(&values, &[\"red\", \"green\"]);\n",
+            "assert!(result.is_err());\n",
+            "```"
+        )]
         pub trait $Trait<C, P = composited_path::Scalar> {
             fn $method(&self, candidates: &[C]) -> Result<(), Composited<$Error>>;
         }
@@ -447,11 +483,11 @@ define_owned!(
     MultipleOfError
 );
 
-define_fixed!(ValidateCompositedMaxLength, validate_composited_max_length, ValidateMaxLength::validate_max_length, max_length: usize, MaxLengthError, maps = yes);
-define_fixed!(ValidateCompositedMinLength, validate_composited_min_length, ValidateMinLength::validate_min_length, min_length: usize, MinLengthError, maps = yes);
-define_fixed!(ValidateCompositedPattern, validate_composited_pattern, ValidatePattern::validate_pattern, pattern: &regex::Regex, PatternError, maps = yes);
-define_fixed!(ValidateCompositedMaxProperties, validate_composited_max_properties, ValidateMaxProperties::validate_max_properties, max_properties: usize, MaxPropertiesError, maps = no);
-define_fixed!(ValidateCompositedMinProperties, validate_composited_min_properties, ValidateMinProperties::validate_min_properties, min_properties: usize, MinPropertiesError, maps = no);
+define_fixed!(ValidateCompositedMaxLength, validate_composited_max_length, ValidateMaxLength::validate_max_length, max_length: usize, MaxLengthError, maps = yes, example = (vec!["a", "long"], 2));
+define_fixed!(ValidateCompositedMinLength, validate_composited_min_length, ValidateMinLength::validate_min_length, min_length: usize, MinLengthError, maps = yes, example = (vec!["a", "long"], 2));
+define_fixed!(ValidateCompositedPattern, validate_composited_pattern, ValidatePattern::validate_pattern, pattern: &regex::Regex, PatternError, maps = yes, example = (vec!["red", "blue"], &regex::Regex::new("^red$").unwrap()));
+define_fixed!(ValidateCompositedMaxProperties, validate_composited_max_properties, ValidateMaxProperties::validate_max_properties, max_properties: usize, MaxPropertiesError, maps = no, example = (vec![std::collections::BTreeMap::from([("a", 1)]), std::collections::BTreeMap::from([("a", 1), ("b", 2), ("c", 3)])], 2));
+define_fixed!(ValidateCompositedMinProperties, validate_composited_min_properties, ValidateMinProperties::validate_min_properties, min_properties: usize, MinPropertiesError, maps = no, example = (vec![std::collections::BTreeMap::from([("a", 1)]), std::collections::BTreeMap::from([("a", 1), ("b", 2), ("c", 3)])], 2));
 
 define_slice!(
     ValidateCompositedEnum,
