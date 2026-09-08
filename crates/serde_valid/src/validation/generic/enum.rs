@@ -137,6 +137,61 @@ impl_validate_enum_string!(
     |value: &std::path::PathBuf, candidate: &&str| std::path::Path::new(candidate) == value
 );
 
+impl<C, T> ValidateEnum<C> for &T
+where
+    T: ValidateEnum<C> + ?Sized,
+{
+    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
+        (*self).validate_enum(candidates)
+    }
+}
+
+impl<C, T> ValidateEnum<C> for Box<T>
+where
+    T: ValidateEnum<C> + ?Sized,
+{
+    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
+        self.as_ref().validate_enum(candidates)
+    }
+}
+
+impl<C, T> ValidateEnum<C> for std::borrow::Cow<'_, T>
+where
+    T: std::borrow::ToOwned + ValidateEnum<C> + ?Sized,
+{
+    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
+        self.as_ref().validate_enum(candidates)
+    }
+}
+
+impl<C, T> ValidateEnum<C> for std::rc::Rc<T>
+where
+    T: ValidateEnum<C> + ?Sized,
+{
+    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
+        self.as_ref().validate_enum(candidates)
+    }
+}
+
+impl<C, T> ValidateEnum<C> for std::sync::Arc<T>
+where
+    T: ValidateEnum<C> + ?Sized,
+{
+    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
+        self.as_ref().validate_enum(candidates)
+    }
+}
+
+impl<C, P> ValidateEnum<C> for std::pin::Pin<P>
+where
+    P: std::ops::Deref,
+    P::Target: ValidateEnum<C>,
+{
+    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError> {
+        self.as_ref().get_ref().validate_enum(candidates)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

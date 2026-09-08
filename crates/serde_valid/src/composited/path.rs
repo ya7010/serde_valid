@@ -1,16 +1,10 @@
-//! Type-level paths for recursive composited validation.
+//! Type-level paths for composited validation.
 
 /// A scalar value validated directly.
 pub struct Scalar;
 
-/// A transparent wrapper around another validation path.
-pub struct Transparent<P>(std::marker::PhantomData<fn() -> P>);
-
-/// A sequence whose elements follow another validation path.
+/// A value whose elements follow another validation path.
+///
+/// Indexed sequences produce array errors. Key-value iterators produce object errors, but use the
+/// same path because both apply a validation rule to their values.
 pub struct Sequence<P>(std::marker::PhantomData<fn() -> P>);
-
-/// An optional value following another validation path when present.
-pub struct Optional<P>(std::marker::PhantomData<fn() -> P>);
-
-/// A string-keyed map whose values follow another validation path.
-pub struct Map<P>(std::marker::PhantomData<fn() -> P>);

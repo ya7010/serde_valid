@@ -75,24 +75,18 @@
 //! ```
 //!
 //! Composited validators now have a path type parameter. It defaults to [`composited::path::Scalar`]
-//! for direct scalar use. Standard wrappers and containers compose the path automatically; custom
-//! wrappers forward the appropriate composited validator as shown in [`composited`].
+//! for direct scalar use. [`composited::path::Sequence`] represents each level that enumerates
+//! values. Indexed sequences and key-value maps use the same path marker; their implementations
+//! produce array and object errors respectively.
 //!
 //! [`composited::Composited`] also has an `Object` variant so map failures retain their actual
 //! property keys. Exhaustive matches must handle this variant.
 //!
 //! ### Update custom map keys
 //!
-//! Recursive validation for `HashMap`, `BTreeMap`, and `IndexMap` requires `K: ToString`.
+//! Validation for `HashMap`, `BTreeMap`, and `IndexMap` requires `K: ToString`.
 //! Implement [`std::fmt::Display`] for a custom key and ensure distinct keys do not stringify to the
 //! same value unless their errors should be combined.
-//!
-//! ### Keep scalar and composited validation separate
-//!
-//! Some wrappers implemented string and enum capability traits directly in v2. In v3, recursion
-//! for those scalar rules is expressed through composited validation. Implement the scalar trait
-//! for the underlying value, then use derive or the corresponding `ValidateComposited*` trait for
-//! recursive validation. See [`composited`] for supported wrappers and a custom-wrapper example.
 //!
 //! ## Validations
 //!

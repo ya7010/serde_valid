@@ -434,14 +434,13 @@ mod issue125 {
     struct BorrowedNames<'a> {
         #[validate(min_items = 4)]
         #[validate(max_items = 2)]
-        #[validate(min_length = 1)]
         #[validate(unique_items)]
         #[serde(borrow)]
         names: Box<[&'a str]>,
     }
 
     #[test]
-    fn boxed_slice_supports_array_and_composited_validators() {
+    fn boxed_slice_supports_array_validators() {
         let value = BorrowedNames {
             names: vec!["", "duplicate", "duplicate"].into_boxed_slice(),
         };
@@ -449,7 +448,6 @@ mod issue125 {
         let errors = value.validate().unwrap_err().to_string();
         assert!(errors.contains("The length of the items must be `>= 4`."));
         assert!(errors.contains("The length of the items must be `<= 2`."));
-        assert!(errors.contains("The length of the value must be `>= 1`."));
         assert!(errors.contains("The items must be unique."));
     }
 
@@ -656,15 +654,6 @@ mod issue125 {
         value: &'a i32,
     }
 
-    #[derive(Debug, Validate)]
-    #[allow(clippy::box_collection)]
-    struct BoxedOuterContainerConstraints {
-        #[validate(r#enum = [1, 2])]
-        optional: Box<Option<i32>>,
-        #[validate(minimum = 1)]
-        values: Box<Vec<i32>>,
-    }
-
     #[test]
     fn boxed_and_cow_values_delegate_enum_validation_to_their_inner_type() {
         assert!(BoxedIntegerConstraint { value: Box::new(1) }
@@ -784,44 +773,6 @@ mod issue125 {
         assert!(BorrowedIntegerConstraint { value: &integer }
             .validate()
             .is_err());
-
-        assert!(BoxedOuterContainerConstraints {
-            optional: Box::new(Some(1)),
-            values: Box::new(vec![1, 2]),
-        }
-        .validate()
-        .is_ok());
-
-        let errors = serde_json::to_value(
-            BoxedOuterContainerConstraints {
-                optional: Box::new(Some(3)),
-                values: Box::new(vec![1, 2]),
-            }
-            .validate()
-            .unwrap_err(),
-        )
-        .unwrap();
-        assert!(errors["properties"].get("optional").is_some());
-        assert!(errors["properties"].get("values").is_none());
-
-        let errors = serde_json::to_value(
-            BoxedOuterContainerConstraints {
-                optional: Box::new(Some(1)),
-                values: Box::new(vec![0, 2]),
-            }
-            .validate()
-            .unwrap_err(),
-        )
-        .unwrap();
-        assert!(errors["properties"].get("optional").is_none());
-        assert!(errors["properties"].get("values").is_some());
-
-        assert!(BoxedOuterContainerConstraints {
-            optional: Box::new(Some(3)),
-            values: Box::new(vec![0, 2]),
-        }
-        .validate()
-        .is_err());
     }
 
     #[derive(Clone, Debug, PartialEq)]
@@ -879,186 +830,11 @@ mod issue125 {
         );
     }
 
-    #[derive(Validate)]
-    #[allow(clippy::box_collection)]
-    struct StandardCompositedWrappers<'a> {
-        #[validate(minimum = 1)]
-        boxed_hash_map: Box<HashMap<String, i32>>,
-        #[validate(min_length = 2)]
-        boxed_index_map: Box<IndexMap<String, String>>,
-        #[validate(minimum = 1)]
-        borrowed_vec: &'a Vec<i32>,
-        #[validate(minimum = 1)]
-        borrowed_option: &'a Option<i32>,
-        #[validate(r#enum = [1, 2])]
-        cow_slice: std::borrow::Cow<'a, [i32]>,
-    }
-
-    #[test]
-    fn standard_composited_wrappers_delegate_to_their_containers() {
-        let valid_vec = vec![1, 2];
-        let valid_option = Some(1);
-        assert!(StandardCompositedWrappers {
-            boxed_hash_map: Box::new(HashMap::from([("number".to_owned(), 1)])),
-            boxed_index_map: Box::new(IndexMap::from([("string".to_owned(), "ok".to_owned(),)])),
-            borrowed_vec: &valid_vec,
-            borrowed_option: &valid_option,
-            cow_slice: std::borrow::Cow::Borrowed(&[1, 2]),
-        }
-        .validate()
-        .is_ok());
-
-        let invalid_vec = vec![0];
-        let invalid_option = Some(0);
-        let errors = serde_json::to_value(
-            StandardCompositedWrappers {
-                boxed_hash_map: Box::new(HashMap::from([("number".to_owned(), 0)])),
-                boxed_index_map: Box::new(IndexMap::from([("string".to_owned(), "x".to_owned())])),
-                borrowed_vec: &invalid_vec,
-                borrowed_option: &invalid_option,
-                cow_slice: std::borrow::Cow::Owned(vec![3]),
-            }
-            .validate()
-            .unwrap_err(),
-        )
-        .unwrap();
-
-        for field in [
-            "boxed_hash_map",
-            "boxed_index_map",
-            "borrowed_vec",
-            "borrowed_option",
-            "cow_slice",
-        ] {
-            assert!(errors["properties"].get(field).is_some(), "missing {field}");
-        }
-    }
-
-    #[derive(Validate)]
-    #[allow(
-        clippy::borrowed_box,
-        clippy::box_collection,
-        clippy::owned_cow,
-        clippy::redundant_allocation
-    )]
-    struct NestedCompositedWrappers<'a> {
-        #[validate(minimum = 1)]
-        cow_vec: std::borrow::Cow<'a, Vec<i32>>,
-        #[validate(minimum = 1)]
-        cow_option: std::borrow::Cow<'a, Option<i32>>,
-        #[validate(minimum = 1)]
-        cow_hash_map: std::borrow::Cow<'a, HashMap<String, i32>>,
-        #[validate(minimum = 1)]
-        cow_index_map: std::borrow::Cow<'a, IndexMap<String, i32>>,
-        #[validate(minimum = 1)]
-        cow_array: std::borrow::Cow<'a, [i32; 1]>,
-        #[validate(minimum = 1)]
-        nested_boxed_vec: Box<Box<Vec<i32>>>,
-        #[validate(minimum = 1)]
-        borrowed_boxed_vec: &'a Box<Vec<i32>>,
-        #[validate(minimum = 1)]
-        boxed_borrowed_vec: Box<&'a Vec<i32>>,
-        #[validate(minimum = 1)]
-        boxed_cow_slice: Box<std::borrow::Cow<'a, [i32]>>,
-        #[validate(minimum = 1)]
-        rc_vec: std::rc::Rc<Vec<i32>>,
-        #[validate(minimum = 1)]
-        arc_vec: std::sync::Arc<Vec<i32>>,
-        #[validate(minimum = 1)]
-        pinned_vec: std::pin::Pin<Box<Vec<i32>>>,
-        #[validate(multiple_of = 2)]
-        nested_multiple_of: Box<Box<Vec<i32>>>,
-        #[validate(min_length = 2)]
-        nested_min_length: Box<Box<Vec<String>>>,
-        #[validate(pattern = "^[a-z]+$")]
-        nested_pattern: Box<Box<Vec<String>>>,
-        #[validate(min_properties = 1)]
-        nested_min_properties: Box<Box<Vec<HashMap<String, i32>>>>,
-        #[validate(r#enum = [1, 2])]
-        nested_enum: Box<Box<Vec<i32>>>,
-    }
-
-    #[test]
-    fn composited_validation_supports_cow_containers_and_nested_wrappers() {
-        let borrowed_vec = vec![0];
-        let borrowed_boxed_vec = Box::new(vec![0]);
-        let errors = serde_json::to_value(
-            NestedCompositedWrappers {
-                cow_vec: std::borrow::Cow::Owned(vec![0]),
-                cow_option: std::borrow::Cow::Owned(Some(0)),
-                cow_hash_map: std::borrow::Cow::Owned(HashMap::from([("value".to_owned(), 0)])),
-                cow_index_map: std::borrow::Cow::Owned(IndexMap::from([("value".to_owned(), 0)])),
-                cow_array: std::borrow::Cow::Owned([0]),
-                nested_boxed_vec: Box::new(Box::new(vec![0])),
-                borrowed_boxed_vec: &borrowed_boxed_vec,
-                boxed_borrowed_vec: Box::new(&borrowed_vec),
-                boxed_cow_slice: Box::new(std::borrow::Cow::Borrowed(&[0])),
-                rc_vec: std::rc::Rc::new(vec![0]),
-                arc_vec: std::sync::Arc::new(vec![0]),
-                pinned_vec: Box::pin(vec![0]),
-                nested_multiple_of: Box::new(Box::new(vec![3])),
-                nested_min_length: Box::new(Box::new(vec!["x".to_owned()])),
-                nested_pattern: Box::new(Box::new(vec!["123".to_owned()])),
-                nested_min_properties: Box::new(Box::new(vec![HashMap::new()])),
-                nested_enum: Box::new(Box::new(vec![3])),
-            }
-            .validate()
-            .unwrap_err(),
-        )
-        .unwrap();
-
-        for field in [
-            "cow_vec",
-            "cow_option",
-            "cow_hash_map",
-            "cow_index_map",
-            "cow_array",
-            "nested_boxed_vec",
-            "borrowed_boxed_vec",
-            "boxed_borrowed_vec",
-            "boxed_cow_slice",
-            "rc_vec",
-            "arc_vec",
-            "pinned_vec",
-            "nested_multiple_of",
-            "nested_min_length",
-            "nested_pattern",
-            "nested_min_properties",
-            "nested_enum",
-        ] {
-            assert!(errors["properties"].get(field).is_some(), "missing {field}");
-        }
-    }
-
-    #[test]
-    #[allow(clippy::owned_cow)]
-    fn cow_container_composited_traits_are_available_directly() {
-        use serde_valid::composited::ValidateCompositedMinimum;
-
-        let vec: std::borrow::Cow<'_, Vec<i32>> = std::borrow::Cow::Owned(vec![1]);
-        assert!(ValidateCompositedMinimum::validate_composited_minimum(&vec, 1).is_ok());
-
-        let option: std::borrow::Cow<'_, Option<i32>> = std::borrow::Cow::Owned(Some(1));
-        assert!(ValidateCompositedMinimum::validate_composited_minimum(&option, 1).is_ok());
-
-        let hash_map: std::borrow::Cow<'_, HashMap<String, i32>> =
-            std::borrow::Cow::Owned(HashMap::from([("value".to_owned(), 1)]));
-        assert!(ValidateCompositedMinimum::validate_composited_minimum(&hash_map, 1).is_ok());
-
-        let index_map: std::borrow::Cow<'_, IndexMap<String, i32>> =
-            std::borrow::Cow::Owned(IndexMap::from([("value".to_owned(), 1)]));
-        assert!(ValidateCompositedMinimum::validate_composited_minimum(&index_map, 1).is_ok());
-
-        let array: std::borrow::Cow<'_, [i32; 1]> = std::borrow::Cow::Owned([1]);
-        assert!(ValidateCompositedMinimum::validate_composited_minimum(&array, 1).is_ok());
-    }
-
     #[derive(Debug, Validate)]
     struct BoxedArray {
         #[validate(min_items = 4)]
         #[validate(max_items = 2)]
         #[validate(unique_items)]
-        #[validate(minimum = 1)]
         values: Box<[i32; 3]>,
     }
 
@@ -1067,12 +843,11 @@ mod issue125 {
         #[validate(min_items = 4)]
         #[validate(max_items = 2)]
         #[validate(unique_items)]
-        #[validate(minimum = 1)]
         values: &'a [i32; 3],
     }
 
     #[test]
-    fn boxed_and_borrowed_arrays_support_array_and_composited_validators() {
+    fn boxed_and_borrowed_arrays_support_array_validators() {
         let errors = BoxedArray {
             values: Box::new([0, 1, 1]),
         }
@@ -1082,7 +857,6 @@ mod issue125 {
         assert!(errors.contains("The length of the items must be `>= 4`."));
         assert!(errors.contains("The length of the items must be `<= 2`."));
         assert!(errors.contains("The items must be unique."));
-        assert!(errors.contains("The number must be `>= 1`."));
 
         let values = [0, 1, 1];
         let errors = BorrowedArray { values: &values }
@@ -1092,7 +866,6 @@ mod issue125 {
         assert!(errors.contains("The length of the items must be `>= 4`."));
         assert!(errors.contains("The length of the items must be `<= 2`."));
         assert!(errors.contains("The items must be unique."));
-        assert!(errors.contains("The number must be `>= 1`."));
     }
 
     #[derive(Debug, Validate)]
@@ -1202,35 +975,6 @@ mod issue125 {
         }
         .validate()
         .is_ok());
-    }
-
-    #[derive(Debug, Validate)]
-    struct BoxedNumbers {
-        #[validate(minimum = 1)]
-        numbers: Box<[i32]>,
-    }
-
-    #[derive(Debug, Validate)]
-    struct BorrowedNumbers<'a> {
-        #[validate(minimum = 1)]
-        numbers: &'a [i32],
-    }
-
-    #[test]
-    fn boxed_slice_supports_numeric_composited_validation() {
-        assert!(BoxedNumbers {
-            numbers: vec![1, 2].into_boxed_slice(),
-        }
-        .validate()
-        .is_ok());
-        assert!(BoxedNumbers {
-            numbers: vec![0, 2].into_boxed_slice(),
-        }
-        .validate()
-        .is_err());
-
-        assert!(BorrowedNumbers { numbers: &[1, 2] }.validate().is_ok());
-        assert!(BorrowedNumbers { numbers: &[0, 2] }.validate().is_err());
     }
 
     #[derive(Debug, Validate)]
@@ -1693,109 +1437,94 @@ mod issue125 {
 
     macro_rules! impl_inherent_method_shadow_composited_validation {
         ($Trait:ident, $method:ident, $Argument:ty, $Error:ident) => {
-            impl<T, P>
-                serde_valid::composited::$Trait<serde_valid::composited::path::Transparent<P>>
-                for InherentMethodShadow<T>
+            impl<T> serde_valid::$Trait for InherentMethodShadow<T>
             where
-                T: serde_valid::composited::$Trait<P>,
+                T: serde_valid::$Trait,
             {
-                fn $method(
-                    &self,
-                    argument: $Argument,
-                ) -> Result<(), serde_valid::composited::Composited<serde_valid::$Error>> {
-                    serde_valid::composited::$Trait::$method(&self.0, argument)
+                fn $method(&self, argument: $Argument) -> Result<(), serde_valid::$Error> {
+                    serde_valid::$Trait::$method(&self.0, argument)
                 }
             }
         };
         (generic_owned $Trait:ident, $method:ident, $Error:ident) => {
-            impl<C, T, P>
-                serde_valid::composited::$Trait<C, serde_valid::composited::path::Transparent<P>>
-                for InherentMethodShadow<T>
+            impl<C, T> serde_valid::$Trait<C> for InherentMethodShadow<T>
             where
-                T: serde_valid::composited::$Trait<C, P>,
+                T: serde_valid::$Trait<C>,
             {
-                fn $method(
-                    &self,
-                    argument: C,
-                ) -> Result<(), serde_valid::composited::Composited<serde_valid::$Error>> {
-                    serde_valid::composited::$Trait::$method(&self.0, argument)
+                fn $method(&self, argument: C) -> Result<(), serde_valid::$Error> {
+                    serde_valid::$Trait::$method(&self.0, argument)
                 }
             }
         };
         (generic_slice $Trait:ident, $method:ident, $Error:ident) => {
-            impl<C, T, P>
-                serde_valid::composited::$Trait<C, serde_valid::composited::path::Transparent<P>>
-                for InherentMethodShadow<T>
+            impl<C, T> serde_valid::$Trait<C> for InherentMethodShadow<T>
             where
-                T: serde_valid::composited::$Trait<C, P>,
+                T: serde_valid::$Trait<C>,
             {
-                fn $method(
-                    &self,
-                    argument: &[C],
-                ) -> Result<(), serde_valid::composited::Composited<serde_valid::$Error>> {
-                    serde_valid::composited::$Trait::$method(&self.0, argument)
+                fn $method(&self, argument: &[C]) -> Result<(), serde_valid::$Error> {
+                    serde_valid::$Trait::$method(&self.0, argument)
                 }
             }
         };
     }
 
     impl_inherent_method_shadow_composited_validation!(
-        generic_slice ValidateCompositedEnum,
-        validate_composited_enum,
+        generic_slice ValidateEnum,
+        validate_enum,
         EnumError
     );
     impl_inherent_method_shadow_composited_validation!(
-        generic_owned ValidateCompositedMultipleOf,
-        validate_composited_multiple_of,
+        generic_owned ValidateMultipleOf,
+        validate_multiple_of,
         MultipleOfError
     );
     impl_inherent_method_shadow_composited_validation!(
-        generic_owned ValidateCompositedMinimum,
-        validate_composited_minimum,
+        generic_owned ValidateMinimum,
+        validate_minimum,
         MinimumError
     );
     impl_inherent_method_shadow_composited_validation!(
-        generic_owned ValidateCompositedMaximum,
-        validate_composited_maximum,
+        generic_owned ValidateMaximum,
+        validate_maximum,
         MaximumError
     );
     impl_inherent_method_shadow_composited_validation!(
-        generic_owned ValidateCompositedExclusiveMinimum,
-        validate_composited_exclusive_minimum,
+        generic_owned ValidateExclusiveMinimum,
+        validate_exclusive_minimum,
         ExclusiveMinimumError
     );
     impl_inherent_method_shadow_composited_validation!(
-        generic_owned ValidateCompositedExclusiveMaximum,
-        validate_composited_exclusive_maximum,
+        generic_owned ValidateExclusiveMaximum,
+        validate_exclusive_maximum,
         ExclusiveMaximumError
     );
     impl_inherent_method_shadow_composited_validation!(
-        ValidateCompositedMinProperties,
-        validate_composited_min_properties,
+        ValidateMinProperties,
+        validate_min_properties,
         usize,
         MinPropertiesError
     );
     impl_inherent_method_shadow_composited_validation!(
-        ValidateCompositedMaxProperties,
-        validate_composited_max_properties,
+        ValidateMaxProperties,
+        validate_max_properties,
         usize,
         MaxPropertiesError
     );
     impl_inherent_method_shadow_composited_validation!(
-        ValidateCompositedMinLength,
-        validate_composited_min_length,
+        ValidateMinLength,
+        validate_min_length,
         usize,
         MinLengthError
     );
     impl_inherent_method_shadow_composited_validation!(
-        ValidateCompositedMaxLength,
-        validate_composited_max_length,
+        ValidateMaxLength,
+        validate_max_length,
         usize,
         MaxLengthError
     );
     impl_inherent_method_shadow_composited_validation!(
-        ValidateCompositedPattern,
-        validate_composited_pattern,
+        ValidatePattern,
+        validate_pattern,
         &serde_valid::export::regex::Regex,
         PatternError
     );
@@ -1905,17 +1634,17 @@ mod issue125 {
         #[validate]
         nested: InherentMethodShadow<WrappedChild>,
         #[validate(r#enum = [1, 2])]
-        enum_values: InherentMethodShadow<Vec<i32>>,
+        enum_values: InherentMethodShadow<i32>,
         #[validate(multiple_of = 2)]
-        multiple_of: InherentMethodShadow<Vec<i32>>,
+        multiple_of: InherentMethodShadow<i32>,
         #[validate(minimum = 1)]
-        minimum: InherentMethodShadow<Vec<i32>>,
+        minimum: InherentMethodShadow<i32>,
         #[validate(maximum = 1)]
-        maximum: InherentMethodShadow<Vec<i32>>,
+        maximum: InherentMethodShadow<i32>,
         #[validate(exclusive_minimum = 1)]
-        exclusive_minimum: InherentMethodShadow<Vec<i32>>,
+        exclusive_minimum: InherentMethodShadow<i32>,
         #[validate(exclusive_maximum = 1)]
-        exclusive_maximum: InherentMethodShadow<Vec<i32>>,
+        exclusive_maximum: InherentMethodShadow<i32>,
         #[validate(min_properties = 1)]
         min_properties: InherentMethodShadow<HashMap<String, i32>>,
         #[validate(max_properties = 1)]
@@ -1933,12 +1662,12 @@ mod issue125 {
         let errors = serde_json::to_value(
             InherentMethodShadowConstraints {
                 nested: InherentMethodShadow(WrappedChild { value: 0 }),
-                enum_values: InherentMethodShadow(vec![3]),
-                multiple_of: InherentMethodShadow(vec![3]),
-                minimum: InherentMethodShadow(vec![0]),
-                maximum: InherentMethodShadow(vec![2]),
-                exclusive_minimum: InherentMethodShadow(vec![1]),
-                exclusive_maximum: InherentMethodShadow(vec![1]),
+                enum_values: InherentMethodShadow(3),
+                multiple_of: InherentMethodShadow(3),
+                minimum: InherentMethodShadow(0),
+                maximum: InherentMethodShadow(2),
+                exclusive_minimum: InherentMethodShadow(1),
+                exclusive_maximum: InherentMethodShadow(1),
                 min_properties: InherentMethodShadow(HashMap::new()),
                 max_properties: InherentMethodShadow(HashMap::from([
                     ("one".to_owned(), 1),
