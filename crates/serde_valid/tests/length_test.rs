@@ -195,78 +195,76 @@ fn length_nested_vec_type_is_ok() {
     assert!(s.validate().is_ok());
 }
 
-#[test]
-fn length_option_type_is_ok() {
-    #[derive(Validate)]
-    struct TestStruct {
-        #[validate(min_length = 0)]
-        #[validate(max_length = 5)]
-        val: Option<String>,
-    }
-
-    let s = TestStruct {
-        val: Some(String::from("abcd")),
-    };
-    assert!(s.validate().is_ok());
+#[derive(Validate)]
+struct LengthValue {
+    #[validate(min_length = 0)]
+    #[validate(max_length = 5)]
+    value: String,
 }
 
 #[test]
-fn length_option_type_is_err() {
+fn length_validation_runs_through_optional_nested_validation() {
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(min_length = 0)]
-        #[validate(max_length = 5)]
-        val: Option<String>,
+        #[validate]
+        val: Option<LengthValue>,
     }
 
-    let s = TestStruct {
-        val: Some(String::from("abcdefg")),
-    };
-
-    assert_eq!(
-        s.validate().unwrap_err().to_string(),
-        json!(
-            {
-                "errors":[],
-                "properties":{
-                    "val":{
-                        "errors": ["The length of the value must be `<= 5`."]
-                    }
-                }
-            }
-        )
-        .to_string()
-    );
+    assert!(TestStruct {
+        val: Some(LengthValue {
+            value: "abcd".to_owned(),
+        }),
+    }
+    .validate()
+    .is_ok());
+    assert!(TestStruct {
+        val: Some(LengthValue {
+            value: "abcdefg".to_owned(),
+        }),
+    }
+    .validate()
+    .is_err());
+    assert!(TestStruct { val: None }.validate().is_ok());
 }
 
 #[test]
-fn length_nested_option_type_is_ok() {
+fn length_validation_runs_through_nested_optional_validation() {
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(min_length = 0)]
-        #[validate(max_length = 5)]
-        val: Option<Option<String>>,
+        #[validate]
+        val: Option<Option<LengthValue>>,
     }
 
-    let s = TestStruct {
-        val: Some(Some(String::from("abcd"))),
-    };
-    assert!(s.validate().is_ok());
+    assert!(TestStruct {
+        val: Some(Some(LengthValue {
+            value: "abcd".to_owned(),
+        })),
+    }
+    .validate()
+    .is_ok());
 }
 
 #[test]
-fn length_vec_optional_type_is_ok() {
+fn length_validation_runs_through_sequence_nested_validation() {
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(min_length = 0)]
-        #[validate(max_length = 5)]
-        val: Vec<Option<String>>,
+        #[validate]
+        val: Vec<Option<LengthValue>>,
     }
 
-    let s = TestStruct {
-        val: vec![Some(String::from("abc")), Some(String::from("abcde")), None],
-    };
-    assert!(s.validate().is_ok());
+    assert!(TestStruct {
+        val: vec![
+            Some(LengthValue {
+                value: "abc".to_owned(),
+            }),
+            Some(LengthValue {
+                value: "abcde".to_owned(),
+            }),
+            None,
+        ],
+    }
+    .validate()
+    .is_ok());
 }
 
 #[test]

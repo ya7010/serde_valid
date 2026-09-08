@@ -187,60 +187,54 @@ fn range_nested_vec_type_is_ok() {
     assert!(s.validate().is_ok());
 }
 
-#[test]
-fn range_option_type_is_ok() {
-    #[derive(Validate)]
-    struct TestStruct {
-        #[validate(minimum = 0)]
-        #[validate(maximum = 10)]
-        val: Option<i32>,
-    }
-
-    let s = TestStruct { val: Some(5) };
-    assert!(s.validate().is_ok());
+#[derive(Validate)]
+struct RangeValue {
+    #[validate(minimum = 0)]
+    #[validate(maximum = 10)]
+    value: i32,
 }
 
 #[test]
-fn range_nested_option_type_is_ok() {
+fn range_validation_runs_through_optional_nested_validation() {
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(minimum = 0)]
-        #[validate(maximum = 10)]
-        val: Option<Option<i32>>,
+        #[validate]
+        val: Option<Option<RangeValue>>,
     }
 
-    let s = TestStruct { val: Some(Some(5)) };
-    assert!(s.validate().is_ok());
+    assert!(TestStruct {
+        val: Some(Some(RangeValue { value: 5 })),
+    }
+    .validate()
+    .is_ok());
+    assert!(TestStruct {
+        val: Some(Some(RangeValue { value: 11 })),
+    }
+    .validate()
+    .is_err());
+    assert!(TestStruct { val: None }.validate().is_ok());
 }
 
 #[test]
-fn range_vec_optional_type_is_ok() {
+fn range_validation_runs_through_sequence_nested_validation() {
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(minimum = 0)]
-        #[validate(maximum = 10)]
-        val: Vec<Option<i32>>,
+        #[validate]
+        vec: Vec<Option<RangeValue>>,
+        #[validate]
+        array: [Option<RangeValue>; 3],
     }
 
-    let s = TestStruct {
-        val: vec![Some(4), Some(8), None],
-    };
-    assert!(s.validate().is_ok());
-}
-
-#[test]
-fn range_array_optional_type_is_ok() {
-    #[derive(Validate)]
-    struct TestStruct {
-        #[validate(minimum = 0)]
-        #[validate(maximum = 10)]
-        val: [Option<i32>; 3],
+    assert!(TestStruct {
+        vec: vec![Some(RangeValue { value: 4 }), None],
+        array: [
+            Some(RangeValue { value: 4 }),
+            Some(RangeValue { value: 8 }),
+            None,
+        ],
     }
-
-    let s = TestStruct {
-        val: [Some(4), Some(8), None],
-    };
-    assert!(s.validate().is_ok());
+    .validate()
+    .is_ok());
 }
 
 #[test]

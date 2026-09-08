@@ -45,14 +45,6 @@ struct TestStruct<'a> {
 
     // Generic validator
     #[validate(r#enum = [5, 10, 15])]
-    // Numeric validator
-    #[validate(multiple_of = 5)]
-    #[validate(minimum = 5)]
-    #[validate(maximum = 5)]
-    optional_value: Option<i32>,
-
-    // Generic validator
-    #[validate(r#enum = [5, 10, 15])]
     // Array validator
     #[validate(unique_items)]
     #[validate(min_items = 3)]
@@ -115,14 +107,6 @@ struct TestInnerStruct<'a> {
 
     // Generic validator
     #[validate(r#enum = [5, 10, 15])]
-    // Numeric validator
-    #[validate(multiple_of = 5)]
-    #[validate(minimum = 5)]
-    #[validate(maximum = 5)]
-    inner_optional_value: Option<i32>,
-
-    // Generic validator
-    #[validate(r#enum = [5, 10, 15])]
     // Array validator
     #[validate(unique_items)]
     #[validate(min_items = 3)]
@@ -141,14 +125,12 @@ fn complex_validation() {
         float_value: 5.0,
         string_value: "12345".to_string(),
         str_value: "12345",
-        optional_value: Some(5),
         vec_value: vec![5, 10, 15],
         nested_struct: TestInnerStruct {
             inner_int_value: 5,
             inner_float_value: 5.0,
             inner_string_value: "12345".to_string(),
             inner_str_value: "12345",
-            inner_optional_value: Some(5),
             inner_vec_value: vec![5, 10, 15],
         },
         nested_vec_struct: vec![TestInnerStruct {
@@ -156,7 +138,6 @@ fn complex_validation() {
             inner_float_value: 5.0,
             inner_string_value: "12345".to_string(),
             inner_str_value: "12345",
-            inner_optional_value: Some(5),
             inner_vec_value: vec![5, 10, 15],
         }],
     };

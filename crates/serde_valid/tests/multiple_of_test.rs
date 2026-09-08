@@ -75,44 +75,34 @@ fn multiple_of_nested_vec_type_is_ok() {
     assert!(s.validate().is_ok());
 }
 
-#[test]
-fn multiple_of_optional_type_is_ok() {
-    #[derive(Validate)]
-    struct TestStruct {
-        #[validate(multiple_of = 4)]
-        val: Option<i32>,
-    }
-
-    let s = TestStruct { val: Some(12) };
-    assert!(s.validate().is_ok());
+#[derive(Validate)]
+struct MultipleOfValue {
+    #[validate(multiple_of = 4)]
+    value: i32,
 }
 
 #[test]
-fn multiple_of_nested_optional_type_is_ok() {
+fn multiple_of_validation_runs_through_nested_validation() {
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(multiple_of = 4)]
-        val: Option<Option<i32>>,
+        #[validate]
+        optional: Option<Option<MultipleOfValue>>,
+        #[validate]
+        values: Vec<Option<MultipleOfValue>>,
     }
 
-    let s = TestStruct {
-        val: Some(Some(12)),
-    };
-    assert!(s.validate().is_ok());
-}
-
-#[test]
-fn multiple_of_vec_optional_type_is_ok() {
-    #[derive(Validate)]
-    struct TestStruct {
-        #[validate(multiple_of = 4)]
-        val: Vec<Option<i32>>,
+    assert!(TestStruct {
+        optional: Some(Some(MultipleOfValue { value: 12 })),
+        values: vec![Some(MultipleOfValue { value: 4 }), None],
     }
-
-    let s = TestStruct {
-        val: vec![Some(4), Some(8), None],
-    };
-    assert!(s.validate().is_ok());
+    .validate()
+    .is_ok());
+    assert!(TestStruct {
+        optional: Some(Some(MultipleOfValue { value: 3 })),
+        values: Vec::new(),
+    }
+    .validate()
+    .is_err());
 }
 
 #[test]

@@ -144,50 +144,43 @@ fn pattern_nested_vec_type_is_ok() {
     assert!(s.validate().is_ok());
 }
 
-#[test]
-fn pattern_option_type_is_ok() {
-    #[derive(Validate)]
-    struct TestStruct {
-        #[validate(pattern = r"^\d{4}-\d{2}-\d{2}$")]
-        val: Option<String>,
-    }
-
-    let s = TestStruct {
-        val: Some(String::from("2020-09-10")),
-    };
-    assert!(s.validate().is_ok());
+#[derive(Validate)]
+struct PatternValue {
+    #[validate(pattern = r"^\d{4}-\d{2}-\d{2}$")]
+    value: String,
 }
 
 #[test]
-fn pattern_nested_option_type_is_ok() {
+fn pattern_validation_runs_through_nested_validation() {
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(pattern = r"^\d{4}-\d{2}-\d{2}$")]
-        val: Option<Option<String>>,
+        #[validate]
+        optional: Option<Option<PatternValue>>,
+        #[validate]
+        values: Vec<Option<PatternValue>>,
     }
 
-    let s = TestStruct {
-        val: Some(Some(String::from("2020-09-10"))),
-    };
-    assert!(s.validate().is_ok());
-}
-
-#[test]
-fn pattern_vec_optional_type_is_ok() {
-    #[derive(Validate)]
-    struct TestStruct {
-        #[validate(pattern = r"^\d{4}-\d{2}-\d{2}$")]
-        val: Vec<Option<String>>,
-    }
-
-    let s = TestStruct {
-        val: vec![
-            Some(String::from("2020-09-10")),
-            Some(String::from("2020-10-10")),
+    assert!(TestStruct {
+        optional: Some(Some(PatternValue {
+            value: "2020-09-10".to_owned(),
+        })),
+        values: vec![
+            Some(PatternValue {
+                value: "2020-10-10".to_owned(),
+            }),
             None,
         ],
-    };
-    assert!(s.validate().is_ok());
+    }
+    .validate()
+    .is_ok());
+    assert!(TestStruct {
+        optional: Some(Some(PatternValue {
+            value: "2020/09/10".to_owned(),
+        })),
+        values: Vec::new(),
+    }
+    .validate()
+    .is_err());
 }
 
 #[test]

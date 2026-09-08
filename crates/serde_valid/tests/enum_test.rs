@@ -91,28 +91,34 @@ fn enum_vec_string_type() {
     assert!(s.validate().is_ok());
 }
 
-#[test]
-fn enum_option_type() {
-    #[derive(Validate)]
-    struct TestStruct {
-        #[validate(r#enum = [1, 2, 3])]
-        val: Option<i32>,
-    }
-
-    let s = TestStruct { val: Some(3) };
-    assert!(s.validate().is_ok());
+#[derive(Validate)]
+struct EnumValue {
+    #[validate(r#enum = [1, 2, 3])]
+    value: i32,
 }
 
 #[test]
-fn enum_vec_option_type() {
+fn enum_validation_runs_through_nested_validation() {
     #[derive(Validate)]
     struct TestStruct {
-        #[validate(r#enum = [3])]
-        val: Vec<Option<i32>>,
+        #[validate]
+        optional: Option<EnumValue>,
+        #[validate]
+        values: Vec<Option<EnumValue>>,
     }
 
-    let s = TestStruct { val: vec![Some(3)] };
-    assert!(s.validate().is_ok());
+    assert!(TestStruct {
+        optional: Some(EnumValue { value: 3 }),
+        values: vec![Some(EnumValue { value: 1 }), None],
+    }
+    .validate()
+    .is_ok());
+    assert!(TestStruct {
+        optional: Some(EnumValue { value: 4 }),
+        values: Vec::new(),
+    }
+    .validate()
+    .is_err());
 }
 
 #[test]
