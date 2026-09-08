@@ -25,6 +25,49 @@ Sequence failures are represented by `Composited::Array`. Map failures are repre
 `ToString` (normally through `Display`). If distinct keys produce the same string, their validation
 errors are collected under the same property.
 
+## How paths compose
+
+The path markers are not separate arguments. They are nested to describe every layer between the
+field and the scalar value being validated:
+
+| Rust type | Composited path |
+| --- | --- |
+| `String` | `Scalar` |
+| `Box<String>` | `Transparent<Scalar>` |
+| `Vec<Box<String>>` | `Sequence<Transparent<Scalar>>` |
+| `Option<Vec<Box<String>>>` | `Optional<Sequence<Transparent<Scalar>>>` |
+| `HashMap<String, Option<Vec<String>>>` | `Map<Optional<Sequence<Scalar>>>` |
+
+For example, applying `min_length` to `Option<Vec<Box<String>>>` selects this implementation:
+
+```text
+ValidateCompositedMinLength<
+    Optional<Sequence<Transparent<Scalar>>>
+>
+```
+
+Application code normally does not write this path. Given a derived field such as:
+
+```rust
+# extern crate serde_valid;
+use serde_valid::Validate;
+
+#[derive(Validate)]
+struct Request {
+    #[validate(min_length = 3)]
+    values: Option<Vec<Box<String>>>,
+}
+
+let request = Request {
+    values: Some(vec![Box::new("Bo".to_owned())]),
+};
+
+assert!(request.validate().is_err());
+```
+
+Rust infers the complete path through trait resolution. A path type needs to be written explicitly
+only when implementing composited validation for a custom wrapper or container.
+
 ## Custom transparent wrappers
 
 A wrapper that should preserve its inner validation path can forward the composited validator with
