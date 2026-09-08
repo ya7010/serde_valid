@@ -42,8 +42,6 @@ pub mod path;
 mod validator;
 
 pub use error::Composited;
-#[allow(deprecated)]
-pub use validator::ValidateCompositedEnumerate;
 pub use validator::{
     ValidateCompositedEnum, ValidateCompositedExclusiveMaximum, ValidateCompositedExclusiveMinimum,
     ValidateCompositedMaxLength, ValidateCompositedMaxProperties, ValidateCompositedMaximum,

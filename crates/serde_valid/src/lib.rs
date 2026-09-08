@@ -579,8 +579,6 @@ pub mod traits;
 pub mod utils;
 pub mod validation;
 
-#[allow(deprecated)]
-pub use error::EnumerateError;
 pub use error::{
     EnumError, Error, ExclusiveMaximumError, ExclusiveMinimumError, MaxItemsError, MaxLengthError,
     MaxPropertiesError, MaximumError, MinItemsError, MinLengthError, MinPropertiesError,
@@ -593,8 +591,6 @@ use std::{
     borrow::Cow,
     collections::{BTreeMap, HashMap},
 };
-#[allow(deprecated)]
-pub use validation::ValidateEnumerate;
 pub use validation::{
     ValidateEnum, ValidateExclusiveMaximum, ValidateExclusiveMinimum, ValidateMaxItems,
     ValidateMaxLength, ValidateMaxProperties, ValidateMaximum, ValidateMinItems, ValidateMinLength,

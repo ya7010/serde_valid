@@ -1,5 +1,3 @@
-use syn::spanned::Spanned;
-
 use crate::attribute::common::lit::get_lit;
 use crate::attribute::common::message_format::MessageFormat;
 use crate::attribute::field_validate::array::{
@@ -24,7 +22,7 @@ use crate::attribute::field_validate::string::{
 use crate::attribute::{MetaNameValueFieldValidation, Validator};
 use crate::serde::rename::RenameMap;
 use crate::types::Field;
-use crate::warning::{Warning, WithWarnings};
+use crate::warning::WithWarnings;
 
 pub fn extract_field_validator_from_meta_name_value(
     field: &impl Field,
@@ -122,24 +120,6 @@ pub fn extract_field_validator_from_meta_name_value(
             rename_map,
         )
         .map(WithWarnings::new),
-        MetaNameValueFieldValidation::Enumerate => {
-            let warnings = vec![Warning::Deprecated {
-                ident: validation.path.segments.first().unwrap().ident.clone(),
-                note: "🚧 Please use `#[validate(r#enum = ...)]` instead of `#[validate(enumerate = ...)]` 🚧"
-                    .to_string(),
-                span: validation.path.span(),
-                lint_attrs: vec![],
-            }];
-
-            let validator = extract_generic_enum_validator_from_name_value(
-                field,
-                validation,
-                message_format,
-                rename_map,
-            )?;
-
-            Ok(WithWarnings::new_with_warnings(validator, warnings))
-        }
         MetaNameValueFieldValidation::Custom => {
             extract_generic_custom_validator_from_meta_name_value(
                 field,

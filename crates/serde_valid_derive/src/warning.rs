@@ -161,3 +161,27 @@ impl ToTokens for Warning {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn warning_can_be_injected_with_the_call_site_lint_scope() {
+        let warning = Warning::Deprecated {
+            ident: syn::parse_quote!(legacy_rule),
+            note: "use the replacement rule".to_owned(),
+            span: Span::call_site(),
+            lint_attrs: vec![],
+        }
+        .with_lint_attrs(&[syn::parse_quote!(#[allow(deprecated)])])
+        .add_index(2);
+
+        let tokens = warning.to_token_stream().to_string();
+
+        assert!(tokens.contains("allow (deprecated)"));
+        assert!(tokens.contains("deprecated"));
+        assert!(tokens.contains("use the replacement rule"));
+        assert!(tokens.contains("__legacy_rule_2"));
+    }
+}
