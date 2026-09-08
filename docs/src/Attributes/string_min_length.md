@@ -1,6 +1,6 @@
 # String: "min_length" validation
 
-The `#[validate(min_length = ???)]` attribute is used to validate that a `String` is no longer than a given length.
+The `#[validate(min_length = ???)]` attribute validates that a string has at least the given length.
 
 ```rust
 # extern crate serde_valid;

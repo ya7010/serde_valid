@@ -26,3 +26,8 @@ assert!(
     }.validate().is_ok()
 );
 ```
+
+Nested validation is also available through standard references, pointer wrappers, sequences,
+optional values, and maps. Map errors use the stringified map key rather than its numeric iteration
+position. See [Composited validation](../composited.md) for the complete list and for custom wrapper
+implementations.
