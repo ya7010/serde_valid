@@ -1,4 +1,4 @@
-/// Multipl validation of the number.
+/// Multiple-of validation of the number.
 ///
 /// See <https://json-schema.org/understanding-json-schema/reference/numeric.html#multiples>
 ///
