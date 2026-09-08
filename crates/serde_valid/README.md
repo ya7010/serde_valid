@@ -321,13 +321,6 @@ assert!(s.validate().is_ok());
 
 By implementing the validation trait, Your original type can uses Serde Valid validations.
 
-Scalar validation traits return their specific error type. Their corresponding
-`validation::ValidateComposited*` traits return `validation::Composited<Error>` and recursively
-preserve array indices and object keys. Implementing a scalar trait for a custom type automatically
-makes it available to composited validation; no second implementation is required.
-Transparent wrappers and recursive containers participate in the composited traits rather than
-also implementing the scalar traits. This keeps scalar and structural validation unambiguous.
-
 ```rust
 use serde_valid::Validate;
 
