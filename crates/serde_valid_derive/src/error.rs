@@ -226,11 +226,7 @@ impl Error {
     pub fn field_validation_type_unknown(path: &syn::Path, unknown: &str) -> Self {
         let candidates = &(MetaPathFieldValidation::iter().map(|x| x.name()))
             .chain(MetaListFieldValidation::iter().map(|x| x.name()))
-            .chain(
-                MetaNameValueFieldValidation::iter()
-                    .filter(|v| v != &MetaNameValueFieldValidation::Enumerate)
-                    .map(|x| x.name()),
-            )
+            .chain(MetaNameValueFieldValidation::iter().map(|x| x.name()))
             .unique()
             .sorted()
             .collect::<Vec<_>>();

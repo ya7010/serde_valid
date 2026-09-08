@@ -119,7 +119,6 @@ enum_str! {
         MultipleOf = "multiple_of",
         Pattern = "pattern",
         Enum = "r#enum",
-        Enumerate = "enumerate",
         Custom = "custom",
     }
 }

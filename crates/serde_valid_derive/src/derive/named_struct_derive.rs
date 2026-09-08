@@ -140,3 +140,30 @@ fn collect_named_field_validators<'a>(
         validators,
     ))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deprecated_enumerate_attribute_is_rejected() {
+        let input: syn::DeriveInput = syn::parse_quote! {
+            struct Input {
+                #[validate(enumerate = ["a"])]
+                value: String,
+            }
+        };
+        let syn::Data::Struct(data) = &input.data else {
+            unreachable!();
+        };
+        let syn::Fields::Named(fields) = &data.fields else {
+            unreachable!();
+        };
+
+        let errors = expand_named_struct_derive(&input, fields).unwrap_err();
+        let message = crate::error::to_compile_errors(errors).to_string();
+
+        assert!(message.contains("`enumerate` is unknown validation type"));
+        assert!(message.contains("r#enum"));
+    }
+}

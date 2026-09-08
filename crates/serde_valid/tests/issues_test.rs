@@ -234,38 +234,6 @@ mod prelude_name_hygiene_edge_cases {
     }
 }
 
-#[allow(deprecated)]
-mod deprecated_enumerate_warning_hygiene {
-    fn __enumerate_0(_value: &String) -> Result<(), ::serde_valid::validation::Error> {
-        Ok(())
-    }
-
-    #[derive(::serde_valid::Validate)]
-    struct Input {
-        #[validate(enumerate = ["a"])]
-        enumerated: String,
-        #[validate(custom = __enumerate_0)]
-        custom: String,
-    }
-
-    #[derive(::serde_valid::Validate)]
-    struct TupleInput(#[validate(enumerate = ["a"])] String);
-
-    #[test]
-    fn warning_helper_does_not_shadow_custom_validator() {
-        let value = Input {
-            enumerated: "a".to_owned(),
-            custom: "value".to_owned(),
-        };
-        assert!(::serde_valid::Validate::validate(&value).is_ok());
-    }
-
-    #[test]
-    fn warning_helper_is_valid_for_tuple_structs() {
-        assert!(::serde_valid::Validate::validate(&TupleInput("a".to_owned())).is_ok());
-    }
-}
-
 mod issue107 {
     use serde::{Deserialize, Serialize};
     use serde_valid::Validate;
@@ -415,7 +383,6 @@ mod issue125 {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn downstream_unsized_scalar_impls_are_automatically_composited() {
         fn assert_impl<T>()
         where
@@ -425,9 +392,7 @@ mod issue125 {
                 + serde_valid::ValidateMinimum<i32>
                 + serde_valid::composited::ValidateCompositedMinimum<i32>
                 + serde_valid::ValidateEnum<i32>
-                + serde_valid::ValidateEnumerate<i32>
-                + serde_valid::composited::ValidateCompositedEnum<i32>
-                + serde_valid::composited::ValidateCompositedEnumerate<i32>,
+                + serde_valid::composited::ValidateCompositedEnum<i32>,
         {
         }
 
@@ -435,7 +400,6 @@ mod issue125 {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn foreign_dst_terminals_keep_composited_validation_support() {
         fn assert_string_validators<T>()
         where
@@ -448,9 +412,7 @@ mod issue125 {
 
         fn assert_enum_validators<T>()
         where
-            T: ?Sized
-                + serde_valid::composited::ValidateCompositedEnum<&'static str>
-                + serde_valid::composited::ValidateCompositedEnumerate<&'static str>,
+            T: ?Sized + serde_valid::composited::ValidateCompositedEnum<&'static str>,
         {
         }
 
@@ -1089,93 +1051,6 @@ mod issue125 {
 
         let array: std::borrow::Cow<'_, [i32; 1]> = std::borrow::Cow::Owned([1]);
         assert!(ValidateCompositedMinimum::validate_composited_minimum(&array, 1).is_ok());
-    }
-
-    #[allow(deprecated)]
-    mod deprecated_enumerate {
-        use super::*;
-        use serde_valid::composited::ValidateCompositedEnumerate;
-        use serde_valid::ValidateEnumerate;
-
-        #[derive(Debug, Validate)]
-        struct DeprecatedBoxedStringConstraint {
-            #[validate(enumerate = ["alpha", "beta"])]
-            value: Box<str>,
-        }
-
-        #[derive(Clone, Debug)]
-        struct DeprecatedCustomEnumValue(String);
-
-        impl ValidateEnumerate<&'static str> for DeprecatedCustomEnumValue {
-            fn validate_enumerate(&self, candidates: &[&'static str]) -> Result<(), EnumError> {
-                self.0.validate_enumerate(candidates)
-            }
-        }
-
-        #[test]
-        fn boxed_string_remains_supported_by_deprecated_enumerate_validator() {
-            assert!(DeprecatedBoxedStringConstraint {
-                value: "alpha".into(),
-            }
-            .validate()
-            .is_ok());
-            assert!(DeprecatedBoxedStringConstraint {
-                value: "gamma".into(),
-            }
-            .validate()
-            .is_err());
-            let custom = Box::new(DeprecatedCustomEnumValue("alpha".to_owned()));
-            assert!(ValidateCompositedEnumerate::validate_composited_enumerate(
-                &custom,
-                &["alpha", "beta"]
-            )
-            .is_ok());
-            let custom: std::borrow::Cow<'_, DeprecatedCustomEnumValue> =
-                std::borrow::Cow::Owned(DeprecatedCustomEnumValue("alpha".to_owned()));
-            assert!(ValidateCompositedEnumerate::validate_composited_enumerate(
-                &custom,
-                &["alpha", "beta"]
-            )
-            .is_ok());
-            let custom: std::borrow::Cow<'_, DeprecatedCustomEnumValue> =
-                std::borrow::Cow::Owned(DeprecatedCustomEnumValue("gamma".to_owned()));
-            assert!(ValidateCompositedEnumerate::validate_composited_enumerate(
-                &custom,
-                &["alpha", "beta"]
-            )
-            .is_err());
-            let custom = DeprecatedCustomEnumValue("alpha".to_owned());
-            let custom = std::borrow::Cow::Borrowed(&custom);
-            assert!(ValidateCompositedEnumerate::validate_composited_enumerate(
-                &custom,
-                &["alpha", "beta"]
-            )
-            .is_ok());
-            let custom = DeprecatedCustomEnumValue("gamma".to_owned());
-            let custom = std::borrow::Cow::Borrowed(&custom);
-            assert!(ValidateCompositedEnumerate::validate_composited_enumerate(
-                &custom,
-                &["alpha", "beta"]
-            )
-            .is_err());
-
-            let integer: std::borrow::Cow<'_, i32> = std::borrow::Cow::Owned(1);
-            assert!(
-                ValidateCompositedEnumerate::validate_composited_enumerate(&integer, &[1, 2])
-                    .is_ok()
-            );
-            let integer: std::borrow::Cow<'_, i32> = std::borrow::Cow::Owned(3);
-            assert!(
-                ValidateCompositedEnumerate::validate_composited_enumerate(&integer, &[1, 2])
-                    .is_err()
-            );
-
-            let values = IndexMap::from([("value".to_owned(), 3)]);
-            assert!(
-                ValidateCompositedEnumerate::validate_composited_enumerate(&values, &[1, 2])
-                    .is_err()
-            );
-        }
     }
 
     #[derive(Debug, Validate)]

@@ -243,6 +243,3 @@ struct_error_params!(
         pub candidates: Vec<Literal>,
     }
 );
-
-#[deprecated(since = "2.0.2", note = "use `EnumError` instead")]
-pub type EnumerateError = EnumError;

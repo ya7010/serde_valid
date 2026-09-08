@@ -12,8 +12,6 @@ pub use error::{
     PropertyErrorsMap, PropertyVecErrorsMap, VecErrors,
 };
 pub use generic::ValidateEnum;
-#[allow(deprecated)]
-pub use generic::ValidateEnumerate;
 pub use numeric::{
     ValidateExclusiveMaximum, ValidateExclusiveMinimum, ValidateMaximum, ValidateMinimum,
     ValidateMultipleOf,
