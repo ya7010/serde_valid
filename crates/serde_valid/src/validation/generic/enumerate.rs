@@ -16,13 +16,13 @@ use crate::EnumError;
     since = "2.0.2",
     note = "use `ValidateEnum` and `validate_enum` instead"
 )]
-pub trait ValidateEnumerate<C> {
-    fn validate_enumerate(&self, enumerate: &[C]) -> Result<(), EnumError>;
+pub trait ValidateEnumerate<T> {
+    fn validate_enumerate(&self, enumerate: &[T]) -> Result<(), EnumError>;
 }
 
 #[allow(deprecated)]
-impl<C, T: ValidateEnum<C> + ?Sized> ValidateEnumerate<C> for T {
-    fn validate_enumerate(&self, enumerate: &[C]) -> Result<(), EnumError> {
+impl<T, U: ValidateEnum<T> + ?Sized> ValidateEnumerate<T> for U {
+    fn validate_enumerate(&self, enumerate: &[T]) -> Result<(), EnumError> {
         ValidateEnum::validate_enum(self, enumerate)
     }
 }

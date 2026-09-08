@@ -1,6 +1,6 @@
 use crate::EnumError;
 
-/// Enumerated-value validation.
+/// Enum validation.
 ///
 /// See <https://json-schema.org/understanding-json-schema/reference/generic.html#enumerated-values>
 ///
@@ -44,8 +44,8 @@ use crate::EnumError;
 ///     .to_string()
 /// );
 /// ```
-pub trait ValidateEnum<C> {
-    fn validate_enum(&self, candidates: &[C]) -> Result<(), EnumError>;
+pub trait ValidateEnum<T> {
+    fn validate_enum(&self, candidates: &[T]) -> Result<(), EnumError>;
 }
 
 macro_rules! impl_validate_enum_literal {

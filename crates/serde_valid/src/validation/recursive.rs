@@ -132,8 +132,8 @@ macro_rules! define_owned {
             "assert!(result.is_err());\n",
             "```"
         )]
-        pub trait $Trait<C, P = composited_path::Scalar> {
-            fn $method(&self, argument: C) -> Result<(), Composited<$Error>>;
+        pub trait $Trait<T, P = composited_path::Scalar> {
+            fn $method(&self, argument: T) -> Result<(), Composited<$Error>>;
         }
         impl<C, T: $Base<C> + ?Sized> $Trait<C, composited_path::Scalar> for T {
             fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
@@ -314,8 +314,8 @@ macro_rules! define_slice {
             "assert!(result.is_err());\n",
             "```"
         )]
-        pub trait $Trait<C, P = composited_path::Scalar> {
-            fn $method(&self, candidates: &[C]) -> Result<(), Composited<$Error>>;
+        pub trait $Trait<T, P = composited_path::Scalar> {
+            fn $method(&self, candidates: &[T]) -> Result<(), Composited<$Error>>;
         }
         impl<C, T: $Base<C> + ?Sized> $Trait<C, composited_path::Scalar> for T {
             fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
