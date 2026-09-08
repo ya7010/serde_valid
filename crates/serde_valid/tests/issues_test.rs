@@ -421,13 +421,13 @@ mod issue125 {
         where
             T: ?Sized
                 + serde_valid::ValidateMaxLength
-                + serde_valid::validation::ValidateCompositedMaxLength
+                + serde_valid::composited::ValidateCompositedMaxLength
                 + serde_valid::ValidateMinimum<i32>
-                + serde_valid::validation::ValidateCompositedMinimum<i32>
+                + serde_valid::composited::ValidateCompositedMinimum<i32>
                 + serde_valid::ValidateEnum<i32>
                 + serde_valid::ValidateEnumerate<i32>
-                + serde_valid::validation::ValidateCompositedEnum<i32>
-                + serde_valid::validation::ValidateCompositedEnumerate<i32>,
+                + serde_valid::composited::ValidateCompositedEnum<i32>
+                + serde_valid::composited::ValidateCompositedEnumerate<i32>,
         {
         }
 
@@ -440,17 +440,17 @@ mod issue125 {
         fn assert_string_validators<T>()
         where
             T: ?Sized
-                + serde_valid::validation::ValidateCompositedMaxLength
-                + serde_valid::validation::ValidateCompositedMinLength
-                + serde_valid::validation::ValidateCompositedPattern,
+                + serde_valid::composited::ValidateCompositedMaxLength
+                + serde_valid::composited::ValidateCompositedMinLength
+                + serde_valid::composited::ValidateCompositedPattern,
         {
         }
 
         fn assert_enum_validators<T>()
         where
             T: ?Sized
-                + serde_valid::validation::ValidateCompositedEnum<&'static str>
-                + serde_valid::validation::ValidateCompositedEnumerate<&'static str>,
+                + serde_valid::composited::ValidateCompositedEnum<&'static str>
+                + serde_valid::composited::ValidateCompositedEnumerate<&'static str>,
         {
         }
 
@@ -891,7 +891,7 @@ mod issue125 {
         let value = CandidateValue(1);
         let borrowed = &value;
         assert!(
-            serde_valid::validation::ValidateCompositedEnum::validate_composited_enum(
+            serde_valid::composited::ValidateCompositedEnum::validate_composited_enum(
                 &borrowed,
                 &candidates
             )
@@ -900,7 +900,7 @@ mod issue125 {
 
         let boxed = Box::new(CandidateValue(1));
         assert!(
-            serde_valid::validation::ValidateCompositedEnum::validate_composited_enum(
+            serde_valid::composited::ValidateCompositedEnum::validate_composited_enum(
                 &boxed,
                 &candidates
             )
@@ -909,7 +909,7 @@ mod issue125 {
 
         let cow: std::borrow::Cow<'_, CandidateValue> = std::borrow::Cow::Owned(CandidateValue(1));
         assert!(
-            serde_valid::validation::ValidateCompositedEnum::validate_composited_enum(
+            serde_valid::composited::ValidateCompositedEnum::validate_composited_enum(
                 &cow,
                 &candidates
             )
@@ -1071,7 +1071,7 @@ mod issue125 {
     #[test]
     #[allow(clippy::owned_cow)]
     fn cow_container_composited_traits_are_available_directly() {
-        use serde_valid::validation::ValidateCompositedMinimum;
+        use serde_valid::composited::ValidateCompositedMinimum;
 
         let vec: std::borrow::Cow<'_, Vec<i32>> = std::borrow::Cow::Owned(vec![1]);
         assert!(ValidateCompositedMinimum::validate_composited_minimum(&vec, 1).is_ok());
@@ -1094,7 +1094,7 @@ mod issue125 {
     #[allow(deprecated)]
     mod deprecated_enumerate {
         use super::*;
-        use serde_valid::validation::ValidateCompositedEnumerate;
+        use serde_valid::composited::ValidateCompositedEnumerate;
         use serde_valid::ValidateEnumerate;
 
         #[derive(Debug, Validate)]
@@ -1819,51 +1819,46 @@ mod issue125 {
     macro_rules! impl_inherent_method_shadow_composited_validation {
         ($Trait:ident, $method:ident, $Argument:ty, $Error:ident) => {
             impl<T, P>
-                serde_valid::validation::$Trait<
-                    serde_valid::validation::composited_path::Transparent<P>,
-                > for InherentMethodShadow<T>
+                serde_valid::composited::$Trait<serde_valid::composited::path::Transparent<P>>
+                for InherentMethodShadow<T>
             where
-                T: serde_valid::validation::$Trait<P>,
+                T: serde_valid::composited::$Trait<P>,
             {
                 fn $method(
                     &self,
                     argument: $Argument,
-                ) -> Result<(), serde_valid::validation::Composited<serde_valid::$Error>> {
-                    serde_valid::validation::$Trait::$method(&self.0, argument)
+                ) -> Result<(), serde_valid::composited::Composited<serde_valid::$Error>> {
+                    serde_valid::composited::$Trait::$method(&self.0, argument)
                 }
             }
         };
         (generic_owned $Trait:ident, $method:ident, $Error:ident) => {
             impl<C, T, P>
-                serde_valid::validation::$Trait<
-                    C,
-                    serde_valid::validation::composited_path::Transparent<P>,
-                > for InherentMethodShadow<T>
+                serde_valid::composited::$Trait<C, serde_valid::composited::path::Transparent<P>>
+                for InherentMethodShadow<T>
             where
-                T: serde_valid::validation::$Trait<C, P>,
+                T: serde_valid::composited::$Trait<C, P>,
             {
                 fn $method(
                     &self,
                     argument: C,
-                ) -> Result<(), serde_valid::validation::Composited<serde_valid::$Error>> {
-                    serde_valid::validation::$Trait::$method(&self.0, argument)
+                ) -> Result<(), serde_valid::composited::Composited<serde_valid::$Error>> {
+                    serde_valid::composited::$Trait::$method(&self.0, argument)
                 }
             }
         };
         (generic_slice $Trait:ident, $method:ident, $Error:ident) => {
             impl<C, T, P>
-                serde_valid::validation::$Trait<
-                    C,
-                    serde_valid::validation::composited_path::Transparent<P>,
-                > for InherentMethodShadow<T>
+                serde_valid::composited::$Trait<C, serde_valid::composited::path::Transparent<P>>
+                for InherentMethodShadow<T>
             where
-                T: serde_valid::validation::$Trait<C, P>,
+                T: serde_valid::composited::$Trait<C, P>,
             {
                 fn $method(
                     &self,
                     argument: &[C],
-                ) -> Result<(), serde_valid::validation::Composited<serde_valid::$Error>> {
-                    serde_valid::validation::$Trait::$method(&self.0, argument)
+                ) -> Result<(), serde_valid::composited::Composited<serde_valid::$Error>> {
+                    serde_valid::composited::$Trait::$method(&self.0, argument)
                 }
             }
         };
@@ -1951,35 +1946,35 @@ mod issue125 {
         fn validate_composited_enum<C>(
             &self,
             _candidates: &[C],
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::EnumError>> {
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::EnumError>> {
             Ok(())
         }
 
         fn validate_composited_multiple_of<A>(
             &self,
             _multiple_of: A,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MultipleOfError>> {
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MultipleOfError>> {
             Ok(())
         }
 
         fn validate_composited_minimum<A>(
             &self,
             _minimum: A,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinimumError>> {
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MinimumError>> {
             Ok(())
         }
 
         fn validate_composited_maximum<A>(
             &self,
             _maximum: A,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaximumError>> {
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MaximumError>> {
             Ok(())
         }
 
         fn validate_composited_exclusive_minimum<A>(
             &self,
             _minimum: A,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::ExclusiveMinimumError>>
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::ExclusiveMinimumError>>
         {
             Ok(())
         }
@@ -1987,7 +1982,7 @@ mod issue125 {
         fn validate_composited_exclusive_maximum<A>(
             &self,
             _maximum: A,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::ExclusiveMaximumError>>
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::ExclusiveMaximumError>>
         {
             Ok(())
         }
@@ -1995,7 +1990,7 @@ mod issue125 {
         fn validate_composited_min_properties(
             &self,
             _minimum: usize,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinPropertiesError>>
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MinPropertiesError>>
         {
             Ok(())
         }
@@ -2003,7 +1998,7 @@ mod issue125 {
         fn validate_composited_max_properties(
             &self,
             _maximum: usize,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaxPropertiesError>>
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MaxPropertiesError>>
         {
             Ok(())
         }
@@ -2011,21 +2006,21 @@ mod issue125 {
         fn validate_composited_min_length(
             &self,
             _minimum: usize,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinLengthError>> {
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MinLengthError>> {
             Ok(())
         }
 
         fn validate_composited_max_length(
             &self,
             _maximum: usize,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaxLengthError>> {
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MaxLengthError>> {
             Ok(())
         }
 
         fn validate_composited_pattern(
             &self,
             _pattern: &serde_valid::export::regex::Regex,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::PatternError>> {
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::PatternError>> {
             Ok(())
         }
     }
@@ -2288,12 +2283,12 @@ mod issue125 {
     #[derive(Debug)]
     struct MixedCompositedShape(bool);
 
-    impl serde_valid::validation::ValidateCompositedMinimum<i32> for MixedCompositedShape {
+    impl serde_valid::composited::ValidateCompositedMinimum<i32> for MixedCompositedShape {
         fn validate_composited_minimum(
             &self,
             minimum: i32,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MinimumError>> {
-            use serde_valid::validation::Composited;
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MinimumError>> {
+            use serde_valid::composited::Composited;
 
             if self.0 {
                 Err(Composited::Object(IndexMap::from([(
@@ -2309,12 +2304,12 @@ mod issue125 {
         }
     }
 
-    impl serde_valid::validation::ValidateCompositedMaximum<i32> for MixedCompositedShape {
+    impl serde_valid::composited::ValidateCompositedMaximum<i32> for MixedCompositedShape {
         fn validate_composited_maximum(
             &self,
             maximum: i32,
-        ) -> Result<(), serde_valid::validation::Composited<serde_valid::MaximumError>> {
-            use serde_valid::validation::Composited;
+        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MaximumError>> {
+            use serde_valid::composited::Composited;
 
             Err(Composited::Object(IndexMap::from([(
                 "property".into(),

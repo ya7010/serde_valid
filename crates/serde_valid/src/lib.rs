@@ -571,10 +571,11 @@
 //! );
 //! ```
 
+pub mod composited;
 pub mod error;
 mod features;
 pub mod json;
-mod traits;
+pub mod traits;
 pub mod utils;
 pub mod validation;
 

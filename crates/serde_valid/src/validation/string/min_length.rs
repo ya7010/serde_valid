@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn test_validate_string_min_length_cow_str_type() {
         assert!(
-            crate::validation::ValidateCompositedMinLength::validate_composited_min_length(
+            crate::composited::ValidateCompositedMinLength::validate_composited_min_length(
                 &Cow::from("abcde"),
                 5
             )

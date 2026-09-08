@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn test_validate_string_max_length_cow_str_type() {
         assert!(
-            crate::validation::ValidateCompositedMaxLength::validate_composited_max_length(
+            crate::composited::ValidateCompositedMaxLength::validate_composited_max_length(
                 &Cow::from("abcde"),
                 5
             )
