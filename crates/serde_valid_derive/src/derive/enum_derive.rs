@@ -5,7 +5,6 @@ use crate::attribute::Validator;
 use crate::error::{array_errors_tokens, new_type_errors_tokens, object_errors_tokens};
 use crate::serde::rename::collect_serde_rename_map;
 use crate::types::CommaSeparatedTokenStreams;
-use crate::warning::WithWarnings;
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::iter::FromIterator;
@@ -33,7 +32,7 @@ pub fn expand_enum_validate_derive(
                     Ok(variant_varidates_and_rules) => variant_varidates_and_rules,
                     Err(variant_errors) => {
                         errors.extend(variant_errors);
-                        WithWarnings::new(Validator::new())
+                        Validator::new()
                     }
                 }
             }
@@ -47,7 +46,7 @@ pub fn expand_enum_validate_derive(
                     Ok(variant_varidates_and_rules) => variant_varidates_and_rules,
                     Err(variant_errors) => {
                         errors.extend(variant_errors);
-                        WithWarnings::new(Validator::new())
+                        Validator::new()
                     }
                 }
             }
@@ -55,30 +54,18 @@ pub fn expand_enum_validate_derive(
                 Ok(variant_validates_and_rules) => variant_validates_and_rules,
                 Err(variant_errors) => {
                     errors.extend(variant_errors);
-                    WithWarnings::new(Validator::new())
+                    Validator::new()
                 }
             },
         })
         .collect::<Vec<_>>();
 
-    let validations_and_rules = TokenStream::from_iter(
-        validations
-            .iter()
-            .map(|variant| variant.data.clone())
-            .collect::<Vec<_>>(),
-    );
-    let warnings = validations
-        .into_iter()
-        .flat_map(|variant| variant.warnings)
-        .enumerate()
-        .map(|(index, warning)| warning.add_index(index))
-        .collect::<Vec<_>>();
+    let validations_and_rules = TokenStream::from_iter(validations);
 
     if errors.is_empty() {
         Ok(quote!(
             impl #impl_generics ::serde_valid::Validate for #ident #type_generics #where_clause {
                 fn validate(&self) -> ::std::result::Result<(), ::serde_valid::validation::Errors> {
-                    #( #warnings )*
                     #validations_and_rules
 
                     ::std::result::Result::Ok(())
@@ -95,8 +82,7 @@ fn expand_enum_variant_named_fields_validation(
     input: &syn::DeriveInput,
     variant: &syn::Variant,
     named_fields: &syn::FieldsNamed,
-) -> Result<WithWarnings<Validator>, crate::Errors> {
-    let mut warnings = vec![];
+) -> Result<Validator, crate::Errors> {
     let mut errors = vec![];
 
     let variant_ident = &variant.ident;
@@ -104,10 +90,7 @@ fn expand_enum_variant_named_fields_validation(
     let rename_map = collect_serde_rename_map(named_fields)?;
 
     let enum_validates = match collect_variant_custom_from_variant(&input.attrs) {
-        Ok(validations) => {
-            warnings.extend(validations.warnings);
-            TokenStream::from_iter(validations.data)
-        }
+        Ok(validations) => TokenStream::from_iter(validations),
         Err(rule_errors) => {
             errors.extend(rule_errors);
             quote!()
@@ -117,7 +100,6 @@ fn expand_enum_variant_named_fields_validation(
     let validates = match collect_named_fields_validators_list(named_fields, &rename_map) {
         Ok(field_validators_list) => {
             TokenStream::from_iter(field_validators_list.iter().map(|validators| {
-                warnings.extend(validators.warnings.clone());
                 let field_ident = validators.ident();
                 let field_getter = validators.getter_token();
 
@@ -141,22 +123,19 @@ fn expand_enum_variant_named_fields_validation(
     let property_vec_errors_map = crate::types::property_vec_errors_map_ident();
 
     if errors.is_empty() {
-        Ok(WithWarnings {
-            data: quote!(
-                if let #ident::#variant_ident{#fields_idents} = &self {
-                    let mut #rule_vec_errors = ::serde_valid::validation::VecErrors::new();
-                    let mut #property_vec_errors_map = ::serde_valid::validation::PropertyVecErrorsMap::new();
+        Ok(quote!(
+            if let #ident::#variant_ident{#fields_idents} = &self {
+                let mut #rule_vec_errors = ::serde_valid::validation::VecErrors::new();
+                let mut #property_vec_errors_map = ::serde_valid::validation::PropertyVecErrorsMap::new();
 
-                    #validates
-                    #enum_validates
+                #validates
+                #enum_validates
 
-                    if !(#rule_vec_errors.is_empty() && #property_vec_errors_map.is_empty()) {
-                        ::std::result::Result::Err(#variant_errors)?
-                    }
+                if !(#rule_vec_errors.is_empty() && #property_vec_errors_map.is_empty()) {
+                    ::std::result::Result::Err(#variant_errors)?
                 }
-            ),
-            warnings,
-        })
+            }
+        ))
     } else {
         Err(errors)
     }
@@ -167,18 +146,14 @@ fn expand_enum_variant_unnamed_fields_varidation(
     input: &syn::DeriveInput,
     variant: &syn::Variant,
     unnamed_fields: &syn::FieldsUnnamed,
-) -> Result<WithWarnings<Validator>, crate::Errors> {
-    let mut warnings = vec![];
+) -> Result<Validator, crate::Errors> {
     let mut errors = vec![];
 
     let variant_ident = &variant.ident;
     let mut fields_idents = CommaSeparatedTokenStreams::new();
 
     let enum_validates = match collect_variant_custom_from_variant(&input.attrs) {
-        Ok(validations) => {
-            warnings.extend(validations.warnings);
-            TokenStream::from_iter(validations.data)
-        }
+        Ok(validations) => TokenStream::from_iter(validations),
         Err(rule_errors) => {
             errors.extend(rule_errors);
             quote!()
@@ -188,7 +163,6 @@ fn expand_enum_variant_unnamed_fields_varidation(
     let validates = match collect_unnamed_fields_validators_list(unnamed_fields) {
         Ok(field_validators_list) => {
             TokenStream::from_iter(field_validators_list.iter().map(|validators| {
-                warnings.extend(validators.warnings.clone());
                 let field_ident = validators.ident();
 
                 if let Some(token) = validators.get_tokens() {
@@ -217,22 +191,19 @@ fn expand_enum_variant_unnamed_fields_varidation(
     let item_vec_errors_map = crate::types::item_vec_errors_map_ident();
 
     if errors.is_empty() {
-        Ok(WithWarnings {
-            data: quote!(
-                if let #ident::#variant_ident(#fields_idents) = &self {
-                    let mut #rule_vec_errors = ::serde_valid::validation::VecErrors::new();
-                    let mut #item_vec_errors_map = ::serde_valid::validation::ItemVecErrorsMap::new();
+        Ok(quote!(
+            if let #ident::#variant_ident(#fields_idents) = &self {
+                let mut #rule_vec_errors = ::serde_valid::validation::VecErrors::new();
+                let mut #item_vec_errors_map = ::serde_valid::validation::ItemVecErrorsMap::new();
 
-                    #enum_validates
-                    #validates
+                #enum_validates
+                #validates
 
-                    if !(#rule_vec_errors.is_empty() && #item_vec_errors_map.is_empty()) {
-                        ::std::result::Result::Err(#variant_errors)?
-                    }
+                if !(#rule_vec_errors.is_empty() && #item_vec_errors_map.is_empty()) {
+                    ::std::result::Result::Err(#variant_errors)?
                 }
-            ),
-            warnings,
-        })
+            }
+        ))
     } else {
         Err(errors)
     }
@@ -242,67 +213,22 @@ fn expand_enum_unit_variant_validation(
     ident: &syn::Ident,
     input: &syn::DeriveInput,
     variant: &syn::Variant,
-) -> Result<WithWarnings<Validator>, crate::Errors> {
-    let WithWarnings {
-        data: enum_validates,
-        warnings,
-    } = collect_variant_custom_from_variant(&input.attrs)?;
+) -> Result<Validator, crate::Errors> {
+    let enum_validates = collect_variant_custom_from_variant(&input.attrs)?;
     let variant_ident = &variant.ident;
     let rule_vec_errors = crate::types::rule_vec_errors_ident();
 
-    Ok(WithWarnings {
-        data: quote!(
-            if let #ident::#variant_ident = &self {
-                let mut #rule_vec_errors = ::serde_valid::validation::VecErrors::new();
+    Ok(quote!(
+        if let #ident::#variant_ident = &self {
+            let mut #rule_vec_errors = ::serde_valid::validation::VecErrors::new();
 
-                #enum_validates
+            #enum_validates
 
-                if !#rule_vec_errors.is_empty() {
-                    ::std::result::Result::Err(
-                        ::serde_valid::validation::Errors::NewType(#rule_vec_errors)
-                    )?
-                }
+            if !#rule_vec_errors.is_empty() {
+                ::std::result::Result::Err(
+                    ::serde_valid::validation::Errors::NewType(#rule_vec_errors)
+                )?
             }
-        ),
-        warnings,
-    })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn expand(input: syn::DeriveInput) -> String {
-        let syn::Data::Enum(data) = &input.data else {
-            unreachable!();
-        };
-        expand_enum_validate_derive(&input, &data.variants)
-            .unwrap()
-            .to_string()
-    }
-
-    #[test]
-    fn named_variant_field_warnings_are_emitted() {
-        let tokens = expand(syn::parse_quote! {
-            enum Input {
-                Value {
-                    #[validate(enumerate = ["a"])]
-                    value: String,
-                }
-            }
-        });
-
-        assert!(tokens.contains("deprecated"));
-    }
-
-    #[test]
-    fn tuple_variant_field_warnings_are_emitted() {
-        let tokens = expand(syn::parse_quote! {
-            enum Input {
-                Value(#[validate(enumerate = ["a"])] String),
-            }
-        });
-
-        assert!(tokens.contains("deprecated"));
-    }
+        }
+    ))
 }

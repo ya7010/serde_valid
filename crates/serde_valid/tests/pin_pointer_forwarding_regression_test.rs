@@ -1,5 +1,3 @@
-#![allow(deprecated)]
-
 use serde_valid::{Validate, ValidateExclusiveMinimum};
 use std::collections::HashMap;
 use std::pin::Pin;
@@ -18,7 +16,6 @@ fn every_standard_pin_pointer_family_has_composited_forwarding() {
             assert!(serde_valid::composited::ValidateCompositedMinLength::validate_composited_min_length(&$value, 2).is_ok());
             assert!(serde_valid::composited::ValidateCompositedPattern::validate_composited_pattern(&$value, &pattern).is_ok());
             assert!(serde_valid::composited::ValidateCompositedEnum::validate_composited_enum(&$value, &["allowed"]).is_ok());
-            assert!(serde_valid::composited::ValidateCompositedEnumerate::validate_composited_enumerate(&$value, &["allowed"]).is_ok());
         }};
     }
 
@@ -42,7 +39,6 @@ struct PinnedPointerConstraints {
     #[validate(min_length = 2)]
     #[validate(pattern = "^[a-z]+$")]
     #[validate(r#enum = ["allowed"])]
-    #[validate(enumerate = ["allowed"])]
     string: Pin<Rc<str>>,
     #[validate(min_properties = 1)]
     object: Pin<Arc<HashMap<String, String>>>,

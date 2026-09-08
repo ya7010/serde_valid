@@ -1,6 +1,5 @@
 use crate::attribute::Validator;
 use crate::types::Field;
-use crate::warning::WithWarnings;
 use quote::quote;
 use std::borrow::Cow;
 use std::iter::FromIterator;
@@ -8,22 +7,11 @@ use std::iter::FromIterator;
 pub struct FieldValidators<'a, F: Field + Clone + 'a> {
     field: Cow<'a, F>,
     validators: Vec<Validator>,
-    pub warnings: Vec<crate::warning::Warning>,
 }
 
 impl<'a, F: Field + Clone> FieldValidators<'a, F> {
-    pub fn new(field: Cow<'a, F>, validators: Vec<WithWarnings<Validator>>) -> Self {
-        let warnings = validators
-            .iter()
-            .flat_map(|validator| validator.warnings.iter())
-            .cloned()
-            .map(|warning| warning.with_lint_attrs(field.attrs()))
-            .collect();
-        Self {
-            field,
-            validators: validators.iter().map(|v| v.data.clone()).collect(),
-            warnings,
-        }
+    pub fn new(field: Cow<'a, F>, validators: Vec<Validator>) -> Self {
+        Self { field, validators }
     }
 
     pub fn ident(&self) -> &syn::Ident {

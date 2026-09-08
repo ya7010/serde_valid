@@ -1,10 +1,8 @@
-#![allow(deprecated)]
-
 use super::{error::Composited, path as composited_path};
 use crate::validation::{
-    ValidateEnum, ValidateEnumerate, ValidateExclusiveMaximum, ValidateExclusiveMinimum,
-    ValidateMaxLength, ValidateMaxProperties, ValidateMaximum, ValidateMinLength,
-    ValidateMinProperties, ValidateMinimum, ValidateMultipleOf, ValidatePattern,
+    ValidateEnum, ValidateExclusiveMaximum, ValidateExclusiveMinimum, ValidateMaxLength,
+    ValidateMaxProperties, ValidateMaximum, ValidateMinLength, ValidateMinProperties,
+    ValidateMinimum, ValidateMultipleOf, ValidatePattern,
 };
 use crate::{
     EnumError, ExclusiveMaximumError, ExclusiveMinimumError, MaxLengthError, MaxPropertiesError,
@@ -294,7 +292,6 @@ macro_rules! define_slice {
             "Implementing the scalar trait is sufficient; transparent wrappers and containers are composed automatically.\n\n",
             "# Examples\n\n",
             "```rust\n",
-            "#![allow(deprecated)]\n",
             "use serde_valid::composited::", stringify!($Trait), ";\n\n",
             "let values = vec![\"red\", \"blue\"];\n",
             "let result = ", stringify!($Trait), "::", stringify!($method),
@@ -481,16 +478,5 @@ define_slice!(
     ValidateCompositedEnum,
     validate_composited_enum,
     ValidateEnum::validate_enum,
-    EnumError
-);
-
-define_slice!(
-    #[deprecated(
-        since = "2.0.2",
-        note = "use `ValidateCompositedEnum` and `validate_composited_enum` instead"
-    )]
-    ValidateCompositedEnumerate,
-    validate_composited_enumerate,
-    ValidateEnumerate::validate_enumerate,
     EnumError
 );

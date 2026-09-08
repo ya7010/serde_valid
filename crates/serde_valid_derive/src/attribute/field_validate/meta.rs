@@ -11,7 +11,6 @@ use crate::attribute::{
 use crate::serde::rename::RenameMap;
 use crate::types::Field;
 use crate::types::SingleIdentPath;
-use crate::warning::WithWarnings;
 use meta_list::extract_field_validator_from_meta_list;
 use meta_name_value::extract_field_validator_from_meta_name_value;
 use meta_path::extract_field_validator_from_meta_path;
@@ -23,7 +22,7 @@ pub fn extract_field_validator(
     field: &impl Field,
     attribute: &syn::Attribute,
     rename_map: &RenameMap,
-) -> Result<WithWarnings<Validator>, crate::Errors> {
+) -> Result<Validator, crate::Errors> {
     match &attribute.meta {
         syn::Meta::List(list) => inner_extract_field_validator(field, attribute, list, rename_map),
         syn::Meta::Path(_) => extract_generic_validate_validator(field, rename_map),
@@ -40,7 +39,7 @@ fn inner_extract_field_validator(
     attribute: &syn::Attribute,
     meta_list: &syn::MetaList,
     rename_map: &RenameMap,
-) -> Result<WithWarnings<Validator>, crate::Errors> {
+) -> Result<Validator, crate::Errors> {
     let mut errors = vec![];
     let nested = meta_list
         .parse_args_with(crate::types::CommaSeparatedMetas::parse_terminated)
@@ -50,10 +49,7 @@ fn inner_extract_field_validator(
             )]
         })?;
 
-    let WithWarnings {
-        data: message_format,
-        mut warnings,
-    } = match nested.len() {
+    let message_format = match nested.len() {
         0 => Err(vec![crate::Error::field_validation_type_required(
             attribute,
         )])?,
@@ -81,7 +77,7 @@ fn inner_extract_field_validator(
             None
         }
     }
-    .unwrap_or_else(|| WithWarnings::new(default_message_format()));
+    .unwrap_or_else(default_message_format);
 
     let meta = &nested[0];
 
@@ -151,19 +147,12 @@ fn inner_extract_field_validator(
             validation_path,
             &validation_name,
         )]),
-    }
-    .map(|validator| {
-        warnings.extend(validator.warnings);
-        validator.data
-    });
+    };
 
     match validator {
         Ok(validator) => {
             if errors.is_empty() {
-                Ok(WithWarnings {
-                    data: validator,
-                    warnings,
-                })
+                Ok(validator)
             } else {
                 Err(errors)
             }

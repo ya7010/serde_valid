@@ -16,14 +16,10 @@ pub fn expand_named_struct_derive(
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
     let rename_map = collect_serde_rename_map(fields)?;
 
-    let mut warnings = vec![];
     let mut errors = vec![];
 
     let struct_validations = match collect_struct_custom_from_named_struct(&input.attrs) {
-        Ok(validations) => {
-            warnings.extend(validations.warnings);
-            TokenStream::from_iter(validations.data)
-        }
+        Ok(validations) => TokenStream::from_iter(validations),
         Err(rule_errors) => {
             errors.extend(rule_errors);
             quote!()
@@ -32,7 +28,6 @@ pub fn expand_named_struct_derive(
 
     let field_validates = match collect_named_fields_validators_list(fields, &rename_map) {
         Ok(field_validators) => TokenStream::from_iter(field_validators.iter().map(|validator| {
-            warnings.extend(validator.warnings.clone());
             if validator.is_empty() {
                 quote!()
             } else {
@@ -49,17 +44,10 @@ pub fn expand_named_struct_derive(
     let rule_vec_errors = crate::types::rule_vec_errors_ident();
     let property_vec_errors_map = crate::types::property_vec_errors_map_ident();
 
-    let warnings = warnings
-        .into_iter()
-        .enumerate()
-        .map(|(index, warning)| warning.add_index(index))
-        .collect::<Vec<_>>();
-
     if errors.is_empty() {
         Ok(quote!(
             impl #impl_generics ::serde_valid::Validate for #ident #type_generics #where_clause {
                 fn validate(&self) -> ::std::result::Result<(), ::serde_valid::validation::Errors> {
-                    #(#warnings)*
                     let mut #rule_vec_errors = ::serde_valid::validation::VecErrors::new();
                     let mut #property_vec_errors_map = ::serde_valid::validation::PropertyVecErrorsMap::new();
 
@@ -139,4 +127,31 @@ fn collect_named_field_validators<'a>(
         Cow::Owned(named_field.clone()),
         validators,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deprecated_enumerate_attribute_is_rejected() {
+        let input: syn::DeriveInput = syn::parse_quote! {
+            struct Input {
+                #[validate(enumerate = ["a"])]
+                value: String,
+            }
+        };
+        let syn::Data::Struct(data) = &input.data else {
+            unreachable!();
+        };
+        let syn::Fields::Named(fields) = &data.fields else {
+            unreachable!();
+        };
+
+        let errors = expand_named_struct_derive(&input, fields).unwrap_err();
+        let message = crate::error::to_compile_errors(errors).to_string();
+
+        assert!(message.contains("`enumerate` is unknown validation type"));
+        assert!(message.contains("r#enum"));
+    }
 }
