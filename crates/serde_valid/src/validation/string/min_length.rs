@@ -46,24 +46,18 @@ pub trait ValidateMinLength {
     fn validate_min_length(&self, min_length: usize) -> Result<(), MinLengthError>;
 }
 
-macro_rules! impl_validate_min_length {
-    ($($type:ty),+ $(,)?) => {$(
-        impl ValidateMinLength for $type {
-            fn validate_min_length(&self, min_length: usize) -> Result<(), MinLengthError> {
-                if min_length <= self.length() { Ok(()) } else { Err(MinLengthError::new(min_length)) }
-            }
+impl<T> ValidateMinLength for T
+where
+    T: Length + ?Sized,
+{
+    fn validate_min_length(&self, min_length: usize) -> Result<(), MinLengthError> {
+        if min_length <= self.length() {
+            Ok(())
+        } else {
+            Err(MinLengthError::new(min_length))
         }
-    )+};
+    }
 }
-
-impl_validate_min_length!(
-    str,
-    String,
-    std::ffi::OsStr,
-    std::ffi::OsString,
-    std::path::Path,
-    std::path::PathBuf
-);
 
 #[cfg(test)]
 mod tests {
@@ -71,6 +65,20 @@ mod tests {
     use std::borrow::Cow;
     use std::ffi::{OsStr, OsString};
     use std::path::{Path, PathBuf};
+
+    struct CustomLength(usize);
+
+    impl Length for CustomLength {
+        fn length(&self) -> usize {
+            self.0
+        }
+    }
+
+    #[test]
+    fn custom_length_implementations_are_validated() {
+        assert!(ValidateMinLength::validate_min_length(&CustomLength(2), 2).is_ok());
+        assert!(ValidateMinLength::validate_min_length(&CustomLength(1), 2).is_err());
+    }
 
     #[test]
     fn test_validate_string_min_length_ascii_is_true() {

@@ -51,19 +51,10 @@ pub trait ValidateMaxProperties {
     fn validate_max_properties(&self, max_properties: usize) -> Result<(), MaxPropertiesError>;
 }
 
-macro_rules! impl_validate_max_properties {
-    ($($type:ty),+ $(,)?) => {$(
-        impl<K, V> ValidateMaxProperties for $type {
-            fn validate_max_properties(&self, max_properties: usize) -> Result<(), MaxPropertiesError> {
-                if max_properties >= self.size() { Ok(()) } else { Err(MaxPropertiesError::new(max_properties)) }
-            }
-        }
-    )+};
-}
-
-impl_validate_max_properties!(std::collections::HashMap<K, V>, std::collections::BTreeMap<K, V>, indexmap::IndexMap<K, V>);
-
-impl ValidateMaxProperties for serde_json::Map<String, serde_json::Value> {
+impl<T> ValidateMaxProperties for T
+where
+    T: Size,
+{
     fn validate_max_properties(&self, max_properties: usize) -> Result<(), MaxPropertiesError> {
         if max_properties >= self.size() {
             Ok(())
@@ -79,6 +70,20 @@ mod tests {
     use serde_json::json;
     use std::collections::BTreeMap;
     use std::collections::HashMap;
+
+    struct CustomSize(usize);
+
+    impl Size for CustomSize {
+        fn size(&self) -> usize {
+            self.0
+        }
+    }
+
+    #[test]
+    fn custom_size_implementations_are_validated() {
+        assert!(ValidateMaxProperties::validate_max_properties(&CustomSize(2), 2).is_ok());
+        assert!(ValidateMaxProperties::validate_max_properties(&CustomSize(3), 2).is_err());
+    }
 
     #[test]
     fn test_validate_object_max_properties_hash_map_type() {

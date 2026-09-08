@@ -46,24 +46,18 @@ pub trait ValidateMaxLength {
     fn validate_max_length(&self, max_length: usize) -> Result<(), MaxLengthError>;
 }
 
-macro_rules! impl_validate_max_length {
-    ($($type:ty),+ $(,)?) => {$(
-        impl ValidateMaxLength for $type {
-            fn validate_max_length(&self, max_length: usize) -> Result<(), MaxLengthError> {
-                if max_length >= self.length() { Ok(()) } else { Err(MaxLengthError::new(max_length)) }
-            }
+impl<T> ValidateMaxLength for T
+where
+    T: Length + ?Sized,
+{
+    fn validate_max_length(&self, max_length: usize) -> Result<(), MaxLengthError> {
+        if max_length >= self.length() {
+            Ok(())
+        } else {
+            Err(MaxLengthError::new(max_length))
         }
-    )+};
+    }
 }
-
-impl_validate_max_length!(
-    str,
-    String,
-    std::ffi::OsStr,
-    std::ffi::OsString,
-    std::path::Path,
-    std::path::PathBuf
-);
 
 #[cfg(test)]
 mod tests {
@@ -71,6 +65,20 @@ mod tests {
     use std::borrow::Cow;
     use std::ffi::{OsStr, OsString};
     use std::path::{Path, PathBuf};
+
+    struct CustomLength(usize);
+
+    impl Length for CustomLength {
+        fn length(&self) -> usize {
+            self.0
+        }
+    }
+
+    #[test]
+    fn custom_length_implementations_are_validated() {
+        assert!(ValidateMaxLength::validate_max_length(&CustomLength(2), 2).is_ok());
+        assert!(ValidateMaxLength::validate_max_length(&CustomLength(3), 2).is_err());
+    }
 
     #[test]
     fn test_validate_string_max_length_ascii_is_true() {

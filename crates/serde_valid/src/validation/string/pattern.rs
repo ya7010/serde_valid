@@ -47,24 +47,18 @@ pub trait ValidatePattern {
     fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError>;
 }
 
-macro_rules! impl_validate_pattern {
-    ($($type:ty),+ $(,)?) => {$(
-        impl ValidatePattern for $type {
-            fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError> {
-                if self.is_match(pattern) { Ok(()) } else { Err(PatternError::new(pattern.to_string())) }
-            }
+impl<T> ValidatePattern for T
+where
+    T: IsMatch + ?Sized,
+{
+    fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError> {
+        if self.is_match(pattern) {
+            Ok(())
+        } else {
+            Err(PatternError::new(pattern.to_string()))
         }
-    )+};
+    }
 }
-
-impl_validate_pattern!(
-    str,
-    String,
-    std::ffi::OsStr,
-    std::ffi::OsString,
-    std::path::Path,
-    std::path::PathBuf
-);
 
 #[cfg(test)]
 mod tests {
@@ -72,6 +66,21 @@ mod tests {
     use std::borrow::Cow;
     use std::ffi::{OsStr, OsString};
     use std::path::{Path, PathBuf};
+
+    struct CustomMatch(bool);
+
+    impl IsMatch for CustomMatch {
+        fn is_match(&self, _pattern: &Regex) -> bool {
+            self.0
+        }
+    }
+
+    #[test]
+    fn custom_is_match_implementations_are_validated() {
+        let pattern = Regex::new(".*").unwrap();
+        assert!(ValidatePattern::validate_pattern(&CustomMatch(true), &pattern).is_ok());
+        assert!(ValidatePattern::validate_pattern(&CustomMatch(false), &pattern).is_err());
+    }
 
     #[test]
     fn test_validate_string_pattern_str_type() {

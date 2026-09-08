@@ -49,19 +49,10 @@ pub trait ValidateMinProperties {
     fn validate_min_properties(&self, min_properties: usize) -> Result<(), MinPropertiesError>;
 }
 
-macro_rules! impl_validate_min_properties {
-    ($($type:ty),+ $(,)?) => {$(
-        impl<K, V> ValidateMinProperties for $type {
-            fn validate_min_properties(&self, min_properties: usize) -> Result<(), MinPropertiesError> {
-                if min_properties <= self.size() { Ok(()) } else { Err(MinPropertiesError::new(min_properties)) }
-            }
-        }
-    )+};
-}
-
-impl_validate_min_properties!(std::collections::HashMap<K, V>, std::collections::BTreeMap<K, V>, indexmap::IndexMap<K, V>);
-
-impl ValidateMinProperties for serde_json::Map<String, serde_json::Value> {
+impl<T> ValidateMinProperties for T
+where
+    T: Size,
+{
     fn validate_min_properties(&self, min_properties: usize) -> Result<(), MinPropertiesError> {
         if min_properties <= self.size() {
             Ok(())
@@ -77,6 +68,20 @@ mod tests {
     use serde_json::json;
     use std::collections::BTreeMap;
     use std::collections::HashMap;
+
+    struct CustomSize(usize);
+
+    impl Size for CustomSize {
+        fn size(&self) -> usize {
+            self.0
+        }
+    }
+
+    #[test]
+    fn custom_size_implementations_are_validated() {
+        assert!(ValidateMinProperties::validate_min_properties(&CustomSize(2), 2).is_ok());
+        assert!(ValidateMinProperties::validate_min_properties(&CustomSize(1), 2).is_err());
+    }
 
     #[test]
     fn test_validate_object_min_properties_hash_map_type() {
