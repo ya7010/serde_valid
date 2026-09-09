@@ -1,19 +1,20 @@
+use crate::traits::Numeric;
+
 /// Multiple-of validation of the number.
 ///
 /// See <https://json-schema.org/understanding-json-schema/reference/numeric.html#multiples>
 ///
 /// ```rust
 /// use serde_json::json;
-/// use serde_valid::{Validate, ValidateMultipleOf};
+/// use serde_valid::{traits::Numeric, Validate};
 ///
 /// struct MyType(i32);
 ///
-/// impl ValidateMultipleOf<i32> for MyType {
-///     fn validate_multiple_of(
-///         &self,
-///         multiple_of: i32,
-///     ) -> Result<(), serde_valid::MultipleOfError> {
-///         self.0.validate_multiple_of(multiple_of)
+/// impl Numeric for MyType {
+///     type Value = i32;
+///
+///     fn numeric(&self) -> Self::Value {
+///         self.0
 ///     }
 /// }
 ///
@@ -40,6 +41,24 @@
 /// ```
 pub trait ValidateMultipleOf<T> {
     fn validate_multiple_of(&self, multiple_of: T) -> Result<(), crate::MultipleOfError>;
+}
+
+impl<T> ValidateMultipleOf<T::Value> for T
+where
+    T: Numeric + ?Sized,
+    T::Value: Copy
+        + std::ops::Rem<Output = T::Value>
+        + PartialEq
+        + num_traits::Zero
+        + Into<crate::validation::Number>,
+{
+    fn validate_multiple_of(&self, multiple_of: T::Value) -> Result<(), crate::MultipleOfError> {
+        if self.numeric() % multiple_of == num_traits::Zero::zero() {
+            Ok(())
+        } else {
+            Err(crate::MultipleOfError::new(multiple_of))
+        }
+    }
 }
 
 macro_rules! impl_validate_numeric_multiple_of {

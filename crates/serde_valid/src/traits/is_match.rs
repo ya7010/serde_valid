@@ -1,12 +1,13 @@
-/// A string-like value that [`ValidatePattern`](crate::ValidatePattern) can test against a regular
-/// expression.
+/// A custom string-like type compared by [`ValidatePattern`](crate::ValidatePattern).
 ///
-/// Implement this trait once to make a custom scalar participate in pattern validation through the
-/// blanket implementation of [`ValidatePattern`](crate::ValidatePattern).
+/// Built-in string types implement [`ValidatePattern`](crate::ValidatePattern) directly. Prefer
+/// implementing that validator for a custom type as well. This trait remains as a temporary
+/// convenience, like [`Numeric`](crate::traits::Numeric), and will be removed.
 ///
 /// # Examples
 ///
 /// ```rust
+/// # #![allow(deprecated)]
 /// use regex::Regex;
 /// use serde_valid::{traits::IsMatch, ValidatePattern};
 ///
@@ -14,7 +15,7 @@
 ///
 /// impl IsMatch for Identifier {
 ///     fn is_match(&self, pattern: &Regex) -> bool {
-///         self.0.is_match(pattern)
+///         pattern.is_match(&self.0)
 ///     }
 /// }
 ///
@@ -22,6 +23,7 @@
 /// assert!(Identifier("ABC".to_owned()).validate_pattern(&pattern).is_ok());
 /// assert!(Identifier("abc".to_owned()).validate_pattern(&pattern).is_err());
 /// ```
+#[deprecated(since = "3.0.0", note = "implement `ValidatePattern` instead")]
 pub trait IsMatch {
     /// Returns whether the value matches `pattern`.
     ///
@@ -29,6 +31,7 @@ pub trait IsMatch {
     fn is_match(&self, pattern: &regex::Regex) -> bool;
 }
 
+#[allow(deprecated)]
 impl<T> IsMatch for Box<T>
 where
     T: IsMatch + ?Sized,
@@ -38,6 +41,7 @@ where
     }
 }
 
+#[allow(deprecated)]
 impl<T> IsMatch for std::rc::Rc<T>
 where
     T: IsMatch + ?Sized,
@@ -47,6 +51,7 @@ where
     }
 }
 
+#[allow(deprecated)]
 impl<T> IsMatch for std::sync::Arc<T>
 where
     T: IsMatch + ?Sized,
@@ -55,58 +60,3 @@ where
         self.as_ref().is_match(pattern)
     }
 }
-
-impl<P> IsMatch for std::pin::Pin<P>
-where
-    P: std::ops::Deref,
-    P::Target: IsMatch,
-{
-    fn is_match(&self, pattern: &regex::Regex) -> bool {
-        self.as_ref().get_ref().is_match(pattern)
-    }
-}
-
-macro_rules! impl_for_str {
-    ($ty:ty) => {
-        impl IsMatch for $ty {
-            fn is_match(&self, pattern: &regex::Regex) -> bool {
-                pattern.is_match(self)
-            }
-        }
-    };
-}
-
-impl_for_str!(str);
-impl_for_str!(&str);
-impl_for_str!(String);
-impl_for_str!(std::borrow::Cow<'_, str>);
-
-macro_rules! impl_for_os_str {
-    ($ty:ty) => {
-        impl IsMatch for $ty {
-            fn is_match(&self, pattern: &regex::Regex) -> bool {
-                pattern.is_match(&self.to_string_lossy())
-            }
-        }
-    };
-}
-
-impl_for_os_str!(std::ffi::OsStr);
-impl_for_os_str!(&std::ffi::OsStr);
-impl_for_os_str!(std::ffi::OsString);
-impl_for_os_str!(std::borrow::Cow<'_, std::ffi::OsStr>);
-
-macro_rules! impl_for_path {
-    ($ty:ty) => {
-        impl IsMatch for $ty {
-            fn is_match(&self, pattern: &regex::Regex) -> bool {
-                self.as_os_str().is_match(pattern)
-            }
-        }
-    };
-}
-
-impl_for_path!(std::path::Path);
-impl_for_path!(&std::path::Path);
-impl_for_path!(std::path::PathBuf);
-impl_for_path!(std::borrow::Cow<'_, std::path::Path>);

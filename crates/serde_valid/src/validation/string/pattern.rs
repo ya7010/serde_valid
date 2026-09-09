@@ -1,4 +1,4 @@
-use crate::{traits::IsMatch, PatternError};
+use crate::PatternError;
 use regex::Regex;
 
 /// Pattern validation of the string.
@@ -47,9 +47,10 @@ pub trait ValidatePattern {
     fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError>;
 }
 
+#[allow(deprecated)]
 impl<T> ValidatePattern for T
 where
-    T: IsMatch + ?Sized,
+    T: crate::traits::IsMatch + ?Sized,
 {
     fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError> {
         if self.is_match(pattern) {
@@ -60,6 +61,90 @@ where
     }
 }
 
+macro_rules! impl_validate_pattern_str {
+    ($type:ty) => {
+        impl ValidatePattern for $type {
+            fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError> {
+                if pattern.is_match(self) {
+                    Ok(())
+                } else {
+                    Err(PatternError::new(pattern.to_string()))
+                }
+            }
+        }
+    };
+}
+
+impl_validate_pattern_str!(str);
+impl_validate_pattern_str!(&str);
+impl_validate_pattern_str!(String);
+impl_validate_pattern_str!(std::borrow::Cow<'_, str>);
+
+macro_rules! impl_validate_pattern_os_str {
+    ($type:ty) => {
+        impl ValidatePattern for $type {
+            fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError> {
+                self.to_string_lossy().validate_pattern(pattern)
+            }
+        }
+    };
+}
+
+impl_validate_pattern_os_str!(std::ffi::OsStr);
+impl_validate_pattern_os_str!(&std::ffi::OsStr);
+impl_validate_pattern_os_str!(std::ffi::OsString);
+impl_validate_pattern_os_str!(std::borrow::Cow<'_, std::ffi::OsStr>);
+
+macro_rules! impl_validate_pattern_path {
+    ($type:ty) => {
+        impl ValidatePattern for $type {
+            fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError> {
+                self.as_os_str().validate_pattern(pattern)
+            }
+        }
+    };
+}
+
+impl_validate_pattern_path!(std::path::Path);
+impl_validate_pattern_path!(&std::path::Path);
+impl_validate_pattern_path!(std::path::PathBuf);
+impl_validate_pattern_path!(std::borrow::Cow<'_, std::path::Path>);
+
+macro_rules! impl_validate_pattern_pointer {
+    ($type:ty) => {
+        impl ValidatePattern for $type {
+            fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError> {
+                (**self).validate_pattern(pattern)
+            }
+        }
+    };
+}
+
+impl_validate_pattern_pointer!(Box<str>);
+impl_validate_pattern_pointer!(Box<String>);
+impl_validate_pattern_pointer!(Box<std::ffi::OsStr>);
+impl_validate_pattern_pointer!(Box<std::ffi::OsString>);
+impl_validate_pattern_pointer!(Box<std::path::Path>);
+impl_validate_pattern_pointer!(Box<std::path::PathBuf>);
+impl_validate_pattern_pointer!(std::rc::Rc<str>);
+impl_validate_pattern_pointer!(std::rc::Rc<String>);
+impl_validate_pattern_pointer!(std::rc::Rc<std::ffi::OsStr>);
+impl_validate_pattern_pointer!(std::rc::Rc<std::ffi::OsString>);
+impl_validate_pattern_pointer!(std::rc::Rc<std::path::Path>);
+impl_validate_pattern_pointer!(std::rc::Rc<std::path::PathBuf>);
+impl_validate_pattern_pointer!(std::sync::Arc<str>);
+impl_validate_pattern_pointer!(std::sync::Arc<String>);
+impl_validate_pattern_pointer!(std::sync::Arc<std::ffi::OsStr>);
+impl_validate_pattern_pointer!(std::sync::Arc<std::ffi::OsString>);
+impl_validate_pattern_pointer!(std::sync::Arc<std::path::Path>);
+impl_validate_pattern_pointer!(std::sync::Arc<std::path::PathBuf>);
+impl_validate_pattern_pointer!(std::pin::Pin<Box<str>>);
+impl_validate_pattern_pointer!(std::pin::Pin<Box<String>>);
+impl_validate_pattern_pointer!(std::pin::Pin<std::rc::Rc<str>>);
+impl_validate_pattern_pointer!(std::pin::Pin<std::rc::Rc<String>>);
+impl_validate_pattern_pointer!(std::pin::Pin<std::sync::Arc<str>>);
+impl_validate_pattern_pointer!(std::pin::Pin<std::sync::Arc<String>>);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,15 +152,18 @@ mod tests {
     use std::ffi::{OsStr, OsString};
     use std::path::{Path, PathBuf};
 
+    #[allow(deprecated)]
     struct CustomMatch(bool);
 
-    impl IsMatch for CustomMatch {
+    #[allow(deprecated)]
+    impl crate::traits::IsMatch for CustomMatch {
         fn is_match(&self, _pattern: &Regex) -> bool {
             self.0
         }
     }
 
     #[test]
+    #[allow(deprecated)]
     fn custom_is_match_implementations_are_validated() {
         let pattern = Regex::new(".*").unwrap();
         assert!(ValidatePattern::validate_pattern(&CustomMatch(true), &pattern).is_ok());

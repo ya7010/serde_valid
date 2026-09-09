@@ -4,16 +4,13 @@
 ///
 /// ```rust
 /// use serde_json::json;
-/// use serde_valid::{Validate, ValidateMaxItems};
+/// use serde_valid::{traits::Items, Validate};
 ///
 /// struct MyType(Vec<i32>);
 ///
-/// impl ValidateMaxItems for MyType {
-///     fn validate_max_items(
-///         &self,
-///         max_items: usize,
-///     ) -> Result<(), serde_valid::MaxItemsError> {
-///         self.0.validate_max_items(max_items)
+/// impl Items for MyType {
+///     fn items(&self) -> usize {
+///         self.0.items()
 ///     }
 /// }
 ///
@@ -44,29 +41,12 @@ pub trait ValidateMaxItems {
     fn validate_max_items(&self, max_items: usize) -> Result<(), crate::MaxItemsError>;
 }
 
-impl<T> ValidateMaxItems for Vec<T> {
+impl<T> ValidateMaxItems for T
+where
+    T: crate::traits::Items + ?Sized,
+{
     fn validate_max_items(&self, max_items: usize) -> Result<(), crate::MaxItemsError> {
-        if max_items >= self.len() {
-            Ok(())
-        } else {
-            Err(crate::MaxItemsError::new(max_items))
-        }
-    }
-}
-
-impl<T> ValidateMaxItems for [T] {
-    fn validate_max_items(&self, max_items: usize) -> Result<(), crate::MaxItemsError> {
-        if max_items >= self.len() {
-            Ok(())
-        } else {
-            Err(crate::MaxItemsError::new(max_items))
-        }
-    }
-}
-
-impl<T, const N: usize> ValidateMaxItems for [T; N] {
-    fn validate_max_items(&self, max_items: usize) -> Result<(), crate::MaxItemsError> {
-        if max_items >= self.len() {
+        if max_items >= self.items() {
             Ok(())
         } else {
             Err(crate::MaxItemsError::new(max_items))

@@ -1,4 +1,4 @@
-use crate::MaximumError;
+use crate::{traits::Numeric, MaximumError};
 
 /// Maximum validation of the number.
 ///
@@ -6,12 +6,14 @@ use crate::MaximumError;
 ///
 /// ```rust
 /// use serde_json::json;
-/// use serde_valid::{Validate, ValidateMaximum};
+/// use serde_valid::{traits::Numeric, Validate};
 /// struct MyType(i32);
 ///
-/// impl ValidateMaximum<i32> for MyType {
-///     fn validate_maximum(&self, maximum: i32) -> Result<(), serde_valid::MaximumError> {
-///         self.0.validate_maximum(maximum)
+/// impl Numeric for MyType {
+///     type Value = i32;
+///
+///     fn numeric(&self) -> Self::Value {
+///         self.0
 ///     }
 /// }
 ///
@@ -38,6 +40,20 @@ use crate::MaximumError;
 /// ```
 pub trait ValidateMaximum<T> {
     fn validate_maximum(&self, maximum: T) -> Result<(), MaximumError>;
+}
+
+impl<T> ValidateMaximum<T::Value> for T
+where
+    T: Numeric + ?Sized,
+    T::Value: PartialOrd + Into<crate::validation::Number>,
+{
+    fn validate_maximum(&self, maximum: T::Value) -> Result<(), MaximumError> {
+        if self.numeric() <= maximum {
+            Ok(())
+        } else {
+            Err(MaximumError::new(maximum))
+        }
+    }
 }
 
 macro_rules! impl_validate_numeric_maximum {
@@ -88,6 +104,23 @@ impl_validate_numeric_maximum!(f64);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::traits::Numeric;
+
+    #[test]
+    fn custom_numeric_implementations_are_validated() {
+        struct CustomNumeric(i32);
+
+        impl Numeric for CustomNumeric {
+            type Value = i32;
+
+            fn numeric(&self) -> Self::Value {
+                self.0
+            }
+        }
+
+        assert!(ValidateMaximum::validate_maximum(&CustomNumeric(2), 2).is_ok());
+        assert!(ValidateMaximum::validate_maximum(&CustomNumeric(3), 2).is_err());
+    }
 
     #[test]
     fn test_validate_numeric_maximum_is_true() {

@@ -1,4 +1,4 @@
-use crate::{traits::Size, MinPropertiesError};
+use crate::{traits::Properties, MinPropertiesError};
 
 /// Min size validation of the object properties.
 ///
@@ -51,10 +51,10 @@ pub trait ValidateMinProperties {
 
 impl<T> ValidateMinProperties for T
 where
-    T: Size,
+    T: Properties + ?Sized,
 {
     fn validate_min_properties(&self, min_properties: usize) -> Result<(), MinPropertiesError> {
-        if min_properties <= self.size() {
+        if min_properties <= self.properties() {
             Ok(())
         } else {
             Err(MinPropertiesError::new(min_properties))
@@ -69,18 +69,18 @@ mod tests {
     use std::collections::BTreeMap;
     use std::collections::HashMap;
 
-    struct CustomSize(usize);
+    struct CustomProperties(usize);
 
-    impl Size for CustomSize {
-        fn size(&self) -> usize {
+    impl Properties for CustomProperties {
+        fn properties(&self) -> usize {
             self.0
         }
     }
 
     #[test]
-    fn custom_size_implementations_are_validated() {
-        assert!(ValidateMinProperties::validate_min_properties(&CustomSize(2), 2).is_ok());
-        assert!(ValidateMinProperties::validate_min_properties(&CustomSize(1), 2).is_err());
+    fn custom_properties_implementations_are_validated() {
+        assert!(ValidateMinProperties::validate_min_properties(&CustomProperties(2), 2).is_ok());
+        assert!(ValidateMinProperties::validate_min_properties(&CustomProperties(1), 2).is_err());
     }
 
     #[test]
