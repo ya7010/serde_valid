@@ -238,9 +238,6 @@ define_copy_map!(
     PatternError
 );
 
-// Maps already implement the scalar Size validators. Recursing into map values
-// would make HashMap<K, HashMap<..>> match both Scalar and Sequence, so rustc
-// cannot infer the path for `#[validate(max_properties)]` / `min_properties`.
 define_copy!(
     ValidateCompositedMaxProperties,
     validate_composited_max_properties,
