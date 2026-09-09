@@ -63,33 +63,57 @@ impl Length for Identifier {
 }
 ```
 
-## Implement custom indexed collections with `Sequence`
-
-A custom `Vec`-like collection implements `serde_valid::traits::Sequence` once. The derive then
-applies all supported scalar rules to its values and reports failures by numeric index.
+Object property count uses `Properties`. `Size` is a deprecated alias for `Properties`. Array item
+count uses `Items`. These are not interchangeable with `Length`.
 
 ```rust
-use serde_valid::{traits::Sequence, Validate};
+use serde_valid::traits::{Items, Properties};
 
-struct MyVec<T>(Vec<T>);
+struct Labels(std::collections::HashMap<String, String>);
+struct Ids(Vec<i32>);
 
-impl<T> Sequence for MyVec<T> {
-    type Item = T;
+impl Properties for Labels {
+    fn properties(&self) -> usize {
+        self.0.properties()
+    }
+}
 
-    fn for_each(&self, visitor: impl FnMut(&Self::Item)) {
-        self.0.iter().for_each(visitor);
+impl Items for Ids {
+    fn items(&self) -> usize {
+        self.0.items()
+    }
+}
+```
+
+## Custom collections use public validators
+
+A custom collection implements the public validator or measurement trait it needs. Element-wise
+field rules such as `#[validate(min_length = 3)]` apply to `Vec`, slices, arrays, and map values;
+they are not enabled by implementing `Items`.
+
+```rust
+use serde_valid::traits::Items;
+use serde_valid::Validate;
+
+struct Ids(Vec<i32>);
+
+impl Items for Ids {
+    fn items(&self) -> usize {
+        self.0.items()
     }
 }
 
 #[derive(Validate)]
 struct Request {
+    #[validate(max_items = 2)]
+    ids: Ids,
     #[validate(min_length = 3)]
-    names: MyVec<String>,
+    names: Vec<String>,
 }
 ```
 
-`Sequence` only describes element traversal. It does not provide string `Length`, array item-count
-validation, uniqueness validation, or object `Size`.
+See [`serde_valid::traits`](https://docs.rs/serde_valid/latest/serde_valid/traits/index.html) for
+the capability-to-validator map.
 
 ## Use nested `Validate` for value wrappers
 

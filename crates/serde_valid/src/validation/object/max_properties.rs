@@ -1,4 +1,4 @@
-use crate::{traits::Size, MaxPropertiesError};
+use crate::{traits::Properties, MaxPropertiesError};
 
 /// Max size validation of the object properties.
 ///
@@ -53,10 +53,10 @@ pub trait ValidateMaxProperties {
 
 impl<T> ValidateMaxProperties for T
 where
-    T: Size,
+    T: Properties + ?Sized,
 {
     fn validate_max_properties(&self, max_properties: usize) -> Result<(), MaxPropertiesError> {
-        if max_properties >= self.size() {
+        if max_properties >= self.properties() {
             Ok(())
         } else {
             Err(MaxPropertiesError::new(max_properties))
@@ -71,18 +71,18 @@ mod tests {
     use std::collections::BTreeMap;
     use std::collections::HashMap;
 
-    struct CustomSize(usize);
+    struct CustomProperties(usize);
 
-    impl Size for CustomSize {
-        fn size(&self) -> usize {
+    impl Properties for CustomProperties {
+        fn properties(&self) -> usize {
             self.0
         }
     }
 
     #[test]
-    fn custom_size_implementations_are_validated() {
-        assert!(ValidateMaxProperties::validate_max_properties(&CustomSize(2), 2).is_ok());
-        assert!(ValidateMaxProperties::validate_max_properties(&CustomSize(3), 2).is_err());
+    fn custom_properties_implementations_are_validated() {
+        assert!(ValidateMaxProperties::validate_max_properties(&CustomProperties(2), 2).is_ok());
+        assert!(ValidateMaxProperties::validate_max_properties(&CustomProperties(3), 2).is_err());
     }
 
     #[test]

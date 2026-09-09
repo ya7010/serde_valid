@@ -4,16 +4,13 @@
 ///
 /// ```rust
 /// use serde_json::json;
-/// use serde_valid::{Validate, ValidateMinItems};
+/// use serde_valid::{traits::Items, Validate};
 ///
 /// struct MyType(Vec<i32>);
 ///
-/// impl ValidateMinItems for MyType {
-///     fn validate_min_items(
-///         &self,
-///         min_items: usize,
-///     ) -> Result<(), serde_valid::MinItemsError> {
-///         self.0.validate_min_items(min_items)
+/// impl Items for MyType {
+///     fn items(&self) -> usize {
+///         self.0.items()
 ///     }
 /// }
 ///
@@ -44,29 +41,12 @@ pub trait ValidateMinItems {
     fn validate_min_items(&self, min_items: usize) -> Result<(), crate::MinItemsError>;
 }
 
-impl<T> ValidateMinItems for Vec<T> {
+impl<T> ValidateMinItems for T
+where
+    T: crate::traits::Items + ?Sized,
+{
     fn validate_min_items(&self, min_items: usize) -> Result<(), crate::MinItemsError> {
-        if min_items <= self.len() {
-            Ok(())
-        } else {
-            Err(crate::MinItemsError::new(min_items))
-        }
-    }
-}
-
-impl<T> ValidateMinItems for [T] {
-    fn validate_min_items(&self, min_items: usize) -> Result<(), crate::MinItemsError> {
-        if min_items <= self.len() {
-            Ok(())
-        } else {
-            Err(crate::MinItemsError::new(min_items))
-        }
-    }
-}
-
-impl<T, const N: usize> ValidateMinItems for [T; N] {
-    fn validate_min_items(&self, min_items: usize) -> Result<(), crate::MinItemsError> {
-        if min_items <= self.len() {
+        if min_items <= self.items() {
             Ok(())
         } else {
             Err(crate::MinItemsError::new(min_items))

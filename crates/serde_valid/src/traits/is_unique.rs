@@ -3,7 +3,9 @@ use itertools::Itertools;
 /// A collection whose items [`ValidateUniqueItems`](crate::ValidateUniqueItems) checks for
 /// uniqueness.
 ///
-/// Slice, array, and [`Vec`] uniqueness validation is implemented in terms of this trait.
+/// Slice, array, and [`Vec`] uniqueness validation is implemented in terms of this trait. There is
+/// no blanket [`ValidateUniqueItems`](crate::ValidateUniqueItems) for every [`IsUnique`] type; a
+/// custom collection still implements the validator itself.
 ///
 /// # Examples
 ///

@@ -1,5 +1,4 @@
 use serde_json::json;
-use serde_valid::traits::Sequence;
 use serde_valid::{MinimumError, Validate, ValidateEnum, ValidateMinimum};
 use std::collections::BTreeMap;
 
@@ -105,58 +104,6 @@ fn maps_preserve_real_property_keys() {
                     "errors": [],
                     "properties": {
                         "actual-key": {
-                            "errors": [],
-                            "items": {
-                                "0": { "errors": ["The number must be `>= 1`."] }
-                            }
-                        }
-                    }
-                }
-            }
-        })
-    );
-}
-
-struct MyVec<T>(Vec<T>);
-
-impl<T> Sequence for MyVec<T> {
-    type Item = T;
-
-    fn for_each(&self, visitor: impl FnMut(&Self::Item)) {
-        self.0.iter().for_each(visitor);
-    }
-}
-
-#[derive(Validate)]
-struct CustomSequences {
-    #[validate(min_length = 2)]
-    names: MyVec<String>,
-    #[validate(minimum = 1)]
-    numbers: MyVec<MyVec<i32>>,
-}
-
-#[test]
-fn one_sequence_implementation_enables_all_composited_rules() {
-    let value = CustomSequences {
-        names: MyVec(vec!["x".to_owned()]),
-        numbers: MyVec(vec![MyVec(vec![0])]),
-    };
-
-    assert_eq!(
-        serde_json::to_value(value.validate().unwrap_err()).unwrap(),
-        json!({
-            "errors": [],
-            "properties": {
-                "names": {
-                    "errors": [],
-                    "items": {
-                        "0": { "errors": ["The length of the value must be `>= 2`."] }
-                    }
-                },
-                "numbers": {
-                    "errors": [],
-                    "items": {
-                        "0": {
                             "errors": [],
                             "items": {
                                 "0": { "errors": ["The number must be `>= 1`."] }

@@ -5,7 +5,7 @@ use unicode_segmentation::UnicodeSegmentation;
 ///
 /// Implement this trait once to provide both minimum-length and maximum-length validation through
 /// their blanket implementations. This capability describes character length, not array item count
-/// or object property count.
+/// ([`Items`](crate::traits::Items)) or object property count ([`Properties`](crate::traits::Properties)).
 ///
 /// # Examples
 ///
