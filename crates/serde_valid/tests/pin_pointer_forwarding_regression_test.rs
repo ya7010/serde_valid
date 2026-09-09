@@ -1,3 +1,4 @@
+use serde_json::json;
 use serde_valid::{Validate, ValidateExclusiveMinimum};
 use std::collections::HashMap;
 use std::pin::Pin;
@@ -42,19 +43,31 @@ fn pin_forwards_every_scalar_validator_through_its_pointer_target() {
     )
     .unwrap();
 
-    for field in [
-        "boxed_string",
-        "rc_string",
-        "arc_string",
-        "boxed_object",
-        "rc_object",
-        "arc_object",
-    ] {
-        assert!(
-            errors["properties"].get(field).is_some(),
-            "missing {field}: {errors}"
-        );
-    }
+    let string_errors = json!({
+        "errors": [
+            "The length of the value must be `>= 2`.",
+            "The value must match the pattern of \"^[a-z]+$\".",
+            "The value must be in [allowed]."
+        ]
+    });
+    let object_errors = json!({
+        "errors": ["The size of the properties must be `>= 1`."]
+    });
+
+    assert_eq!(
+        errors,
+        json!({
+            "errors": [],
+            "properties": {
+                "boxed_string": string_errors,
+                "rc_string": string_errors,
+                "arc_string": string_errors,
+                "boxed_object": object_errors,
+                "rc_object": object_errors,
+                "arc_object": object_errors,
+            }
+        })
+    );
 }
 
 struct CustomNumber(i32);
@@ -76,9 +89,22 @@ struct CustomScalarConstraint {
 
 #[test]
 fn public_validator_impl_automatically_provides_composited_validation() {
-    assert!(CustomScalarConstraint {
-        value: CustomNumber(1),
-    }
-    .validate()
-    .is_err());
+    assert_eq!(
+        serde_json::to_value(
+            CustomScalarConstraint {
+                value: CustomNumber(1),
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "value": {
+                    "errors": ["The number must be `> 1`."]
+                }
+            }
+        })
+    );
 }
