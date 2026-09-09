@@ -20,6 +20,7 @@ struct PinnedPointerConstraints {
     #[validate(r#enum = ["allowed"])]
     arc_string: Pin<Arc<str>>,
     #[validate(min_properties = 1)]
+    #[allow(clippy::box_collection)]
     boxed_object: Pin<Box<HashMap<String, String>>>,
     #[validate(min_properties = 1)]
     rc_object: Pin<Rc<HashMap<String, String>>>,
