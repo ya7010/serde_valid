@@ -68,6 +68,10 @@ count uses `Items`. Custom numeric wrappers use `Numeric` to derive the five num
 Built-in numeric types keep those validators implemented directly. These are not interchangeable
 with `Length`.
 
+`IsMatch` and `IsUnique` are deprecated. Implement `ValidatePattern` and `ValidateUniqueItems`
+directly, as with `ValidateEnum`. `IsMatch` still derives `ValidatePattern` for custom types the
+way `Numeric` does. Both traits will be removed.
+
 ```rust
 use serde_valid::traits::{Items, Numeric, Properties};
 

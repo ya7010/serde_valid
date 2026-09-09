@@ -16,9 +16,6 @@
 //! | [`Properties`] | [`crate::ValidateMinProperties`], [`crate::ValidateMaxProperties`] | object property count |
 //! | [`Items`] | [`crate::ValidateMinItems`], [`crate::ValidateMaxItems`] | array item count |
 //! | [`Numeric`] | [`crate::ValidateMinimum`], [`crate::ValidateMaximum`], [`crate::ValidateExclusiveMinimum`], [`crate::ValidateExclusiveMaximum`], [`crate::ValidateMultipleOf`] | numeric value |
-//! | [`IsMatch`] | [`crate::ValidatePattern`] | regular-expression match |
-//!
-//! [`Size`] is a deprecated alias for [`Properties`].
 //!
 //! ```rust
 //! use serde_valid::{traits::Length, ValidateMaxLength, ValidateMinLength};
@@ -36,12 +33,6 @@
 //! assert!(value.validate_max_length(2).is_err());
 //! ```
 //!
-//! ## Capabilities that do not derive a validator
-//!
-//! [`IsUnique`] is used by the `Vec`, slice, and array implementations of
-//! [`crate::ValidateUniqueItems`]. It does not provide a blanket [`crate::ValidateUniqueItems`]. A
-//! custom collection still implements [`crate::ValidateUniqueItems`] itself, and may call
-//! [`IsUnique::is_unique`].
 //!
 //! ## Validators with no capability trait
 //!
@@ -49,6 +40,8 @@
 //!
 //! | Validator | Typical implementors |
 //! |-----------|----------------------|
+//! | [`crate::ValidatePattern`] | strings, paths, and custom types |
+//! | [`crate::ValidateUniqueItems`] | `Vec`, slices, arrays, and custom collections |
 //! | [`crate::ValidateEnum`] | strings and numeric primitives |
 //! | [`crate::Validate`] | `#[derive(Validate)]`, plus wrappers and standard collections |
 
@@ -59,7 +52,9 @@ mod length;
 mod numeric;
 mod properties;
 
+#[allow(deprecated)]
 pub use is_match::IsMatch;
+#[allow(deprecated)]
 pub use is_unique::IsUnique;
 pub use items::Items;
 pub use length::Length;

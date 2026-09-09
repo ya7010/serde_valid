@@ -1,4 +1,4 @@
-use crate::traits::IsUnique;
+use itertools::Itertools;
 
 /// Uniqueness validation of the array items.
 ///
@@ -41,6 +41,54 @@ use crate::traits::IsUnique;
 /// ```
 pub trait ValidateUniqueItems {
     fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError>;
+}
+
+fn items_are_unique<T>(items: &[T]) -> bool
+where
+    T: std::cmp::Eq + std::hash::Hash,
+{
+    let len = items.len();
+    let unique = items.iter().unique();
+    let (lower, upper) = unique.size_hint();
+    if let Some(upper) = upper {
+        if lower == len && upper == len {
+            return true;
+        }
+    }
+    unique.count() == len
+}
+
+macro_rules! impl_validate_unique_items {
+    ($type:ty) => {
+        impl<T> ValidateUniqueItems for $type
+        where
+            T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
+        {
+            fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
+                if items_are_unique(self) {
+                    Ok(())
+                } else {
+                    Err(crate::UniqueItemsError {})
+                }
+            }
+        }
+    };
+}
+
+impl_validate_unique_items!(Vec<T>);
+impl_validate_unique_items!([T]);
+
+impl<T, const N: usize> ValidateUniqueItems for [T; N]
+where
+    T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
+{
+    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
+        if items_are_unique(self) {
+            Ok(())
+        } else {
+            Err(crate::UniqueItemsError {})
+        }
+    }
 }
 
 impl<T> ValidateUniqueItems for &T
@@ -104,45 +152,6 @@ where
 {
     fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
         self.as_ref().get_ref().validate_unique_items()
-    }
-}
-
-impl<T> ValidateUniqueItems for Vec<T>
-where
-    T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
-{
-    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
-        if self.is_unique() {
-            Ok(())
-        } else {
-            Err(crate::UniqueItemsError {})
-        }
-    }
-}
-
-impl<T> ValidateUniqueItems for [T]
-where
-    T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
-{
-    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
-        if self.is_unique() {
-            Ok(())
-        } else {
-            Err(crate::UniqueItemsError {})
-        }
-    }
-}
-
-impl<T, const N: usize> ValidateUniqueItems for [T; N]
-where
-    T: std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
-{
-    fn validate_unique_items(&self) -> Result<(), crate::UniqueItemsError> {
-        if self.is_unique() {
-            Ok(())
-        } else {
-            Err(crate::UniqueItemsError {})
-        }
     }
 }
 

@@ -1,8 +1,12 @@
+#![allow(deprecated)]
+
+use regex::Regex;
 use serde_valid::traits::{IsMatch, IsUnique, Items, Length, Numeric, Properties};
 use serde_valid::{
     ValidateExclusiveMaximum, ValidateExclusiveMinimum, ValidateMaxItems, ValidateMaxLength,
     ValidateMaxProperties, ValidateMaximum, ValidateMinItems, ValidateMinLength,
     ValidateMinProperties, ValidateMinimum, ValidateMultipleOf, ValidatePattern,
+    ValidateUniqueItems,
 };
 
 struct Count(i32);
@@ -15,7 +19,26 @@ impl Numeric for Count {
     }
 }
 
+struct Identifier(String);
+
+#[allow(deprecated)]
+impl IsMatch for Identifier {
+    fn is_match(&self, pattern: &Regex) -> bool {
+        pattern.is_match(&self.0)
+    }
+}
+
+struct Ids(Vec<i32>);
+
+#[allow(deprecated)]
+impl IsUnique for Ids {
+    fn is_unique(&self) -> bool {
+        self.0.validate_unique_items().is_ok()
+    }
+}
+
 #[test]
+#[allow(deprecated)]
 fn capability_traits_are_public_under_traits() {
     fn assert_length<T: Length + ?Sized>() {}
     fn assert_properties<T: Properties + ?Sized>() {}
@@ -28,8 +51,8 @@ fn capability_traits_are_public_under_traits() {
     assert_properties::<std::collections::HashMap<String, i32>>();
     assert_items::<Vec<i32>>();
     assert_numeric::<Count>();
-    assert_match::<str>();
-    assert_unique::<[i32]>();
+    assert_match::<Identifier>();
+    assert_unique::<Ids>();
 }
 
 #[test]
@@ -82,14 +105,14 @@ fn length_properties_items_numeric_and_is_match_blanket_implement_their_validato
         exclusive_max::<T>();
         multiple_of::<T>();
     }
+    #[allow(deprecated)]
     fn from_is_match<T: IsMatch + ?Sized>() {
         fn pattern<T: ValidatePattern + ?Sized>() {}
         pattern::<T>();
     }
-
     from_length::<str>();
     from_properties::<std::collections::HashMap<String, i32>>();
     from_items::<Vec<i32>>();
     from_numeric::<Count>();
-    from_is_match::<str>();
+    from_is_match::<Identifier>();
 }
