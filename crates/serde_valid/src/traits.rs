@@ -2,8 +2,18 @@
 //!
 //! Validation-rule traits such as [`crate::ValidateMinLength`] and [`crate::ValidateEnum`] are
 //! available from the crate root and [`crate::validation`]. This module contains the underlying
-//! capabilities used by their blanket implementations. For example, implementing [`Length`] for
-//! a custom scalar type provides both minimum-length and maximum-length validation.
+//! capabilities used by their implementations:
+//!
+//! | Capability | Validators |
+//! |------------|------------|
+//! | [`Length`] | [`crate::ValidateMinLength`], [`crate::ValidateMaxLength`] |
+//! | [`Size`] | [`crate::ValidateMinProperties`], [`crate::ValidateMaxProperties`] |
+//! | [`IsMatch`] | [`crate::ValidatePattern`] |
+//! | [`IsUnique`] | [`crate::ValidateUniqueItems`] |
+//! | [`Sequence`] | [`crate::Validate`] (element-wise application of scalar validators) |
+//!
+//! For example, implementing [`Length`] for a custom scalar type provides both minimum-length and
+//! maximum-length validation.
 //!
 //! ```rust
 //! use serde_valid::{traits::Length, ValidateMaxLength, ValidateMinLength};
