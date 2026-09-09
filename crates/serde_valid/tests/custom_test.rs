@@ -76,7 +76,15 @@ fn custom_clouser_validation_is_err() {
     let s = TestStruct {
         val: vec![1, 2, 3, 11],
     };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["this is custom message."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -97,7 +105,7 @@ fn custom_validation_error() {
         val: vec![1, 2, 3, 4],
     };
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -108,7 +116,6 @@ fn custom_validation_error() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -190,7 +197,12 @@ fn unnamed_struct_custom_closure_is_err() {
 
     let s = TestStruct(5);
     assert_eq!(s.0, 5);
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": ["Struct Validation Error."]
+        })
+    );
 }
 
 #[test]
@@ -229,12 +241,11 @@ fn named_struct_custom_vec_errors_is_err() {
 
     assert_eq!(s.val, 5);
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": ["Error 1", "Error 2"],
             "properties": {}
         })
-        .to_string()
     );
 }
 
@@ -273,12 +284,11 @@ fn named_struct_custom_closure_vec_errors_is_err() {
     let s = TestStruct { val: 5 };
     assert_eq!(s.val, 5);
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": ["Error 1", "Error 2"],
             "properties": {}
         })
-        .to_string()
     );
 }
 
@@ -323,7 +333,7 @@ fn filed_custom_validation_using_self() {
     };
 
     assert_eq!(
-        invalid.validate().unwrap_err().to_string(),
+        serde_json::to_value(invalid.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -334,6 +344,5 @@ fn filed_custom_validation_using_self() {
                 }
             }
         })
-        .to_string()
     );
 }

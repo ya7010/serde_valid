@@ -34,7 +34,15 @@ fn multiple_of_integer_is_err() {
     }
 
     let s = TestStruct { val: 16 };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The value must be multiple of `3`."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -46,7 +54,15 @@ fn multiple_of_float_is_err() {
     }
 
     let s = TestStruct { val: 12.3 };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The value must be multiple of `0.5`."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -97,12 +113,28 @@ fn multiple_of_validation_runs_through_nested_validation() {
     }
     .validate()
     .is_ok());
-    assert!(TestStruct {
-        optional: Some(Some(MultipleOfValue { value: 3 })),
-        values: Vec::new(),
-    }
-    .validate()
-    .is_err());
+    assert_eq!(
+        serde_json::to_value(
+            TestStruct {
+                optional: Some(Some(MultipleOfValue { value: 3 })),
+                values: Vec::new(),
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "optional": {
+                    "errors": [],
+                    "properties": {
+                        "value": { "errors": ["The value must be multiple of `4`."] }
+                    }
+                }
+            }
+        })
+    );
 }
 
 #[test]
@@ -116,7 +148,7 @@ fn multiple_of_err_message() {
     let s = TestStruct { val: 14 };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -127,7 +159,6 @@ fn multiple_of_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -146,7 +177,7 @@ fn multiple_of_custom_err_message_fn() {
     let s = TestStruct { val: 14 };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -157,7 +188,6 @@ fn multiple_of_custom_err_message_fn() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -172,7 +202,7 @@ fn multiple_of_custom_err_message() {
     let s = TestStruct { val: 14 };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -183,6 +213,5 @@ fn multiple_of_custom_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }

@@ -129,7 +129,15 @@ fn length_min_length_is_err() {
     }
 
     let s = TestStruct { val: String::new() };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The length of the value must be `>= 1`."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -159,7 +167,15 @@ fn length_max_length_is_err() {
     let s = TestStruct {
         val: String::from("abcd"),
     };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The length of the value must be `<= 3`."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -217,13 +233,29 @@ fn length_validation_runs_through_optional_nested_validation() {
     }
     .validate()
     .is_ok());
-    assert!(TestStruct {
-        val: Some(LengthValue {
-            value: "abcdefg".to_owned(),
-        }),
-    }
-    .validate()
-    .is_err());
+    assert_eq!(
+        serde_json::to_value(
+            TestStruct {
+                val: Some(LengthValue {
+                    value: "abcdefg".to_owned(),
+                }),
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": {
+                    "errors": [],
+                    "properties": {
+                        "value": { "errors": ["The length of the value must be `<= 5`."] }
+                    }
+                }
+            }
+        })
+    );
     assert!(TestStruct { val: None }.validate().is_ok());
 }
 
@@ -281,7 +313,7 @@ fn length_err_message() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -292,7 +324,6 @@ fn length_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -318,7 +349,7 @@ fn length_custom_err_message_fn() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -330,7 +361,6 @@ fn length_custom_err_message_fn() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -348,7 +378,7 @@ fn length_custom_err_message() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -360,7 +390,6 @@ fn length_custom_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -378,7 +407,7 @@ fn length_vec_err_message() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -395,7 +424,6 @@ fn length_vec_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -426,7 +454,7 @@ fn multi_items_error() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!(
             {
                 "errors": [],
@@ -442,6 +470,5 @@ fn multi_items_error() {
                 }
             }
         )
-        .to_string()
     );
 }

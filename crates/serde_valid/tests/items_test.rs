@@ -52,7 +52,15 @@ fn items_min_items_is_err() {
     }
 
     let s = TestStruct { val: vec![1, 2, 3] };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The length of the items must be `>= 4`."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -78,7 +86,15 @@ fn items_max_items_is_err() {
     }
 
     let s = TestStruct { val: vec![1, 2, 3] };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The length of the items must be `<= 2`."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -153,7 +169,7 @@ fn items_err_message() {
     let s = TestStruct { val: vec![1, 2, 3] };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -162,7 +178,6 @@ fn items_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -187,7 +202,7 @@ fn items_custom_err_message_fn() {
     let s = TestStruct { val: vec![1, 2, 3] };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
         "errors": [],
         "properties": {
@@ -199,7 +214,6 @@ fn items_custom_err_message_fn() {
             }
         }
         })
-        .to_string()
     );
 }
 
@@ -215,7 +229,7 @@ fn items_custom_err_message() {
     let s = TestStruct { val: vec![1, 2, 3] };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -227,6 +241,5 @@ fn items_custom_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }

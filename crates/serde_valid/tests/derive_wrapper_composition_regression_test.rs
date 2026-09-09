@@ -1,5 +1,6 @@
 #![allow(clippy::redundant_allocation)]
 
+use serde_json::json;
 use serde_valid::Validate;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -28,23 +29,35 @@ struct NestedValidationWrappers<'a> {
 #[test]
 fn derive_delegates_nested_validation_through_standard_wrappers() {
     let borrowed = Child { value: 0 };
-    let errors = serde_json::to_value(
-        NestedValidationWrappers {
-            triple_boxed: Box::new(Box::new(Box::new(Child { value: 0 }))),
-            rc_option: Rc::new(Some(Child { value: 0 })),
-            arc: Arc::new(Child { value: 0 }),
-            pinned: Box::pin(Child { value: 0 }),
-            rc_borrowed: Rc::new(&borrowed),
+    let child_errors = json!({
+        "errors": [],
+        "properties": {
+            "value": { "errors": ["The number must be `>= 1`."] }
         }
-        .validate()
-        .unwrap_err(),
-    )
-    .unwrap();
+    });
 
-    for field in ["triple_boxed", "rc_option", "arc", "pinned", "rc_borrowed"] {
-        assert!(
-            errors["properties"].get(field).is_some(),
-            "missing validation error for {field}: {errors}"
-        );
-    }
+    assert_eq!(
+        serde_json::to_value(
+            NestedValidationWrappers {
+                triple_boxed: Box::new(Box::new(Box::new(Child { value: 0 }))),
+                rc_option: Rc::new(Some(Child { value: 0 })),
+                arc: Arc::new(Child { value: 0 }),
+                pinned: Box::pin(Child { value: 0 }),
+                rc_borrowed: Rc::new(&borrowed),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "triple_boxed": child_errors,
+                "rc_option": child_errors,
+                "arc": child_errors,
+                "pinned": child_errors,
+                "rc_borrowed": child_errors,
+            }
+        })
+    );
 }

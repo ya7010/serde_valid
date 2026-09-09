@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use serde_json::json;
 use serde_valid::{Validate, ValidateMaxItems, ValidateMinItems, ValidateUniqueItems};
 use std::collections::{BTreeMap, HashMap};
 
@@ -17,16 +18,27 @@ struct NumericKeyMap {
 
 #[test]
 fn composited_map_validation_accepts_keys_convertible_to_strings() {
-    let errors = serde_json::to_value(
-        NumericKeyMap {
-            values: HashMap::from([(7, "x".to_owned())]),
-        }
-        .validate()
-        .unwrap_err(),
-    )
-    .unwrap();
-
-    assert!(errors["properties"]["values"]["properties"]["7"].is_object());
+    assert_eq!(
+        serde_json::to_value(
+            NumericKeyMap {
+                values: HashMap::from([(7, "x".to_owned())]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "values": {
+                    "errors": [],
+                    "properties": {
+                        "7": { "errors": ["The length of the value must be `>= 2`."] }
+                    }
+                }
+            }
+        })
+    );
 }
 
 #[derive(Debug, Validate)]
@@ -37,28 +49,37 @@ struct BTreeMapParent {
 
 #[test]
 fn nested_validation_supports_btree_map_and_preserves_its_keys() {
-    let errors = serde_json::to_value(
-        BTreeMapParent {
-            children: BTreeMap::from([(
-                "actual-key".to_owned(),
-                Child {
-                    value: "x".to_owned(),
-                },
-            )]),
-        }
-        .validate()
-        .unwrap_err(),
-    )
-    .unwrap();
-
-    assert!(
-        errors["properties"]["children"]["properties"]["actual-key"]["properties"]["value"]
-            .is_object()
+    assert_eq!(
+        serde_json::to_value(
+            BTreeMapParent {
+                children: BTreeMap::from([(
+                    "actual-key".to_owned(),
+                    Child {
+                        value: "x".to_owned(),
+                    },
+                )]),
+            }
+            .validate()
+            .unwrap_err(),
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "children": {
+                    "errors": [],
+                    "properties": {
+                        "actual-key": {
+                            "errors": [],
+                            "properties": {
+                                "value": { "errors": ["The length of the value must be `>= 2`."] }
+                            }
+                        }
+                    }
+                }
+            }
+        })
     );
-}
-
-fn assert_invalid<T: Validate>(value: T) {
-    assert!(value.validate().is_err());
 }
 
 fn assert_not_unique<T: ValidateUniqueItems>(value: T) {
@@ -75,7 +96,15 @@ fn mutable_references_forward_validation_traits() {
     let mut child = Child {
         value: "x".to_owned(),
     };
-    assert_invalid(&mut child);
+    assert_eq!(
+        serde_json::to_value((&mut child).validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "value": { "errors": ["The length of the value must be `>= 2`."] }
+            }
+        })
+    );
 
     let mut values = [1, 1];
     assert_not_unique(&mut values[..]);

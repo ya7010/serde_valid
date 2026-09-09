@@ -113,12 +113,28 @@ fn enum_validation_runs_through_nested_validation() {
     }
     .validate()
     .is_ok());
-    assert!(TestStruct {
-        optional: Some(EnumValue { value: 4 }),
-        values: Vec::new(),
-    }
-    .validate()
-    .is_err());
+    assert_eq!(
+        serde_json::to_value(
+            TestStruct {
+                optional: Some(EnumValue { value: 4 }),
+                values: Vec::new(),
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "optional": {
+                    "errors": [],
+                    "properties": {
+                        "value": { "errors": ["The value must be in [1, 2, 3]."] }
+                    }
+                }
+            }
+        })
+    );
 }
 
 #[test]
@@ -130,7 +146,15 @@ fn enum_is_err() {
     }
 
     let s = TestStruct { val: 0.1 };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The value must be in [0.3, 1.2, 1.5]."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -144,7 +168,7 @@ fn enum_err_message() {
     let s = TestStruct { val: 4 };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -155,7 +179,6 @@ fn enum_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -174,7 +197,7 @@ fn enum_custom_err_message_fn() {
     let s = TestStruct { val: 4 };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -185,7 +208,6 @@ fn enum_custom_err_message_fn() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -200,7 +222,7 @@ fn enum_custom_err_message() {
     let s = TestStruct { val: 4 };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -211,7 +233,6 @@ fn enum_custom_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -240,7 +261,7 @@ fn enum_numeric_trait() {
     let s = TestStruct { val: MyType(4) };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -251,6 +272,5 @@ fn enum_numeric_trait() {
                 }
             }
         })
-        .to_string()
     );
 }

@@ -100,20 +100,6 @@ fn pattern_path_buf_type() {
 }
 
 #[test]
-fn pattern_is_err() {
-    #[derive(Validate)]
-    struct TestStruct {
-        #[validate(pattern = r"^\d{4}-\d{2}-\d{2}$")]
-        val: String,
-    }
-
-    let s = TestStruct {
-        val: String::from("2020/09/10"),
-    };
-    assert!(s.validate().is_err());
-}
-
-#[test]
 fn pattern_vec_type_is_ok() {
     #[derive(Validate)]
     struct TestStruct {
@@ -173,14 +159,34 @@ fn pattern_validation_runs_through_nested_validation() {
     }
     .validate()
     .is_ok());
-    assert!(TestStruct {
-        optional: Some(Some(PatternValue {
-            value: "2020/09/10".to_owned(),
-        })),
-        values: Vec::new(),
-    }
-    .validate()
-    .is_err());
+    assert_eq!(
+        serde_json::to_value(
+            TestStruct {
+                optional: Some(Some(PatternValue {
+                    value: "2020/09/10".to_owned(),
+                })),
+                values: Vec::new(),
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "optional": {
+                    "errors": [],
+                    "properties": {
+                        "value": {
+                            "errors": [
+                                "The value must match the pattern of \"^\\d{4}-\\d{2}-\\d{2}$\"."
+                            ]
+                        }
+                    }
+                }
+            }
+        })
+    );
 }
 
 #[test]
@@ -196,7 +202,7 @@ fn pattern_err_message() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -207,7 +213,6 @@ fn pattern_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -228,7 +233,7 @@ fn pattern_custom_err_message_fn() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -239,7 +244,6 @@ fn pattern_custom_err_message_fn() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -256,7 +260,7 @@ fn pattern_custom_err_message() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -267,7 +271,6 @@ fn pattern_custom_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 

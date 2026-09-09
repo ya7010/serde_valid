@@ -47,7 +47,7 @@ fn duration_maximum_is_err() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -58,7 +58,6 @@ fn duration_maximum_is_err() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -75,7 +74,7 @@ fn duration_minimum_is_err() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -86,6 +85,5 @@ fn duration_minimum_is_err() {
                 }
             }
         })
-        .to_string()
     );
 }

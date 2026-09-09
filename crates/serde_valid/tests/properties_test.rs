@@ -75,7 +75,15 @@ fn properties_is_err() {
     map.insert("key2".to_string(), "value2".to_string());
 
     let s = TestStruct { val: map };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The size of the properties must be `>= 3`."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -93,7 +101,7 @@ fn properties_hash_map_type_err_message() {
     let s = TestStruct { val: map };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -104,7 +112,6 @@ fn properties_hash_map_type_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -123,7 +130,7 @@ fn properties_btree_map_type_err_message() {
     let s = TestStruct { val: map };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -134,7 +141,6 @@ fn properties_btree_map_type_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -155,7 +161,7 @@ fn properties_json_map_type_err_message() {
     .unwrap();
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -166,7 +172,6 @@ fn properties_json_map_type_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -196,7 +201,7 @@ fn properties_custom_err_message_fn() {
     .unwrap();
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -208,7 +213,6 @@ fn properties_custom_err_message_fn() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -230,7 +234,7 @@ fn properties_custom_err_message() {
     .unwrap();
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -242,6 +246,5 @@ fn properties_custom_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }

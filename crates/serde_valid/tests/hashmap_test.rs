@@ -1,4 +1,3 @@
-use regex::Regex;
 use serde_json::json;
 use serde_valid::Validate;
 use std::collections::HashMap;
@@ -84,33 +83,50 @@ fn hashmap_validation() {
         hashmap_of_strings,
     };
 
-    // Because hashmap indexing is non-deterministic,
-    // we have to check for the individual errors returned.
-    let errors = test_struct2.validate().unwrap_err().to_string();
     assert_eq!(
-        // This should appear for all 3 hashmaps.
-        Regex::new(r"The size of the properties must be `<= 2`\.")
-            .unwrap()
-            .find_iter(&errors)
-            .count(),
-        3
+        serde_json::to_value(test_struct2.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "hashmap_of_hashmap": {
+                    "errors": ["The size of the properties must be `<= 2`."],
+                    "properties": {
+                        "H_three": {
+                            "errors": [],
+                            "properties": {
+                                "nineteen": {
+                                    "errors": ["The value must be multiple of `5`."]
+                                }
+                            }
+                        }
+                    }
+                },
+                "hashmap_of_numbers": {
+                    "errors": ["The size of the properties must be `<= 2`."],
+                    "properties": {
+                        "twenty": {
+                            "errors": [
+                                "The value must be in [5, 10, 15].",
+                                "The number must be `<= 10`.",
+                                "The number must be `< 11`."
+                            ]
+                        }
+                    }
+                },
+                "hashmap_of_strings": {
+                    "errors": ["The size of the properties must be `<= 2`."],
+                    "properties": {
+                        "three": {
+                            "errors": [
+                                "The value must match the pattern of \"d.*\".",
+                                "The length of the value must be `>= 5`."
+                            ]
+                        }
+                    }
+                }
+            }
+        })
     );
-    assert!(errors.contains("The value must be multiple of `5`."));
-    assert!(errors.contains(
-        &json!({"errors":[
-            r#"The value must match the pattern of "d.*"."#,
-            "The length of the value must be `>= 5`."
-        ]})
-        .to_string()
-    ));
-    assert!(errors.contains(
-        &json!({"errors":[
-            "The value must be in [5, 10, 15].",
-            "The number must be `<= 10`.",
-            "The number must be `< 11`."
-        ]})
-        .to_string()
-    ));
 }
 
 #[test]
@@ -126,7 +142,7 @@ fn hashmap_object_validation() {
         hashmap_of_object: hashmap_of_object2,
     };
     assert_eq!(
-        test_struct2.validate().unwrap_err().to_string(),
+        serde_json::to_value(test_struct2.validate().unwrap_err()).unwrap(),
         json!({"errors":[],
         "properties":{
             "hashmap_of_object":{
@@ -145,6 +161,5 @@ fn hashmap_object_validation() {
                 }
             }
         })
-        .to_string()
     );
 }

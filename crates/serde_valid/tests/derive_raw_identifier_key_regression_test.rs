@@ -1,4 +1,5 @@
 use serde::Serialize;
+use serde_json::json;
 use serde_valid::Validate;
 
 #[derive(Serialize, Validate)]
@@ -20,12 +21,19 @@ fn validation_error_key_matches_the_serialized_raw_identifier_key() {
         r#type: "x".to_owned(),
     };
 
-    let serialized = serde_json::to_value(&value).unwrap();
-    let errors = serde_json::to_value(value.validate().unwrap_err()).unwrap();
-
-    assert!(serialized.get("type").is_some());
-    assert!(errors["properties"].get("type").is_some(), "{errors}");
-    assert!(errors["properties"].get("r#type").is_none(), "{errors}");
+    assert_eq!(
+        serde_json::to_value(&value).unwrap(),
+        json!({ "type": "x" })
+    );
+    assert_eq!(
+        serde_json::to_value(value.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "type": { "errors": ["The length of the value must be `>= 2`."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -34,11 +42,17 @@ fn explicit_serde_rename_still_applies_to_a_raw_identifier() {
         r#type: "x".to_owned(),
     };
 
-    let serialized = serde_json::to_value(&value).unwrap();
-    let errors = serde_json::to_value(value.validate().unwrap_err()).unwrap();
-
-    assert!(serialized.get("kind").is_some());
-    assert!(errors["properties"].get("kind").is_some(), "{errors}");
-    assert!(errors["properties"].get("type").is_none(), "{errors}");
-    assert!(errors["properties"].get("r#type").is_none(), "{errors}");
+    assert_eq!(
+        serde_json::to_value(&value).unwrap(),
+        json!({ "kind": "x" })
+    );
+    assert_eq!(
+        serde_json::to_value(value.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "kind": { "errors": ["The length of the value must be `>= 2`."] }
+            }
+        })
+    );
 }

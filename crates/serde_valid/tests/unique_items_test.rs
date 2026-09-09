@@ -36,7 +36,15 @@ fn unique_items_is_err() {
     }
 
     let s = TestStruct { val: vec![1, 2, 2] };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The items must be unique."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -52,7 +60,7 @@ fn unique_items_err_message() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -63,7 +71,6 @@ fn unique_items_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -84,7 +91,7 @@ fn unique_items_custom_err_message_fn() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -95,7 +102,6 @@ fn unique_items_custom_err_message_fn() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -112,7 +118,7 @@ fn unique_items_custom_err_message() {
     };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -123,6 +129,5 @@ fn unique_items_custom_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }

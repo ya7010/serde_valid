@@ -54,19 +54,6 @@ fn range_minimum_is_ok() {
 }
 
 #[test]
-fn range_minimum_is_err() {
-    #[derive(Validate)]
-    struct TestStruct {
-        #[validate(minimum = 1)]
-        #[validate(maximum = 10)]
-        val: i32,
-    }
-
-    let s = TestStruct { val: 0 };
-    assert!(s.validate().is_err());
-}
-
-#[test]
 fn range_minimum_minus_is_err() {
     #[derive(Validate)]
     struct TestStruct {
@@ -75,7 +62,15 @@ fn range_minimum_minus_is_err() {
     }
 
     let s = TestStruct { val: -2 };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The number must be `>= -1`."] }
+            }
+        })
+    );
 
     let s = TestStruct { val: -1 };
     assert!(s.validate().is_ok());
@@ -104,7 +99,15 @@ fn range_exclusive_minimum_is_err() {
     }
 
     let s = TestStruct { val: 0 };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The number must be `> 0`."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -130,7 +133,15 @@ fn range_maximum_is_err() {
     }
 
     let s = TestStruct { val: 11 };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["The number must be `<= 10`."] }
+            }
+        })
+    );
 }
 
 #[test]
@@ -156,7 +167,20 @@ fn range_exclusive_maximum_is_err() {
     }
 
     let s = TestStruct { val: 10 };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": {
+                    "errors": [
+                        "The number must be `< 10`.",
+                        "The number must be `< 10`."
+                    ]
+                }
+            }
+        })
+    );
 }
 
 #[test]
@@ -207,11 +231,27 @@ fn range_validation_runs_through_optional_nested_validation() {
     }
     .validate()
     .is_ok());
-    assert!(TestStruct {
-        val: Some(Some(RangeValue { value: 11 })),
-    }
-    .validate()
-    .is_err());
+    assert_eq!(
+        serde_json::to_value(
+            TestStruct {
+                val: Some(Some(RangeValue { value: 11 })),
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": {
+                    "errors": [],
+                    "properties": {
+                        "value": { "errors": ["The number must be `<= 10`."] }
+                    }
+                }
+            }
+        })
+    );
     assert!(TestStruct { val: None }.validate().is_ok());
 }
 
@@ -249,7 +289,7 @@ fn range_inclusive_err_message() {
     let s = TestStruct { val: 0 };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -260,7 +300,6 @@ fn range_inclusive_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -273,7 +312,15 @@ fn range_minimum_minus_with_message_is_err() {
     }
 
     let s = TestStruct { val: -2 };
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "val": { "errors": ["foo"] }
+            }
+        })
+    );
 
     let s = TestStruct { val: -1 };
     assert!(s.validate().is_ok());
@@ -291,7 +338,7 @@ fn range_exclusive_err_message() {
     let s = TestStruct { val: 0 };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -302,7 +349,6 @@ fn range_exclusive_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -326,7 +372,7 @@ fn range_custom_err_message_fn() {
     let s = TestStruct { val: 4 };
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -338,7 +384,6 @@ fn range_custom_err_message_fn() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -355,7 +400,7 @@ fn range_custom_err_message() {
     let result = s.validate().unwrap_err();
 
     assert_eq!(
-        serde_json::to_string(&result).unwrap(),
+        serde_json::to_value(&result).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -367,6 +412,5 @@ fn range_custom_err_message() {
                 }
             }
         })
-        .to_string()
     );
 }
