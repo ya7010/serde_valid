@@ -1,0 +1,122 @@
+# Migrating from serde_valid v2 to v3
+
+Version 3 removes APIs deprecated in v2 and separates the public validation capabilities from the
+internal machinery used to apply them recursively.
+
+## Rename `enumerate` to `enum`
+
+Replace the deprecated enumerate names with their enum equivalents.
+
+| v2 | v3 |
+| --- | --- |
+| `#[validate(enumerate = [...])]` | `#[validate(r#enum = [...])]` |
+| `ValidateEnumerate` | `ValidateEnum` |
+| `EnumerateError` | `EnumError` |
+| `ValidateCompositedEnumerate` | `ValidateEnum` for direct validation, or `#[validate(r#enum = [...])]` for derived validation |
+
+The `r#` prefix is Rust raw-identifier syntax because `enum` is a Rust keyword.
+
+Internally, derived collection validation uses `ValidateCompositedEnum`, but composited-validator
+traits are not part of the supported public API in v3.
+
+```rust
+use serde_valid::Validate;
+
+#[derive(Validate)]
+struct Request {
+    #[validate(r#enum = ["draft", "published"])]
+    status: String,
+}
+```
+
+## Remove direct composited-validator usage
+
+`Composited` and the `ValidateCompositedXXX` traits are implementation details used by
+`#[derive(Validate)]`. They are no longer part of the supported public API.
+
+For a custom scalar, implement the corresponding public validation trait. For example:
+
+```rust
+use serde_valid::{MinLengthError, ValidateMinLength};
+
+struct Identifier(String);
+
+impl ValidateMinLength for Identifier {
+    fn validate_min_length(&self, minimum: usize) -> Result<(), MinLengthError> {
+        self.0.validate_min_length(minimum)
+    }
+}
+```
+
+When both minimum and maximum length validation should use the same definition, implement the
+lower-level `Length` capability instead:
+
+```rust
+use serde_valid::traits::Length;
+
+struct Identifier(String);
+
+impl Length for Identifier {
+    fn length(&self) -> usize {
+        self.0.length()
+    }
+}
+```
+
+## Implement custom indexed collections with `Sequence`
+
+A custom `Vec`-like collection implements `serde_valid::traits::Sequence` once. The derive then
+applies all supported scalar rules to its values and reports failures by numeric index.
+
+```rust
+use serde_valid::{traits::Sequence, Validate};
+
+struct MyVec<T>(Vec<T>);
+
+impl<T> Sequence for MyVec<T> {
+    type Item = T;
+
+    fn for_each(&self, visitor: impl FnMut(&Self::Item)) {
+        self.0.iter().for_each(visitor);
+    }
+}
+
+#[derive(Validate)]
+struct Request {
+    #[validate(min_length = 3)]
+    names: MyVec<String>,
+}
+```
+
+`Sequence` only describes element traversal. It does not provide string `Length`, array item-count
+validation, uniqueness validation, or object `Size`.
+
+## Use nested `Validate` for value wrappers
+
+Pointer and optional wrappers delegate ordinary nested validation. Validate a wrapped type with
+`#[validate]`; do not implement composited-validator traits for `Box<T>` or `Option<T>`.
+
+```rust
+use serde_valid::Validate;
+
+#[derive(Validate)]
+struct Child {
+    #[validate(minimum = 1)]
+    value: i32,
+}
+
+#[derive(Validate)]
+struct Request {
+    #[validate]
+    child: Option<Box<Child>>,
+}
+```
+
+## Update custom map keys
+
+Validation of `HashMap`, `BTreeMap`, and `IndexMap` now requires `K: ToString`. Implement
+`Display` for a custom key to receive the standard `ToString` implementation.
+
+Map validation errors use the key's string representation as their property path instead of a
+numeric iteration position. Update assertions or consumers that depended on numeric map positions.
+If distinct keys produce the same string, their validation errors are combined under that property.

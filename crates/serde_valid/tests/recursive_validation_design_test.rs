@@ -1,7 +1,6 @@
-use serde_valid::composited::{Composited, ValidateCompositedEnum, ValidateCompositedMinimum};
-use serde_valid::validation::IntoError;
+use serde_valid::traits::Sequence;
 use serde_valid::{MinimumError, Validate, ValidateEnum, ValidateMinimum};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 struct CustomNumber(i32);
 
@@ -15,97 +14,90 @@ impl ValidateMinimum<i32> for CustomNumber {
     }
 }
 
-#[test]
-fn public_composited_path_markers_are_nameable() {
-    fn assert_path<P>() {}
-
-    assert_path::<serde_valid::composited::path::Scalar>();
-    assert_path::<serde_valid::composited::path::Sequence<()>>();
-}
-
-#[test]
-fn scalar_and_composited_results_remain_distinct() {
-    let scalar: Result<(), MinimumError> = CustomNumber(0).validate_minimum(1);
-    assert!(scalar.is_err());
-
-    let composited: Result<(), Composited<MinimumError>> =
-        ValidateCompositedMinimum::validate_composited_minimum(&CustomNumber(0), 1);
-    assert!(matches!(composited, Err(Composited::Single(_))));
+#[derive(Validate)]
+struct NestedSequences {
+    #[validate(minimum = 1)]
+    values: Vec<[CustomNumber; 1]>,
 }
 
 #[test]
 fn a_scalar_implementation_is_automatically_available_to_nested_sequences() {
-    let values = vec![[CustomNumber(0)]];
-    let error = ValidateCompositedMinimum::validate_composited_minimum(&values, 1)
-        .unwrap_err()
-        .into_error();
-    let error = serde_json::to_value(error).unwrap();
-
-    assert!(error["items"]["0"]["items"]["0"].is_object());
-}
-
-#[derive(Clone, Debug)]
-struct Candidate(i32);
-
-impl From<Candidate> for serde_valid::validation::Literal {
-    fn from(value: Candidate) -> Self {
-        value.0.into()
-    }
-}
-
-impl ValidateEnum<Candidate> for CustomNumber {
-    fn validate_enum(&self, candidates: &[Candidate]) -> Result<(), serde_valid::EnumError> {
-        if candidates.iter().any(|candidate| candidate.0 == self.0) {
-            Ok(())
-        } else {
-            Err(serde_valid::EnumError::new(candidates))
-        }
-    }
-}
-
-#[test]
-fn enum_candidates_are_composited_without_an_extra_user_impl() {
-    let values = vec![CustomNumber(2)];
-    assert!(ValidateCompositedEnum::validate_composited_enum(&values, &[Candidate(1)]).is_err());
-}
-
-#[test]
-fn maps_use_the_sequence_path_and_preserve_real_property_keys() {
-    fn assert_sequence<
-        T: ValidateCompositedMinimum<
-            i32,
-            serde_valid::composited::path::Sequence<serde_valid::composited::path::Scalar>,
-        >,
-    >() {
-    }
-
-    assert_sequence::<HashMap<String, CustomNumber>>();
-    assert_sequence::<BTreeMap<String, CustomNumber>>();
-    assert_sequence::<indexmap::IndexMap<String, CustomNumber>>();
-
-    let values = BTreeMap::from([("actual-key".to_owned(), vec![CustomNumber(0)])]);
-    let error = ValidateCompositedMinimum::validate_composited_minimum(&values, 1)
-        .unwrap_err()
-        .into_error();
-    let error = serde_json::to_value(error).unwrap();
-
-    assert!(error["properties"]["actual-key"]["items"]["0"].is_object());
-}
-
-#[derive(Validate)]
-struct Derived {
-    #[validate(minimum = 1)]
-    values: Vec<Vec<i32>>,
-}
-
-#[test]
-fn derive_uses_the_inferred_sequence_path() {
-    let value = Derived {
-        values: vec![vec![0]],
+    let value = NestedSequences {
+        values: vec![[CustomNumber(0)]],
     };
     let error = serde_json::to_value(value.validate().unwrap_err()).unwrap();
 
     assert!(error["properties"]["values"]["items"]["0"]["items"]["0"].is_object());
+}
+
+struct CustomString(String);
+
+impl ValidateEnum<&'static str> for CustomString {
+    fn validate_enum(&self, candidates: &[&'static str]) -> Result<(), serde_valid::EnumError> {
+        self.0.as_str().validate_enum(candidates)
+    }
+}
+
+#[derive(Validate)]
+struct EnumeratedSequence {
+    #[validate(r#enum = ["allowed"])]
+    values: Vec<CustomString>,
+}
+
+#[test]
+fn enum_candidates_are_composited_without_an_extra_user_impl() {
+    let value = EnumeratedSequence {
+        values: vec![CustomString("denied".to_owned())],
+    };
+    let error = serde_json::to_value(value.validate().unwrap_err()).unwrap();
+
+    assert!(error["properties"]["values"]["items"]["0"].is_object());
+}
+
+#[derive(Validate)]
+struct MapSequence {
+    #[validate(minimum = 1)]
+    values: BTreeMap<String, Vec<CustomNumber>>,
+}
+
+#[test]
+fn maps_preserve_real_property_keys() {
+    let value = MapSequence {
+        values: BTreeMap::from([("actual-key".to_owned(), vec![CustomNumber(0)])]),
+    };
+    let error = serde_json::to_value(value.validate().unwrap_err()).unwrap();
+
+    assert!(error["properties"]["values"]["properties"]["actual-key"]["items"]["0"].is_object());
+}
+
+struct MyVec<T>(Vec<T>);
+
+impl<T> Sequence for MyVec<T> {
+    type Item = T;
+
+    fn for_each(&self, visitor: impl FnMut(&Self::Item)) {
+        self.0.iter().for_each(visitor);
+    }
+}
+
+#[derive(Validate)]
+struct CustomSequences {
+    #[validate(min_length = 2)]
+    names: MyVec<String>,
+    #[validate(minimum = 1)]
+    numbers: MyVec<MyVec<i32>>,
+}
+
+#[test]
+fn one_sequence_implementation_enables_all_composited_rules() {
+    let value = CustomSequences {
+        names: MyVec(vec!["x".to_owned()]),
+        numbers: MyVec(vec![MyVec(vec![0])]),
+    };
+    let error = serde_json::to_value(value.validate().unwrap_err()).unwrap();
+
+    assert!(error["properties"]["names"]["items"]["0"].is_object());
+    assert!(error["properties"]["numbers"]["items"]["0"]["items"]["0"].is_object());
 }
 
 #[derive(Validate)]

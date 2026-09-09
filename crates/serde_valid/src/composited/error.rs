@@ -25,6 +25,7 @@ use indexmap::IndexMap;
 /// }
 /// ```
 #[derive(Debug)]
+#[doc(hidden)]
 pub enum Composited<Error> {
     Single(Error),
     Array(IndexMap<usize, Composited<Error>>),

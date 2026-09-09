@@ -42,6 +42,11 @@ assert!(s.validate().is_ok());
 - `i128` - support `i128`/`u128` type (default).
 - `fluent` - provide localization using [fluent](https://projectfluent.org/).
 
+## Migration
+
+See the [v2 to v3 migration guide](https://github.com/ya7010/serde_valid/blob/main/MIGRATION.md)
+when upgrading an existing project.
+
 ## Validations
 
 Serde Valid support standard validation based JSON Schema.

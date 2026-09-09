@@ -13,9 +13,9 @@ fn every_standard_pin_pointer_family_has_composited_forwarding() {
 
     macro_rules! assert_string {
         ($value:expr) => {{
-            assert!(serde_valid::composited::ValidateCompositedMinLength::validate_composited_min_length(&$value, 2).is_ok());
-            assert!(serde_valid::composited::ValidateCompositedPattern::validate_composited_pattern(&$value, &pattern).is_ok());
-            assert!(serde_valid::composited::ValidateCompositedEnum::validate_composited_enum(&$value, &["allowed"]).is_ok());
+            assert!(serde_valid::__private::ValidateCompositedMinLength::validate_composited_min_length(&$value, 2).is_ok());
+            assert!(serde_valid::__private::ValidateCompositedPattern::validate_composited_pattern(&$value, &pattern).is_ok());
+            assert!(serde_valid::__private::ValidateCompositedEnum::validate_composited_enum(&$value, &["allowed"]).is_ok());
         }};
     }
 
@@ -23,13 +23,13 @@ fn every_standard_pin_pointer_family_has_composited_forwarding() {
     assert_string!(rc);
     assert_string!(arc);
 
-    assert!(serde_valid::composited::ValidateCompositedMinProperties::validate_composited_min_properties(
+    assert!(serde_valid::__private::ValidateCompositedMinProperties::validate_composited_min_properties(
         &Pin::new(Box::new(HashMap::<String, String>::new())), 1,
     ).is_err());
-    assert!(serde_valid::composited::ValidateCompositedMinProperties::validate_composited_min_properties(
+    assert!(serde_valid::__private::ValidateCompositedMinProperties::validate_composited_min_properties(
         &Pin::new(Rc::new(HashMap::<String, String>::new())), 1,
     ).is_err());
-    assert!(serde_valid::composited::ValidateCompositedMinProperties::validate_composited_min_properties(
+    assert!(serde_valid::__private::ValidateCompositedMinProperties::validate_composited_min_properties(
         &Pin::new(Arc::new(HashMap::<String, String>::new())), 1,
     ).is_err());
 }
@@ -79,7 +79,7 @@ struct CustomScalarConstraint {
 
 #[test]
 fn public_validator_impl_automatically_provides_composited_validation() {
-    fn assert_composited<T: serde_valid::composited::ValidateCompositedExclusiveMinimum<i32>>() {}
+    fn assert_composited<T: serde_valid::__private::ValidateCompositedExclusiveMinimum<i32>>() {}
 
     assert_composited::<CustomNumber>();
     assert!(CustomScalarConstraint {

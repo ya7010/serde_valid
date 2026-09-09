@@ -388,11 +388,11 @@ mod issue125 {
         where
             T: ?Sized
                 + serde_valid::ValidateMaxLength
-                + serde_valid::composited::ValidateCompositedMaxLength
+                + serde_valid::__private::ValidateCompositedMaxLength
                 + serde_valid::ValidateMinimum<i32>
-                + serde_valid::composited::ValidateCompositedMinimum<i32>
+                + serde_valid::__private::ValidateCompositedMinimum<i32>
                 + serde_valid::ValidateEnum<i32>
-                + serde_valid::composited::ValidateCompositedEnum<i32>,
+                + serde_valid::__private::ValidateCompositedEnum<i32>,
         {
         }
 
@@ -404,15 +404,15 @@ mod issue125 {
         fn assert_string_validators<T>()
         where
             T: ?Sized
-                + serde_valid::composited::ValidateCompositedMaxLength
-                + serde_valid::composited::ValidateCompositedMinLength
-                + serde_valid::composited::ValidateCompositedPattern,
+                + serde_valid::__private::ValidateCompositedMaxLength
+                + serde_valid::__private::ValidateCompositedMinLength
+                + serde_valid::__private::ValidateCompositedPattern,
         {
         }
 
         fn assert_enum_validators<T>()
         where
-            T: ?Sized + serde_valid::composited::ValidateCompositedEnum<&'static str>,
+            T: ?Sized + serde_valid::__private::ValidateCompositedEnum<&'static str>,
         {
         }
 
@@ -804,7 +804,7 @@ mod issue125 {
         let value = CandidateValue(1);
         let borrowed = &value;
         assert!(
-            serde_valid::composited::ValidateCompositedEnum::validate_composited_enum(
+            serde_valid::__private::ValidateCompositedEnum::validate_composited_enum(
                 &borrowed,
                 &candidates
             )
@@ -813,7 +813,7 @@ mod issue125 {
 
         let boxed = Box::new(CandidateValue(1));
         assert!(
-            serde_valid::composited::ValidateCompositedEnum::validate_composited_enum(
+            serde_valid::__private::ValidateCompositedEnum::validate_composited_enum(
                 &boxed,
                 &candidates
             )
@@ -822,7 +822,7 @@ mod issue125 {
 
         let cow: std::borrow::Cow<'_, CandidateValue> = std::borrow::Cow::Owned(CandidateValue(1));
         assert!(
-            serde_valid::composited::ValidateCompositedEnum::validate_composited_enum(
+            serde_valid::__private::ValidateCompositedEnum::validate_composited_enum(
                 &cow,
                 &candidates
             )
@@ -1550,35 +1550,35 @@ mod issue125 {
         fn validate_composited_enum<C>(
             &self,
             _candidates: &[C],
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::EnumError>> {
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::EnumError>> {
             Ok(())
         }
 
         fn validate_composited_multiple_of<A>(
             &self,
             _multiple_of: A,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MultipleOfError>> {
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MultipleOfError>> {
             Ok(())
         }
 
         fn validate_composited_minimum<A>(
             &self,
             _minimum: A,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MinimumError>> {
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MinimumError>> {
             Ok(())
         }
 
         fn validate_composited_maximum<A>(
             &self,
             _maximum: A,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MaximumError>> {
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MaximumError>> {
             Ok(())
         }
 
         fn validate_composited_exclusive_minimum<A>(
             &self,
             _minimum: A,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::ExclusiveMinimumError>>
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::ExclusiveMinimumError>>
         {
             Ok(())
         }
@@ -1586,7 +1586,7 @@ mod issue125 {
         fn validate_composited_exclusive_maximum<A>(
             &self,
             _maximum: A,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::ExclusiveMaximumError>>
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::ExclusiveMaximumError>>
         {
             Ok(())
         }
@@ -1594,7 +1594,7 @@ mod issue125 {
         fn validate_composited_min_properties(
             &self,
             _minimum: usize,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MinPropertiesError>>
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MinPropertiesError>>
         {
             Ok(())
         }
@@ -1602,7 +1602,7 @@ mod issue125 {
         fn validate_composited_max_properties(
             &self,
             _maximum: usize,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MaxPropertiesError>>
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MaxPropertiesError>>
         {
             Ok(())
         }
@@ -1610,21 +1610,21 @@ mod issue125 {
         fn validate_composited_min_length(
             &self,
             _minimum: usize,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MinLengthError>> {
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MinLengthError>> {
             Ok(())
         }
 
         fn validate_composited_max_length(
             &self,
             _maximum: usize,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MaxLengthError>> {
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MaxLengthError>> {
             Ok(())
         }
 
         fn validate_composited_pattern(
             &self,
             _pattern: &serde_valid::export::regex::Regex,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::PatternError>> {
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::PatternError>> {
             Ok(())
         }
     }
@@ -1887,12 +1887,12 @@ mod issue125 {
     #[derive(Debug)]
     struct MixedCompositedShape(bool);
 
-    impl serde_valid::composited::ValidateCompositedMinimum<i32> for MixedCompositedShape {
+    impl serde_valid::__private::ValidateCompositedMinimum<i32> for MixedCompositedShape {
         fn validate_composited_minimum(
             &self,
             minimum: i32,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MinimumError>> {
-            use serde_valid::composited::Composited;
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MinimumError>> {
+            use serde_valid::__private::Composited;
 
             if self.0 {
                 Err(Composited::Object(IndexMap::from([(
@@ -1908,12 +1908,12 @@ mod issue125 {
         }
     }
 
-    impl serde_valid::composited::ValidateCompositedMaximum<i32> for MixedCompositedShape {
+    impl serde_valid::__private::ValidateCompositedMaximum<i32> for MixedCompositedShape {
         fn validate_composited_maximum(
             &self,
             maximum: i32,
-        ) -> Result<(), serde_valid::composited::Composited<serde_valid::MaximumError>> {
-            use serde_valid::composited::Composited;
+        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MaximumError>> {
+            use serde_valid::__private::Composited;
 
             Err(Composited::Object(IndexMap::from([(
                 "property".into(),
