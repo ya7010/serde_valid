@@ -1,9 +1,10 @@
 /// A collection whose values can be validated by numeric position.
 ///
-/// Implement this trait once to make a custom sequence participate in
-/// element-wise validation performed by [`Validate`](crate::Validate). This
-/// capability only describes traversal. It does not define string length,
-/// item count, uniqueness, or object size.
+/// Implement this trait once to make a custom sequence participate in element-wise validation
+/// performed by [`Validate`](crate::Validate). Scalar validators such as
+/// [`ValidateMinLength`](crate::ValidateMinLength) and [`ValidatePattern`](crate::ValidatePattern)
+/// are applied to each value. This capability only describes traversal. It does not define string
+/// length, item count, uniqueness, or object size.
 ///
 /// # Examples
 ///
@@ -36,8 +37,9 @@ pub trait Sequence {
 
     /// Visits each value in index order.
     ///
-    /// The visitor is [`FnMut`] so the validation engine can accumulate an index and errors. The
-    /// sequence and its values remain immutably borrowed.
+    /// The visitor is [`FnMut`] so [`Validate`](crate::Validate) can apply scalar validators to
+    /// each element and accumulate an index and errors. The sequence and its values remain
+    /// immutably borrowed.
     fn for_each(&self, visitor: impl FnMut(&Self::Item));
 }
 

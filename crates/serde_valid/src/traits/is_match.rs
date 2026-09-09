@@ -1,4 +1,31 @@
+/// A string-like value that [`ValidatePattern`](crate::ValidatePattern) can test against a regular
+/// expression.
+///
+/// Implement this trait once to make a custom scalar participate in pattern validation through the
+/// blanket implementation of [`ValidatePattern`](crate::ValidatePattern).
+///
+/// # Examples
+///
+/// ```rust
+/// use regex::Regex;
+/// use serde_valid::{traits::IsMatch, ValidatePattern};
+///
+/// struct Identifier(String);
+///
+/// impl IsMatch for Identifier {
+///     fn is_match(&self, pattern: &Regex) -> bool {
+///         self.0.is_match(pattern)
+///     }
+/// }
+///
+/// let pattern = Regex::new(r"^[A-Z]+$").unwrap();
+/// assert!(Identifier("ABC".to_owned()).validate_pattern(&pattern).is_ok());
+/// assert!(Identifier("abc".to_owned()).validate_pattern(&pattern).is_err());
+/// ```
 pub trait IsMatch {
+    /// Returns whether the value matches `pattern`.
+    ///
+    /// [`ValidatePattern`](crate::ValidatePattern) treats a `false` result as a validation error.
     fn is_match(&self, pattern: &regex::Regex) -> bool;
 }
 

@@ -1,6 +1,32 @@
 use unicode_segmentation::UnicodeSegmentation;
 
+/// A string-like value whose length is measured by [`ValidateMinLength`](crate::ValidateMinLength)
+/// and [`ValidateMaxLength`](crate::ValidateMaxLength).
+///
+/// Implement this trait once to provide both minimum-length and maximum-length validation through
+/// their blanket implementations. This capability describes character length, not array item count
+/// or object property count.
+///
+/// # Examples
+///
+/// ```rust
+/// use serde_valid::{traits::Length, ValidateMaxLength, ValidateMinLength};
+///
+/// struct Identifier(String);
+///
+/// impl Length for Identifier {
+///     fn length(&self) -> usize {
+///         self.0.chars().count()
+///     }
+/// }
+///
+/// let value = Identifier("abc".to_owned());
+/// assert!(value.validate_min_length(3).is_ok());
+/// assert!(value.validate_max_length(2).is_err());
+/// ```
 pub trait Length {
+    /// Returns the length compared by [`ValidateMinLength`](crate::ValidateMinLength) and
+    /// [`ValidateMaxLength`](crate::ValidateMaxLength).
     fn length(&self) -> usize;
 }
 
