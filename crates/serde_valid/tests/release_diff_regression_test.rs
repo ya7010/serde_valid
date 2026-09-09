@@ -82,6 +82,10 @@ fn nested_validation_supports_btree_map_and_preserves_its_keys() {
     );
 }
 
+fn assert_invalid<T: Validate>(value: T) -> serde_valid::validation::Errors {
+    value.validate().unwrap_err()
+}
+
 fn assert_not_unique<T: ValidateUniqueItems>(value: T) {
     assert!(value.validate_unique_items().is_err());
 }
@@ -92,12 +96,12 @@ fn assert_invalid_item_count<T: ValidateMaxItems + ValidateMinItems>(value: T) {
 }
 
 #[test]
-fn mutable_references_forward_validation_traits() {
-    let mut child = Child {
+fn references_forward_validation_traits() {
+    let child = Child {
         value: "x".to_owned(),
     };
     assert_eq!(
-        serde_json::to_value((&mut child).validate().unwrap_err()).unwrap(),
+        serde_json::to_value(assert_invalid(&child)).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -106,7 +110,7 @@ fn mutable_references_forward_validation_traits() {
         })
     );
 
-    let mut values = [1, 1];
-    assert_not_unique(&mut values[..]);
-    assert_invalid_item_count(&mut values[..]);
+    let values = [1, 1];
+    assert_not_unique(&values[..]);
+    assert_invalid_item_count(&values[..]);
 }

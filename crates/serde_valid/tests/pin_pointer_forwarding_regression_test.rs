@@ -6,6 +6,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 #[derive(Validate)]
+#[allow(clippy::box_collection)]
 struct PinnedPointerConstraints {
     #[validate(min_length = 2)]
     #[validate(pattern = "^[a-z]+$")]
