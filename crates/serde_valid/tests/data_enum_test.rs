@@ -66,7 +66,12 @@ fn enum_newtype_variant_validation_is_ok() {
     }
 
     let s = TestEnum::NewType(15);
-    assert!(s.validate().is_err());
+    assert_eq!(
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": ["The number must be `<= 10`."]
+        })
+    );
 }
 
 #[test]
@@ -100,7 +105,7 @@ fn enum_named_enum_validation_is_err() {
         b: TestStruct { val: 12 },
     };
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": ["Rule error."],
             "properties": {
@@ -122,7 +127,6 @@ fn enum_named_enum_validation_is_err() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -150,7 +154,7 @@ fn enum_unnamed_enum_validation_is_err() {
     let s = TestEnum::Named(TestStruct { val: 12 }, TestStruct { val: 12 });
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": ["Rule error."],
             "items": {
@@ -172,7 +176,6 @@ fn enum_unnamed_enum_validation_is_err() {
                 }
             }
         })
-        .to_string()
     );
 }
 
@@ -193,10 +196,9 @@ fn enum_newtype_variant_validation_is_err() {
     let s = TestEnum::NewType(4);
 
     assert_eq!(
-        s.validate().unwrap_err().to_string(),
+        serde_json::to_value(s.validate().unwrap_err()).unwrap(),
         json!({
             "errors": ["Rule error.", "The number must be `>= 5`."]
         })
-        .to_string()
     );
 }

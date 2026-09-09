@@ -29,7 +29,7 @@ fn serde_rename_is_err() {
     let err = TestStruct::from_json_value(json!({ "value": 123 })).unwrap_err();
 
     assert_eq!(
-        serde_json::from_str::<serde_json::Value>(&err.to_string()).unwrap(),
+        serde_json::to_value(err.as_validation_errors().unwrap()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -69,7 +69,7 @@ fn serde_rename_deserialize_is_err() {
     let err = TestStruct::from_json_value(json!({ "value": 123 })).unwrap_err();
 
     assert_eq!(
-        serde_json::from_str::<serde_json::Value>(&err.to_string()).unwrap(),
+        serde_json::to_value(err.as_validation_errors().unwrap()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -111,7 +111,7 @@ fn serde_rename_enume_is_err() {
     let err = TestEnum::from_json_value(json!({ "Struct": { "value": 123 } })).unwrap_err();
 
     assert_eq!(
-        serde_json::from_str::<serde_json::Value>(&err.to_string()).unwrap(),
+        serde_json::to_value(err.as_validation_errors().unwrap()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -147,7 +147,7 @@ fn serde_with_does_not_rename() {
     let err = TestStruct::from_json_value(json!({ "first": 11, "second": 12 })).unwrap_err();
 
     assert_eq!(
-        serde_json::from_str::<serde_json::Value>(&err.to_string()).unwrap(),
+        serde_json::to_value(err.as_validation_errors().unwrap()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -178,7 +178,7 @@ fn serde_deserialize_with_does_not_rename() {
     let err = TestStruct::from_json_value(json!({ "val": 11 })).unwrap_err();
 
     assert_eq!(
-        serde_json::from_str::<serde_json::Value>(&err.to_string()).unwrap(),
+        serde_json::to_value(err.as_validation_errors().unwrap()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -206,7 +206,7 @@ fn serde_default_does_not_rename() {
     let err = TestStruct::from_json_value(json!({ "count": 11 })).unwrap_err();
 
     assert_eq!(
-        serde_json::from_str::<serde_json::Value>(&err.to_string()).unwrap(),
+        serde_json::to_value(err.as_validation_errors().unwrap()).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -234,7 +234,7 @@ fn serde_rename_with_other_attributes_is_applied() {
     let err = TestStruct::from_json_value(json!({ "value": 11 })).unwrap_err();
 
     assert_eq!(
-        serde_json::from_str::<serde_json::Value>(&err.to_string()).unwrap(),
+        serde_json::to_value(err.as_validation_errors().unwrap()).unwrap(),
         json!({
             "errors": [],
             "properties": {

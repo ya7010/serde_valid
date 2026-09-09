@@ -108,10 +108,20 @@ mod derive_hygiene_edge_cases {
         };
 
         let errors = ::serde_valid::Validate::validate(&value).unwrap_err();
-        let errors = ::serde_json::to_value(errors).unwrap();
-        assert_eq!(errors["errors"], ::serde_json::json!(["struct error"]));
-        assert!(errors["properties"]["__property_vec_errors_map"].is_object());
-        assert!(errors["properties"]["__rule_vec_errors"].is_object());
+        assert_eq!(
+            ::serde_json::to_value(errors).unwrap(),
+            ::serde_json::json!({
+                "errors": ["struct error"],
+                "properties": {
+                    "__property_vec_errors_map": {
+                        "errors": ["The length of the value must be `>= 1`."]
+                    },
+                    "__rule_vec_errors": {
+                        "errors": ["The length of the value must be `>= 1`."]
+                    }
+                }
+            })
+        );
     }
 
     #[test]
@@ -131,7 +141,23 @@ mod derive_hygiene_edge_cases {
 
         assert!(::serde_valid::Validate::validate(&raw).is_ok());
         assert!(::serde_valid::Validate::validate(&collision).is_ok());
-        assert!(::serde_valid::Validate::validate(&collector_names).is_err());
+        assert_eq!(
+            ::serde_json::to_value(
+                ::serde_valid::Validate::validate(&collector_names).unwrap_err()
+            )
+            .unwrap(),
+            ::serde_json::json!({
+                "errors": [],
+                "properties": {
+                    "__property_vec_errors_map": {
+                        "errors": ["The length of the value must be `>= 1`."]
+                    },
+                    "__rule_vec_errors": {
+                        "errors": ["The length of the value must be `>= 1`."]
+                    }
+                }
+            })
+        );
     }
 
     #[test]
@@ -182,7 +208,18 @@ mod prelude_name_hygiene_edge_cases {
 
         #[test]
         fn vec_type_name_does_not_affect_generated_errors() {
-            assert!(::serde_valid::Validate::validate(&Input { value: -1 }).is_err());
+            assert_eq!(
+                ::serde_json::to_value(
+                    ::serde_valid::Validate::validate(&Input { value: -1 }).unwrap_err()
+                )
+                .unwrap(),
+                ::serde_json::json!({
+                    "errors": [],
+                    "properties": {
+                        "value": { "errors": ["The number must be `>= 0`."] }
+                    }
+                })
+            );
         }
     }
 
@@ -203,7 +240,18 @@ mod prelude_name_hygiene_edge_cases {
 
         #[test]
         fn vec_macro_name_does_not_affect_generated_errors() {
-            assert!(::serde_valid::Validate::validate(&Input { value: -1 }).is_err());
+            assert_eq!(
+                ::serde_json::to_value(
+                    ::serde_valid::Validate::validate(&Input { value: -1 }).unwrap_err()
+                )
+                .unwrap(),
+                ::serde_json::json!({
+                    "errors": [],
+                    "properties": {
+                        "value": { "errors": ["The number must be `>= 0`."] }
+                    }
+                })
+            );
         }
     }
 
@@ -229,13 +277,22 @@ mod prelude_name_hygiene_edge_cases {
         #[test]
         fn to_string_trait_name_does_not_affect_custom_messages() {
             let errors = ::serde_valid::Validate::validate(&Input { value: -1 }).unwrap_err();
-            assert!(errors.to_string().contains("too small"));
+            assert_eq!(
+                ::serde_json::to_value(errors).unwrap(),
+                ::serde_json::json!({
+                    "errors": [],
+                    "properties": {
+                        "value": { "errors": ["too small"] }
+                    }
+                })
+            );
         }
     }
 }
 
 mod issue107 {
     use serde::{Deserialize, Serialize};
+    use serde_json::json;
     use serde_valid::Validate;
     use std::collections::HashSet;
 
@@ -271,7 +328,15 @@ mod issue107 {
             list: vec!["127.0.0.1".to_string()].into_iter().collect(),
         };
 
-        assert!(white_list.validate().is_err());
+        assert_eq!(
+            serde_json::to_value(white_list.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "white_type": { "errors": ["The length of the value must be `>= 1`."] }
+                }
+            })
+        );
     }
 
     // Test case 2: Unnamed fields with some fields having validation and others not
@@ -290,7 +355,15 @@ mod issue107 {
     #[test]
     fn test_issue_107_unnamed_fields_validation_error() {
         let data = DataEnum::Unnamed(-1, "test".to_string());
-        assert!(data.validate().is_err());
+        assert_eq!(
+            serde_json::to_value(data.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "items": {
+                    "0": { "errors": ["The number must be `>= 0`."] }
+                }
+            })
+        );
     }
 
     // Test case 3: Multiple variants with mixed validation scenarios
@@ -335,17 +408,41 @@ mod issue107 {
             validated_field: 150,
             unvalidated_field: "test".to_string(),
         };
-        assert!(v1.validate().is_err());
+        assert_eq!(
+            serde_json::to_value(v1.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "validated_field": { "errors": ["The number must be `<= 100`."] }
+                }
+            })
+        );
 
         let v2 = MultiVariant::Variant2 {
             field1: "test".to_string(),
             field2: -10,
             field3: true,
         };
-        assert!(v2.validate().is_err());
+        assert_eq!(
+            serde_json::to_value(v2.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "field2": { "errors": ["The number must be `>= 0`."] }
+                }
+            })
+        );
 
         let v3 = MultiVariant::Variant3("".to_string(), 10, false);
-        assert!(v3.validate().is_err());
+        assert_eq!(
+            serde_json::to_value(v3.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "items": {
+                    "0": { "errors": ["The length of the value must be `>= 1`."] }
+                }
+            })
+        );
     }
 }
 
@@ -357,72 +454,6 @@ mod issue125 {
     use serde_json::json;
     use serde_valid::{EnumError, Validate, ValidateEnum};
     use std::collections::HashMap;
-
-    #[allow(dead_code)]
-    struct DownstreamUnsized([u8]);
-
-    impl serde_valid::ValidateMaxLength for DownstreamUnsized {
-        fn validate_max_length(
-            &self,
-            _max_length: usize,
-        ) -> Result<(), serde_valid::MaxLengthError> {
-            Ok(())
-        }
-    }
-
-    impl serde_valid::ValidateMinimum<i32> for DownstreamUnsized {
-        fn validate_minimum(&self, _minimum: i32) -> Result<(), serde_valid::MinimumError> {
-            Ok(())
-        }
-    }
-
-    impl serde_valid::ValidateEnum<i32> for DownstreamUnsized {
-        fn validate_enum(&self, _candidates: &[i32]) -> Result<(), serde_valid::EnumError> {
-            Ok(())
-        }
-    }
-
-    #[test]
-    fn downstream_unsized_scalar_impls_are_automatically_composited() {
-        fn assert_impl<T>()
-        where
-            T: ?Sized
-                + serde_valid::ValidateMaxLength
-                + serde_valid::__private::ValidateCompositedMaxLength
-                + serde_valid::ValidateMinimum<i32>
-                + serde_valid::__private::ValidateCompositedMinimum<i32>
-                + serde_valid::ValidateEnum<i32>
-                + serde_valid::__private::ValidateCompositedEnum<i32>,
-        {
-        }
-
-        assert_impl::<DownstreamUnsized>();
-    }
-
-    #[test]
-    fn foreign_dst_terminals_keep_composited_validation_support() {
-        fn assert_string_validators<T>()
-        where
-            T: ?Sized
-                + serde_valid::__private::ValidateCompositedMaxLength
-                + serde_valid::__private::ValidateCompositedMinLength
-                + serde_valid::__private::ValidateCompositedPattern,
-        {
-        }
-
-        fn assert_enum_validators<T>()
-        where
-            T: ?Sized + serde_valid::__private::ValidateCompositedEnum<&'static str>,
-        {
-        }
-
-        assert_string_validators::<str>();
-        assert_string_validators::<std::ffi::OsStr>();
-        assert_string_validators::<std::path::Path>();
-        assert_enum_validators::<str>();
-        assert_enum_validators::<std::ffi::OsStr>();
-        assert_enum_validators::<std::path::Path>();
-    }
 
     #[derive(Debug, Deserialize, Validate)]
     struct Child {
@@ -445,10 +476,21 @@ mod issue125 {
             names: vec!["", "duplicate", "duplicate"].into_boxed_slice(),
         };
 
-        let errors = value.validate().unwrap_err().to_string();
-        assert!(errors.contains("The length of the items must be `>= 4`."));
-        assert!(errors.contains("The length of the items must be `<= 2`."));
-        assert!(errors.contains("The items must be unique."));
+        assert_eq!(
+            serde_json::to_value(value.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "names": {
+                        "errors": [
+                            "The length of the items must be `>= 4`.",
+                            "The length of the items must be `<= 2`.",
+                            "The items must be unique."
+                        ]
+                    }
+                }
+            })
+        );
     }
 
     #[test]
@@ -470,9 +512,34 @@ mod issue125 {
     #[test]
     fn borrowed_slice_supports_array_validators() {
         assert!(BorrowedSlice { data: &[1, 2] }.validate().is_ok());
-        assert!(BorrowedSlice { data: &[1] }.validate().is_err());
-        assert!(BorrowedSlice { data: &[1, 2, 3] }.validate().is_err());
-        assert!(BorrowedSlice { data: &[1, 1] }.validate().is_err());
+        assert_eq!(
+            serde_json::to_value(BorrowedSlice { data: &[1] }.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "data": { "errors": ["The length of the items must be `>= 2`."] }
+                }
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(BorrowedSlice { data: &[1, 2, 3] }.validate().unwrap_err())
+                .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "data": { "errors": ["The length of the items must be `<= 2`."] }
+                }
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(BorrowedSlice { data: &[1, 1] }.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "data": { "errors": ["The items must be unique."] }
+                }
+            })
+        );
     }
 
     #[derive(Debug, Validate)]
@@ -485,12 +552,31 @@ mod issue125 {
     #[test]
     fn boxed_string_supports_length_validators() {
         assert!(BoxedString { value: "x".into() }.validate().is_ok());
-        assert!(BoxedString { value: "".into() }.validate().is_err());
-        assert!(BoxedString {
-            value: "too long".into(),
-        }
-        .validate()
-        .is_err());
+        assert_eq!(
+            serde_json::to_value(BoxedString { value: "".into() }.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": { "errors": ["The length of the value must be `>= 1`."] }
+                }
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(
+                BoxedString {
+                    value: "too long".into(),
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": { "errors": ["The length of the value must be `<= 2`."] }
+                }
+            })
+        );
     }
 
     #[derive(Debug, Validate)]
@@ -507,23 +593,41 @@ mod issue125 {
         }
         .validate()
         .is_ok());
-        let pattern_errors = BoxedStringConstraints {
-            value: "beta".into(),
-        }
-        .validate()
-        .unwrap_err()
-        .to_string();
-        assert!(pattern_errors.contains("must match the pattern"));
-        assert!(!pattern_errors.contains("must be in"));
+        assert_eq!(
+            serde_json::to_value(
+                BoxedStringConstraints {
+                    value: "beta".into(),
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": {
+                        "errors": ["The value must match the pattern of \"^(alpha|gamma)$\"."]
+                    }
+                }
+            })
+        );
 
-        let enum_errors = BoxedStringConstraints {
-            value: "gamma".into(),
-        }
-        .validate()
-        .unwrap_err()
-        .to_string();
-        assert!(!enum_errors.contains("must match the pattern"));
-        assert!(enum_errors.contains("must be in"));
+        assert_eq!(
+            serde_json::to_value(
+                BoxedStringConstraints {
+                    value: "gamma".into(),
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": { "errors": ["The value must be in [alpha, beta]."] }
+                }
+            })
+        );
     }
 
     #[allow(non_snake_case)]
@@ -561,22 +665,26 @@ mod issue125 {
         .unwrap();
 
         assert_eq!(
-            errors["properties"]["value"]["errors"]
-                .as_array()
-                .unwrap()
-                .len(),
-            2
+            errors,
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": {
+                        "errors": [
+                            "The value must match the pattern of \"^a$\".",
+                            "The value must match the pattern of \"^b$\"."
+                        ]
+                    },
+                    "foo": { "errors": ["The value must match the pattern of \"^a$\"."] },
+                    "FOO": { "errors": ["The value must match the pattern of \"^b$\"."] },
+                    "type": { "errors": ["The value must match the pattern of \"^a$\"."] },
+                    "__pattern": { "errors": ["The value must match the pattern of \"^a$\"."] },
+                    "__SERDE_VALID_PATTERN": {
+                        "errors": ["The value must match the pattern of \"^a$\"."]
+                    }
+                }
+            })
         );
-        for field in ["foo", "FOO", "type", "__pattern", "__SERDE_VALID_PATTERN"] {
-            let field_errors = errors["properties"][field]["errors"]
-                .as_array()
-                .unwrap_or_else(|| panic!("missing pattern error for {field}: {errors}"));
-            assert_eq!(
-                field_errors.len(),
-                1,
-                "missing pattern error for {field}: {errors}"
-            );
-        }
     }
 
     #[derive(Debug, Validate)]
@@ -659,20 +767,42 @@ mod issue125 {
         assert!(BoxedIntegerConstraint { value: Box::new(1) }
             .validate()
             .is_ok());
-        assert!(BoxedIntegerConstraint { value: Box::new(3) }
-            .validate()
-            .is_err());
+        assert_eq!(
+            serde_json::to_value(
+                BoxedIntegerConstraint { value: Box::new(3) }
+                    .validate()
+                    .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": { "errors": ["The value must be in [1, 2]."] }
+                }
+            })
+        );
 
         assert!(BoxedCustomEnumConstraint {
             value: Box::new(CustomEnumValue("alpha".to_owned())),
         }
         .validate()
         .is_ok());
-        assert!(BoxedCustomEnumConstraint {
-            value: Box::new(CustomEnumValue("gamma".to_owned())),
-        }
-        .validate()
-        .is_err());
+        assert_eq!(
+            serde_json::to_value(
+                BoxedCustomEnumConstraint {
+                    value: Box::new(CustomEnumValue("gamma".to_owned())),
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": { "errors": ["The value must be in [alpha, beta]."] }
+                }
+            })
+        );
         assert!(BoxedOsStrConstraint {
             value: std::ffi::OsString::from("alpha").into_boxed_os_str(),
         }
@@ -688,21 +818,43 @@ mod issue125 {
         }
         .validate()
         .is_ok());
-        assert!(CowStringConstraint {
-            value: std::borrow::Cow::Owned("gamma".to_owned()),
-        }
-        .validate()
-        .is_err());
+        assert_eq!(
+            serde_json::to_value(
+                CowStringConstraint {
+                    value: std::borrow::Cow::Owned("gamma".to_owned()),
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": { "errors": ["The value must be in [alpha, beta]."] }
+                }
+            })
+        );
         assert!(CowOsStrConstraint {
             value: std::borrow::Cow::Borrowed(std::ffi::OsStr::new("alpha")),
         }
         .validate()
         .is_ok());
-        assert!(CowOsStrConstraint {
-            value: std::borrow::Cow::Borrowed(std::ffi::OsStr::new("gamma")),
-        }
-        .validate()
-        .is_err());
+        assert_eq!(
+            serde_json::to_value(
+                CowOsStrConstraint {
+                    value: std::borrow::Cow::Borrowed(std::ffi::OsStr::new("gamma")),
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": { "errors": ["The value must be in [alpha, beta]."] }
+                }
+            })
+        );
         assert!(CowOsStrConstraint {
             value: std::borrow::Cow::Owned(std::ffi::OsString::from("alpha")),
         }
@@ -713,11 +865,22 @@ mod issue125 {
         }
         .validate()
         .is_ok());
-        assert!(CowPathConstraint {
-            value: std::borrow::Cow::Borrowed(std::path::Path::new("gamma")),
-        }
-        .validate()
-        .is_err());
+        assert_eq!(
+            serde_json::to_value(
+                CowPathConstraint {
+                    value: std::borrow::Cow::Borrowed(std::path::Path::new("gamma")),
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": { "errors": ["The value must be in [alpha, beta]."] }
+                }
+            })
+        );
         assert!(CowPathConstraint {
             value: std::borrow::Cow::Owned(std::path::PathBuf::from("alpha")),
         }
@@ -759,20 +922,42 @@ mod issue125 {
         }
         .validate()
         .is_ok());
-        assert!(CowIntegerConstraint {
-            value: std::borrow::Cow::Owned(3),
-        }
-        .validate()
-        .is_err());
+        assert_eq!(
+            serde_json::to_value(
+                CowIntegerConstraint {
+                    value: std::borrow::Cow::Owned(3),
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": { "errors": ["The value must be in [1, 2]."] }
+                }
+            })
+        );
 
         let custom = CustomEnumValue("alpha".to_owned());
         assert!(BorrowedCustomEnumConstraint { value: &custom }
             .validate()
             .is_ok());
         let integer = 3;
-        assert!(BorrowedIntegerConstraint { value: &integer }
-            .validate()
-            .is_err());
+        assert_eq!(
+            serde_json::to_value(
+                BorrowedIntegerConstraint { value: &integer }
+                    .validate()
+                    .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": { "errors": ["The value must be in [1, 2]."] }
+                }
+            })
+        );
     }
 
     #[derive(Clone, Debug, PartialEq)]
@@ -803,31 +988,13 @@ mod issue125 {
 
         let value = CandidateValue(1);
         let borrowed = &value;
-        assert!(
-            serde_valid::__private::ValidateCompositedEnum::validate_composited_enum(
-                &borrowed,
-                &candidates
-            )
-            .is_ok()
-        );
+        assert!(ValidateEnum::validate_enum(&borrowed, &candidates).is_ok());
 
         let boxed = Box::new(CandidateValue(1));
-        assert!(
-            serde_valid::__private::ValidateCompositedEnum::validate_composited_enum(
-                &boxed,
-                &candidates
-            )
-            .is_ok()
-        );
+        assert!(ValidateEnum::validate_enum(&boxed, &candidates).is_ok());
 
         let cow: std::borrow::Cow<'_, CandidateValue> = std::borrow::Cow::Owned(CandidateValue(1));
-        assert!(
-            serde_valid::__private::ValidateCompositedEnum::validate_composited_enum(
-                &cow,
-                &candidates
-            )
-            .is_ok()
-        );
+        assert!(ValidateEnum::validate_enum(&cow, &candidates).is_ok());
     }
 
     #[derive(Debug, Validate)]
@@ -848,24 +1015,36 @@ mod issue125 {
 
     #[test]
     fn boxed_and_borrowed_arrays_support_array_validators() {
-        let errors = BoxedArray {
-            values: Box::new([0, 1, 1]),
-        }
-        .validate()
-        .unwrap_err()
-        .to_string();
-        assert!(errors.contains("The length of the items must be `>= 4`."));
-        assert!(errors.contains("The length of the items must be `<= 2`."));
-        assert!(errors.contains("The items must be unique."));
+        let array_errors = json!({
+            "errors": [],
+            "properties": {
+                "values": {
+                    "errors": [
+                        "The length of the items must be `>= 4`.",
+                        "The length of the items must be `<= 2`.",
+                        "The items must be unique."
+                    ]
+                }
+            }
+        });
+        assert_eq!(
+            serde_json::to_value(
+                BoxedArray {
+                    values: Box::new([0, 1, 1]),
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            array_errors
+        );
 
         let values = [0, 1, 1];
-        let errors = BorrowedArray { values: &values }
-            .validate()
-            .unwrap_err()
-            .to_string();
-        assert!(errors.contains("The length of the items must be `>= 4`."));
-        assert!(errors.contains("The length of the items must be `<= 2`."));
-        assert!(errors.contains("The items must be unique."));
+        assert_eq!(
+            serde_json::to_value(BorrowedArray { values: &values }.validate().unwrap_err())
+                .unwrap(),
+            array_errors
+        );
     }
 
     #[derive(Debug, Validate)]
@@ -883,14 +1062,39 @@ mod issue125 {
     #[test]
     fn boxed_and_borrowed_slices_support_nested_validation() {
         let children = vec![Child { value: 0 }].into_boxed_slice();
-        assert!(BoxedChildren { children }.validate().is_err());
+        let nested_errors = json!({
+            "errors": [],
+            "properties": {
+                "children": {
+                    "errors": [],
+                    "items": {
+                        "0": {
+                            "errors": [],
+                            "properties": {
+                                "value": { "errors": ["The number must be `>= 1`."] }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        assert_eq!(
+            serde_json::to_value(BoxedChildren { children }.validate().unwrap_err()).unwrap(),
+            nested_errors
+        );
 
         let children = [Child { value: 0 }];
-        assert!(BorrowedChildren {
-            children: &children,
-        }
-        .validate()
-        .is_err());
+        assert_eq!(
+            serde_json::to_value(
+                BorrowedChildren {
+                    children: &children,
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            nested_errors
+        );
     }
 
     #[derive(Debug, Validate)]
@@ -1238,10 +1442,32 @@ mod issue125 {
         }
 
         let string_keys = HashMap::from([("string".to_owned(), Child { value: 0 })]);
-        assert!(string_keys.validate().is_err());
+        let child_map_errors = json!({
+            "errors": [],
+            "properties": {
+                "value": { "errors": ["The number must be `>= 1`."] }
+            }
+        });
+        assert_eq!(
+            serde_json::to_value(string_keys.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "string": child_map_errors
+                }
+            })
+        );
 
         let custom_keys = HashMap::from([(CustomKey("custom".to_owned()), Child { value: 0 })]);
-        assert!(custom_keys.validate().is_err());
+        assert_eq!(
+            serde_json::to_value(custom_keys.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "custom": child_map_errors
+                }
+            })
+        );
 
         let borrowed_keys = HashMap::from([("borrowed", Child { value: 0 })]);
         assert_eq!(
@@ -1260,7 +1486,20 @@ mod issue125 {
         );
 
         let borrowed_keys = IndexMap::from([("borrowed", Child { value: 0 })]);
-        assert!(borrowed_keys.validate().is_err());
+        assert_eq!(
+            serde_json::to_value(borrowed_keys.validate().unwrap_err()).unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "borrowed": {
+                        "errors": [],
+                        "properties": {
+                            "value": { "errors": ["The number must be `>= 1`."] }
+                        }
+                    }
+                }
+            })
+        );
     }
 
     #[test]
@@ -1317,15 +1556,24 @@ mod issue125 {
         )
         .unwrap();
 
-        for field in ["boxed_vec", "borrowed_vec", "cow_slice"] {
-            assert_eq!(
-                errors["properties"][field]["errors"]
-                    .as_array()
-                    .unwrap()
-                    .len(),
-                3
-            );
-        }
+        let item_errors = json!({
+            "errors": [
+                "The length of the items must be `>= 3`.",
+                "The length of the items must be `<= 1`.",
+                "The items must be unique."
+            ]
+        });
+        assert_eq!(
+            errors,
+            json!({
+                "errors": [],
+                "properties": {
+                    "boxed_vec": item_errors,
+                    "borrowed_vec": item_errors,
+                    "cow_slice": item_errors,
+                }
+            })
+        );
     }
 
     #[derive(Debug, Validate)]
@@ -1363,15 +1611,25 @@ mod issue125 {
         )
         .unwrap();
 
-        for field in ["rc_vec", "arc_vec", "pinned_vec", "custom_vec"] {
-            assert_eq!(
-                errors["properties"][field]["errors"]
-                    .as_array()
-                    .unwrap()
-                    .len(),
-                3
-            );
-        }
+        let item_errors = json!({
+            "errors": [
+                "The length of the items must be `>= 3`.",
+                "The length of the items must be `<= 1`.",
+                "The items must be unique."
+            ]
+        });
+        assert_eq!(
+            errors,
+            json!({
+                "errors": [],
+                "properties": {
+                    "rc_vec": item_errors,
+                    "arc_vec": item_errors,
+                    "pinned_vec": item_errors,
+                    "custom_vec": item_errors,
+                }
+            })
+        );
     }
 
     #[derive(Debug)]
@@ -1550,81 +1808,77 @@ mod issue125 {
         fn validate_composited_enum<C>(
             &self,
             _candidates: &[C],
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::EnumError>> {
+        ) -> Result<(), serde_valid::EnumError> {
             Ok(())
         }
 
         fn validate_composited_multiple_of<A>(
             &self,
             _multiple_of: A,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MultipleOfError>> {
+        ) -> Result<(), serde_valid::MultipleOfError> {
             Ok(())
         }
 
         fn validate_composited_minimum<A>(
             &self,
             _minimum: A,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MinimumError>> {
+        ) -> Result<(), serde_valid::MinimumError> {
             Ok(())
         }
 
         fn validate_composited_maximum<A>(
             &self,
             _maximum: A,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MaximumError>> {
+        ) -> Result<(), serde_valid::MaximumError> {
             Ok(())
         }
 
         fn validate_composited_exclusive_minimum<A>(
             &self,
             _minimum: A,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::ExclusiveMinimumError>>
-        {
+        ) -> Result<(), serde_valid::ExclusiveMinimumError> {
             Ok(())
         }
 
         fn validate_composited_exclusive_maximum<A>(
             &self,
             _maximum: A,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::ExclusiveMaximumError>>
-        {
+        ) -> Result<(), serde_valid::ExclusiveMaximumError> {
             Ok(())
         }
 
         fn validate_composited_min_properties(
             &self,
             _minimum: usize,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MinPropertiesError>>
-        {
+        ) -> Result<(), serde_valid::MinPropertiesError> {
             Ok(())
         }
 
         fn validate_composited_max_properties(
             &self,
             _maximum: usize,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MaxPropertiesError>>
-        {
+        ) -> Result<(), serde_valid::MaxPropertiesError> {
             Ok(())
         }
 
         fn validate_composited_min_length(
             &self,
             _minimum: usize,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MinLengthError>> {
+        ) -> Result<(), serde_valid::MinLengthError> {
             Ok(())
         }
 
         fn validate_composited_max_length(
             &self,
             _maximum: usize,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MaxLengthError>> {
+        ) -> Result<(), serde_valid::MaxLengthError> {
             Ok(())
         }
 
         fn validate_composited_pattern(
             &self,
             _pattern: &serde_valid::export::regex::Regex,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::PatternError>> {
+        ) -> Result<(), serde_valid::PatternError> {
             Ok(())
         }
     }
@@ -1682,22 +1936,31 @@ mod issue125 {
         )
         .unwrap();
 
-        for field in [
-            "nested",
-            "enum_values",
-            "multiple_of",
-            "minimum",
-            "maximum",
-            "exclusive_minimum",
-            "exclusive_maximum",
-            "min_properties",
-            "max_properties",
-            "min_length",
-            "max_length",
-            "pattern",
-        ] {
-            assert!(errors["properties"].get(field).is_some(), "missing {field}");
-        }
+        assert_eq!(
+            errors,
+            json!({
+                "errors": [],
+                "properties": {
+                    "nested": {
+                        "errors": [],
+                        "properties": {
+                            "value": { "errors": ["The number must be `>= 1`."] }
+                        }
+                    },
+                    "enum_values": { "errors": ["The value must be in [1, 2]."] },
+                    "multiple_of": { "errors": ["The value must be multiple of `2`."] },
+                    "minimum": { "errors": ["The number must be `>= 1`."] },
+                    "maximum": { "errors": ["The number must be `<= 1`."] },
+                    "exclusive_minimum": { "errors": ["The number must be `> 1`."] },
+                    "exclusive_maximum": { "errors": ["The number must be `< 1`."] },
+                    "min_properties": { "errors": ["The size of the properties must be `>= 1`."] },
+                    "max_properties": { "errors": ["The size of the properties must be `<= 1`."] },
+                    "min_length": { "errors": ["The length of the value must be `>= 1`."] },
+                    "max_length": { "errors": ["The length of the value must be `<= 1`."] },
+                    "pattern": { "errors": ["The value must match the pattern of \"^[a-z]+$\"."] }
+                }
+            })
+        );
     }
 
     struct CustomScalarEnumValue;
@@ -1716,11 +1979,22 @@ mod issue125 {
 
     #[test]
     fn derive_promotes_custom_scalar_enum_implementations() {
-        assert!(CustomScalarEnumConstraint {
-            value: CustomScalarEnumValue,
-        }
-        .validate()
-        .is_err());
+        assert_eq!(
+            serde_json::to_value(
+                CustomScalarEnumConstraint {
+                    value: CustomScalarEnumValue,
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "value": { "errors": ["The value must be in [1, 2]."] }
+                }
+            })
+        );
     }
 
     #[derive(Validate)]
@@ -1746,12 +2020,17 @@ mod issue125 {
         )
         .unwrap();
 
-        for field in ["min_length", "pattern", "enum_value"] {
-            assert!(
-                errors["properties"].get(field).is_some(),
-                "missing {field}: {errors}"
-            );
-        }
+        assert_eq!(
+            errors,
+            json!({
+                "errors": [],
+                "properties": {
+                    "min_length": { "errors": ["The length of the value must be `>= 1`."] },
+                    "pattern": { "errors": ["The value must match the pattern of \"^[a-z]+$\"."] },
+                    "enum_value": { "errors": ["The value must be in [allowed]."] }
+                }
+            })
+        );
     }
 
     #[derive(Debug, Clone, Validate)]
@@ -1785,9 +2064,28 @@ mod issue125 {
         )
         .unwrap();
 
-        for field in ["boxed_vec", "borrowed_vec", "cow_slice"] {
-            assert!(errors["properties"].get(field).is_some(), "missing {field}");
-        }
+        let nested_errors = json!({
+            "errors": [],
+            "items": {
+                "0": {
+                    "errors": [],
+                    "properties": {
+                        "value": { "errors": ["The number must be `>= 1`."] }
+                    }
+                }
+            }
+        });
+        assert_eq!(
+            errors,
+            json!({
+                "errors": [],
+                "properties": {
+                    "boxed_vec": nested_errors,
+                    "borrowed_vec": nested_errors,
+                    "cow_slice": nested_errors,
+                }
+            })
+        );
     }
 
     #[derive(Debug, Validate)]
@@ -1804,16 +2102,38 @@ mod issue125 {
         }
         .validate()
         .is_ok());
-        assert!(IndexMapPropertyConstraints {
-            values: IndexMap::new(),
-        }
-        .validate()
-        .is_err());
-        assert!(IndexMapPropertyConstraints {
-            values: IndexMap::from([("one".to_owned(), 1), ("two".to_owned(), 2)]),
-        }
-        .validate()
-        .is_err());
+        assert_eq!(
+            serde_json::to_value(
+                IndexMapPropertyConstraints {
+                    values: IndexMap::new(),
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "values": { "errors": ["The size of the properties must be `>= 1`."] }
+                }
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(
+                IndexMapPropertyConstraints {
+                    values: IndexMap::from([("one".to_owned(), 1), ("two".to_owned(), 2)]),
+                }
+                .validate()
+                .unwrap_err()
+            )
+            .unwrap(),
+            json!({
+                "errors": [],
+                "properties": {
+                    "values": { "errors": ["The size of the properties must be `<= 1`."] }
+                }
+            })
+        );
     }
 
     #[derive(Debug, Eq, Hash, PartialEq)]
@@ -1875,87 +2195,19 @@ mod issue125 {
             (AliasedKey(1), DataDependentValidation(false)),
             (AliasedKey(2), DataDependentValidation(true)),
         ]);
-        let hash_map_errors = serde_json::to_value(hash_map.validate().unwrap_err()).unwrap();
-        let errors = hash_map_errors["properties"]["same"]["errors"]
-            .as_array()
-            .unwrap();
-        assert!(errors.contains(&json!("array error")));
-        assert!(errors.contains(&json!("object error")));
-        assert!(hash_map_errors["properties"]["same"]["properties"]["property"].is_object());
-    }
-
-    #[derive(Debug)]
-    struct MixedCompositedShape(bool);
-
-    impl serde_valid::__private::ValidateCompositedMinimum<i32> for MixedCompositedShape {
-        fn validate_composited_minimum(
-            &self,
-            minimum: i32,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MinimumError>> {
-            use serde_valid::__private::Composited;
-
-            if self.0 {
-                Err(Composited::Object(IndexMap::from([(
-                    "property".into(),
-                    vec![Composited::Single(serde_valid::MinimumError::new(minimum))],
-                )])))
-            } else {
-                Err(Composited::Array(IndexMap::from([(
-                    0,
-                    Composited::Single(serde_valid::MinimumError::new(minimum)),
-                )])))
-            }
-        }
-    }
-
-    impl serde_valid::__private::ValidateCompositedMaximum<i32> for MixedCompositedShape {
-        fn validate_composited_maximum(
-            &self,
-            maximum: i32,
-        ) -> Result<(), serde_valid::__private::Composited<serde_valid::MaximumError>> {
-            use serde_valid::__private::Composited;
-
-            Err(Composited::Object(IndexMap::from([(
-                "property".into(),
-                vec![Composited::Single(serde_valid::MaximumError::new(maximum))],
-            )])))
-        }
-    }
-
-    #[derive(Debug, Validate)]
-    struct MixedCompositedConstraints {
-        #[validate(minimum = 1)]
-        #[validate(maximum = 2)]
-        direct: MixedCompositedShape,
-        #[validate(minimum = 1)]
-        aliased: IndexMap<AliasedKey, MixedCompositedShape>,
-    }
-
-    #[test]
-    fn mixed_composited_error_shapes_use_object_precedence_without_panicking() {
-        let errors = serde_json::to_value(
-            MixedCompositedConstraints {
-                direct: MixedCompositedShape(false),
-                aliased: IndexMap::from([
-                    (AliasedKey(1), MixedCompositedShape(false)),
-                    (AliasedKey(2), MixedCompositedShape(true)),
-                ]),
-            }
-            .validate()
-            .unwrap_err(),
-        )
-        .unwrap();
-
-        assert!(errors["properties"]["direct"]["items"].is_null());
+        let mut hash_map_errors = serde_json::to_value(hash_map.validate().unwrap_err()).unwrap();
+        hash_map_errors["properties"]["same"]["errors"]
+            .as_array_mut()
+            .unwrap()
+            .sort_by(|left, right| left.as_str().cmp(&right.as_str()));
         assert_eq!(
-            errors["properties"]["direct"]["properties"]["property"]["errors"],
-            json!(["The number must be `<= 2`."])
-        );
-        assert!(errors["properties"]["aliased"]["properties"]["same"]["items"].is_null());
-        assert_eq!(
-            errors["properties"]["aliased"]["properties"]["same"]["properties"]["property"]
-                ["errors"],
-            json!(["The number must be `>= 1`."])
+            hash_map_errors["properties"]["same"],
+            json!({
+                "errors": ["array error", "object error"],
+                "properties": {
+                    "property": { "errors": ["property error"] }
+                }
+            })
         );
     }
 }

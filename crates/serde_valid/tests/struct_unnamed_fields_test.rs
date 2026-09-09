@@ -19,7 +19,7 @@ fn struct_unnamed_fields_newtype_is_err() {
     let err = s.validate().unwrap_err();
 
     assert_eq!(
-        serde_json::from_str::<serde_json::Value>(&err.to_string()).unwrap(),
+        serde_json::to_value(&err).unwrap(),
         json!({
             "errors": ["The value must be multiple of `5`."]
         })
@@ -50,7 +50,7 @@ fn struct_unnamed_fields_is_err() {
     let err = s.validate().unwrap_err();
 
     assert_eq!(
-        serde_json::from_str::<serde_json::Value>(&err.to_string()).unwrap(),
+        serde_json::to_value(&err).unwrap(),
         json!({
             "errors": [],
             "items": {

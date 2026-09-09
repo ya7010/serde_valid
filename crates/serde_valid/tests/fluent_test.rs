@@ -32,7 +32,7 @@ mod tests {
         ));
 
         assert_eq!(
-            a.to_string(),
+            serde_json::to_value(&a).unwrap(),
             json!({
                 "errors": [],
                 "properties": {
@@ -48,7 +48,6 @@ mod tests {
                     }
                 }
             })
-            .to_string()
         );
     }
 }

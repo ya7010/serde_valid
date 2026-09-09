@@ -1,63 +1,73 @@
+use serde_json::json;
 use serde_valid::{Validate, ValidateExclusiveMinimum};
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::Arc;
 
-#[test]
-fn every_standard_pin_pointer_family_has_composited_forwarding() {
-    let pattern = regex::Regex::new("^[a-z]+$").unwrap();
-    let boxed = Pin::new(Box::<str>::from("allowed"));
-    let rc = Pin::new(Rc::<str>::from("allowed"));
-    let arc = Pin::new(Arc::<str>::from("allowed"));
-
-    macro_rules! assert_string {
-        ($value:expr) => {{
-            assert!(serde_valid::__private::ValidateCompositedMinLength::validate_composited_min_length(&$value, 2).is_ok());
-            assert!(serde_valid::__private::ValidateCompositedPattern::validate_composited_pattern(&$value, &pattern).is_ok());
-            assert!(serde_valid::__private::ValidateCompositedEnum::validate_composited_enum(&$value, &["allowed"]).is_ok());
-        }};
-    }
-
-    assert_string!(boxed);
-    assert_string!(rc);
-    assert_string!(arc);
-
-    assert!(serde_valid::__private::ValidateCompositedMinProperties::validate_composited_min_properties(
-        &Pin::new(Box::new(HashMap::<String, String>::new())), 1,
-    ).is_err());
-    assert!(serde_valid::__private::ValidateCompositedMinProperties::validate_composited_min_properties(
-        &Pin::new(Rc::new(HashMap::<String, String>::new())), 1,
-    ).is_err());
-    assert!(serde_valid::__private::ValidateCompositedMinProperties::validate_composited_min_properties(
-        &Pin::new(Arc::new(HashMap::<String, String>::new())), 1,
-    ).is_err());
-}
-
 #[derive(Validate)]
 struct PinnedPointerConstraints {
     #[validate(min_length = 2)]
     #[validate(pattern = "^[a-z]+$")]
     #[validate(r#enum = ["allowed"])]
-    string: Pin<Rc<str>>,
+    boxed_string: Pin<Box<str>>,
+    #[validate(min_length = 2)]
+    #[validate(pattern = "^[a-z]+$")]
+    #[validate(r#enum = ["allowed"])]
+    rc_string: Pin<Rc<str>>,
+    #[validate(min_length = 2)]
+    #[validate(pattern = "^[a-z]+$")]
+    #[validate(r#enum = ["allowed"])]
+    arc_string: Pin<Arc<str>>,
     #[validate(min_properties = 1)]
-    object: Pin<Arc<HashMap<String, String>>>,
+    boxed_object: Pin<Box<HashMap<String, String>>>,
+    #[validate(min_properties = 1)]
+    rc_object: Pin<Rc<HashMap<String, String>>>,
+    #[validate(min_properties = 1)]
+    arc_object: Pin<Arc<HashMap<String, String>>>,
 }
 
 #[test]
 fn pin_forwards_every_scalar_validator_through_its_pointer_target() {
     let errors = serde_json::to_value(
         PinnedPointerConstraints {
-            string: Pin::new(Rc::from("1")),
-            object: Pin::new(Arc::new(HashMap::new())),
+            boxed_string: Pin::new(Box::<str>::from("1")),
+            rc_string: Pin::new(Rc::from("1")),
+            arc_string: Pin::new(Arc::from("1")),
+            boxed_object: Pin::new(Box::new(HashMap::new())),
+            rc_object: Pin::new(Rc::new(HashMap::new())),
+            arc_object: Pin::new(Arc::new(HashMap::new())),
         }
         .validate()
         .unwrap_err(),
     )
     .unwrap();
 
-    assert!(errors["properties"].get("string").is_some(), "{errors}");
-    assert!(errors["properties"].get("object").is_some(), "{errors}");
+    let string_errors = json!({
+        "errors": [
+            "The length of the value must be `>= 2`.",
+            "The value must match the pattern of \"^[a-z]+$\".",
+            "The value must be in [allowed]."
+        ]
+    });
+    let object_errors = json!({
+        "errors": ["The size of the properties must be `>= 1`."]
+    });
+
+    assert_eq!(
+        errors,
+        json!({
+            "errors": [],
+            "properties": {
+                "boxed_string": string_errors,
+                "rc_string": string_errors,
+                "arc_string": string_errors,
+                "boxed_object": object_errors,
+                "rc_object": object_errors,
+                "arc_object": object_errors,
+            }
+        })
+    );
 }
 
 struct CustomNumber(i32);
@@ -79,12 +89,22 @@ struct CustomScalarConstraint {
 
 #[test]
 fn public_validator_impl_automatically_provides_composited_validation() {
-    fn assert_composited<T: serde_valid::__private::ValidateCompositedExclusiveMinimum<i32>>() {}
-
-    assert_composited::<CustomNumber>();
-    assert!(CustomScalarConstraint {
-        value: CustomNumber(1),
-    }
-    .validate()
-    .is_err());
+    assert_eq!(
+        serde_json::to_value(
+            CustomScalarConstraint {
+                value: CustomNumber(1),
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "value": {
+                    "errors": ["The number must be `> 1`."]
+                }
+            }
+        })
+    );
 }

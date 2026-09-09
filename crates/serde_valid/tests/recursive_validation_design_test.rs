@@ -1,3 +1,4 @@
+use serde_json::json;
 use serde_valid::traits::Sequence;
 use serde_valid::{MinimumError, Validate, ValidateEnum, ValidateMinimum};
 use std::collections::BTreeMap;
@@ -25,9 +26,26 @@ fn a_scalar_implementation_is_automatically_available_to_nested_sequences() {
     let value = NestedSequences {
         values: vec![[CustomNumber(0)]],
     };
-    let error = serde_json::to_value(value.validate().unwrap_err()).unwrap();
 
-    assert!(error["properties"]["values"]["items"]["0"]["items"]["0"].is_object());
+    assert_eq!(
+        serde_json::to_value(value.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "values": {
+                    "errors": [],
+                    "items": {
+                        "0": {
+                            "errors": [],
+                            "items": {
+                                "0": { "errors": ["The number must be `>= 1`."] }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+    );
 }
 
 struct CustomString(String);
@@ -49,9 +67,21 @@ fn enum_candidates_are_composited_without_an_extra_user_impl() {
     let value = EnumeratedSequence {
         values: vec![CustomString("denied".to_owned())],
     };
-    let error = serde_json::to_value(value.validate().unwrap_err()).unwrap();
 
-    assert!(error["properties"]["values"]["items"]["0"].is_object());
+    assert_eq!(
+        serde_json::to_value(value.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "values": {
+                    "errors": [],
+                    "items": {
+                        "0": { "errors": ["The value must be in [allowed]."] }
+                    }
+                }
+            }
+        })
+    );
 }
 
 #[derive(Validate)]
@@ -65,9 +95,26 @@ fn maps_preserve_real_property_keys() {
     let value = MapSequence {
         values: BTreeMap::from([("actual-key".to_owned(), vec![CustomNumber(0)])]),
     };
-    let error = serde_json::to_value(value.validate().unwrap_err()).unwrap();
 
-    assert!(error["properties"]["values"]["properties"]["actual-key"]["items"]["0"].is_object());
+    assert_eq!(
+        serde_json::to_value(value.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "values": {
+                    "errors": [],
+                    "properties": {
+                        "actual-key": {
+                            "errors": [],
+                            "items": {
+                                "0": { "errors": ["The number must be `>= 1`."] }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+    );
 }
 
 struct MyVec<T>(Vec<T>);
@@ -94,10 +141,32 @@ fn one_sequence_implementation_enables_all_composited_rules() {
         names: MyVec(vec!["x".to_owned()]),
         numbers: MyVec(vec![MyVec(vec![0])]),
     };
-    let error = serde_json::to_value(value.validate().unwrap_err()).unwrap();
 
-    assert!(error["properties"]["names"]["items"]["0"].is_object());
-    assert!(error["properties"]["numbers"]["items"]["0"]["items"]["0"].is_object());
+    assert_eq!(
+        serde_json::to_value(value.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "names": {
+                    "errors": [],
+                    "items": {
+                        "0": { "errors": ["The length of the value must be `>= 2`."] }
+                    }
+                },
+                "numbers": {
+                    "errors": [],
+                    "items": {
+                        "0": {
+                            "errors": [],
+                            "items": {
+                                "0": { "errors": ["The number must be `>= 1`."] }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+    );
 }
 
 #[derive(Validate)]
@@ -120,8 +189,22 @@ fn box_and_option_delegate_nested_validation() {
         boxed: Box::new(Child { value: 0 }),
         optional: Some(Child { value: 0 }),
     };
-    let error = serde_json::to_value(value.validate().unwrap_err()).unwrap();
 
-    assert!(error["properties"]["boxed"]["properties"]["value"].is_object());
-    assert!(error["properties"]["optional"]["properties"]["value"].is_object());
+    let child_errors = json!({
+        "errors": [],
+        "properties": {
+            "value": { "errors": ["The number must be `>= 1`."] }
+        }
+    });
+
+    assert_eq!(
+        serde_json::to_value(value.validate().unwrap_err()).unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "boxed": child_errors,
+                "optional": child_errors,
+            }
+        })
+    );
 }
