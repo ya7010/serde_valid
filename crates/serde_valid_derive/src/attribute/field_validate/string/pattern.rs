@@ -48,7 +48,7 @@ fn inner_extract_string_pattern_validator(
 
     Ok(quote!(
         {
-            static #pattern_ident : ::serde_valid::export::once_cell::sync::OnceCell<::serde_valid::export::regex::Regex> = ::serde_valid::export::once_cell::sync::OnceCell::new();
+            static #pattern_ident : ::std::sync::OnceLock<::serde_valid::export::regex::Regex> = ::std::sync::OnceLock::new();
             if let ::std::result::Result::Err(#error_params) = #validate {
                 use ::serde_valid::validation::IntoError;
 
