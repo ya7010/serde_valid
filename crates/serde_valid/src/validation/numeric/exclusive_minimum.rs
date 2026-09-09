@@ -1,4 +1,4 @@
-use crate::ExclusiveMinimumError;
+use crate::{traits::Numeric, ExclusiveMinimumError};
 
 /// Exclusive minimum validation of the number.
 ///
@@ -6,12 +6,14 @@ use crate::ExclusiveMinimumError;
 ///
 /// ```rust
 /// use serde_json::json;
-/// use serde_valid::{Validate, ValidateExclusiveMinimum};
+/// use serde_valid::{traits::Numeric, Validate};
 /// struct MyType(i32);
 ///
-/// impl ValidateExclusiveMinimum<i32> for MyType {
-///     fn validate_exclusive_minimum(&self, exclusive_minimum: i32) -> Result<(), serde_valid::ExclusiveMinimumError> {
-///         self.0.validate_exclusive_minimum(exclusive_minimum)
+/// impl Numeric for MyType {
+///     type Value = i32;
+///
+///     fn numeric(&self) -> Self::Value {
+///         self.0
 ///     }
 /// }
 ///
@@ -39,6 +41,23 @@ use crate::ExclusiveMinimumError;
 pub trait ValidateExclusiveMinimum<T> {
     fn validate_exclusive_minimum(&self, exclusive_minimum: T)
         -> Result<(), ExclusiveMinimumError>;
+}
+
+impl<T> ValidateExclusiveMinimum<T::Value> for T
+where
+    T: Numeric + ?Sized,
+    T::Value: PartialOrd + Into<crate::validation::Number>,
+{
+    fn validate_exclusive_minimum(
+        &self,
+        exclusive_minimum: T::Value,
+    ) -> Result<(), ExclusiveMinimumError> {
+        if self.numeric() > exclusive_minimum {
+            Ok(())
+        } else {
+            Err(ExclusiveMinimumError::new(exclusive_minimum))
+        }
+    }
 }
 
 macro_rules! impl_validate_numeric_exclusive_minimum {

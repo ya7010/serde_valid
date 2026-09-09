@@ -64,13 +64,16 @@ impl Length for Identifier {
 ```
 
 Object property count uses `Properties`. `Size` is a deprecated alias for `Properties`. Array item
-count uses `Items`. These are not interchangeable with `Length`.
+count uses `Items`. Custom numeric wrappers use `Numeric` to derive the five numeric validators.
+Built-in numeric types keep those validators implemented directly. These are not interchangeable
+with `Length`.
 
 ```rust
-use serde_valid::traits::{Items, Properties};
+use serde_valid::traits::{Items, Numeric, Properties};
 
 struct Labels(std::collections::HashMap<String, String>);
 struct Ids(Vec<i32>);
+struct Count(i32);
 
 impl Properties for Labels {
     fn properties(&self) -> usize {
@@ -81,6 +84,14 @@ impl Properties for Labels {
 impl Items for Ids {
     fn items(&self) -> usize {
         self.0.items()
+    }
+}
+
+impl Numeric for Count {
+    type Value = i32;
+
+    fn numeric(&self) -> Self::Value {
+        self.0
     }
 }
 ```

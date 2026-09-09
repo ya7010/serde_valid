@@ -1,4 +1,4 @@
-use crate::ExclusiveMaximumError;
+use crate::{traits::Numeric, ExclusiveMaximumError};
 
 /// Exclusive maximum validation of the number.
 ///
@@ -6,12 +6,14 @@ use crate::ExclusiveMaximumError;
 ///
 /// ```rust
 /// use serde_json::json;
-/// use serde_valid::{Validate, ValidateExclusiveMaximum};
+/// use serde_valid::{traits::Numeric, Validate};
 /// struct MyType(i32);
 ///
-/// impl ValidateExclusiveMaximum<i32> for MyType {
-///     fn validate_exclusive_maximum(&self, exclusive_maximum: i32) -> Result<(), serde_valid::ExclusiveMaximumError> {
-///         self.0.validate_exclusive_maximum(exclusive_maximum)
+/// impl Numeric for MyType {
+///     type Value = i32;
+///
+///     fn numeric(&self) -> Self::Value {
+///         self.0
 ///     }
 /// }
 ///
@@ -39,6 +41,23 @@ use crate::ExclusiveMaximumError;
 pub trait ValidateExclusiveMaximum<T> {
     fn validate_exclusive_maximum(&self, exclusive_maximum: T)
         -> Result<(), ExclusiveMaximumError>;
+}
+
+impl<T> ValidateExclusiveMaximum<T::Value> for T
+where
+    T: Numeric + ?Sized,
+    T::Value: PartialOrd + Into<crate::validation::Number>,
+{
+    fn validate_exclusive_maximum(
+        &self,
+        exclusive_maximum: T::Value,
+    ) -> Result<(), ExclusiveMaximumError> {
+        if self.numeric() < exclusive_maximum {
+            Ok(())
+        } else {
+            Err(ExclusiveMaximumError::new(exclusive_maximum))
+        }
+    }
 }
 
 macro_rules! impl_validate_numeric_exclusive_maximum {

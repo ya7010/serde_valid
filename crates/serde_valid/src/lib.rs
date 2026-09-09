@@ -46,8 +46,9 @@
 //!
 //! Field rules such as `#[validate(min_length = 3)]` apply to each value of `Vec`, slices, arrays,
 //! and maps. Item count, property count, and string length stay on [`traits::Items`],
-//! [`traits::Properties`], and [`traits::Length`]. [`traits::Size`] is a deprecated alias for
-//! [`traits::Properties`]. See [`traits`] for the full capability-to-validator map.
+//! [`traits::Properties`], and [`traits::Length`]. Custom numeric wrappers use [`traits::Numeric`];
+//! built-in numbers implement the numeric validators directly. [`traits::Size`] is a deprecated
+//! alias for [`traits::Properties`]. See [`traits`] for the full capability-to-validator map.
 //!
 //! Validation for `HashMap`, `BTreeMap`, and `IndexMap` requires keys that implement [`ToString`].
 //! Distinct keys with the same string representation share the same property in validation errors.

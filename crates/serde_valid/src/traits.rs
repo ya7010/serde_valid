@@ -15,6 +15,7 @@
 //! | [`Length`] | [`crate::ValidateMinLength`], [`crate::ValidateMaxLength`] | string character length |
 //! | [`Properties`] | [`crate::ValidateMinProperties`], [`crate::ValidateMaxProperties`] | object property count |
 //! | [`Items`] | [`crate::ValidateMinItems`], [`crate::ValidateMaxItems`] | array item count |
+//! | [`Numeric`] | [`crate::ValidateMinimum`], [`crate::ValidateMaximum`], [`crate::ValidateExclusiveMinimum`], [`crate::ValidateExclusiveMaximum`], [`crate::ValidateMultipleOf`] | numeric value |
 //! | [`IsMatch`] | [`crate::ValidatePattern`] | regular-expression match |
 //!
 //! [`Size`] is a deprecated alias for [`Properties`].
@@ -48,7 +49,6 @@
 //!
 //! | Validator | Typical implementors |
 //! |-----------|----------------------|
-//! | [`crate::ValidateMaximum`], [`crate::ValidateMinimum`], [`crate::ValidateExclusiveMaximum`], [`crate::ValidateExclusiveMinimum`], [`crate::ValidateMultipleOf`] | numeric primitives |
 //! | [`crate::ValidateEnum`] | strings and numeric primitives |
 //! | [`crate::Validate`] | `#[derive(Validate)]`, plus wrappers and standard collections |
 
@@ -56,12 +56,14 @@ mod is_match;
 mod is_unique;
 mod items;
 mod length;
+mod numeric;
 mod properties;
 
 pub use is_match::IsMatch;
 pub use is_unique::IsUnique;
 pub use items::Items;
 pub use length::Length;
+pub use numeric::Numeric;
 pub use properties::Properties;
 #[allow(deprecated)]
 pub use properties::Size;

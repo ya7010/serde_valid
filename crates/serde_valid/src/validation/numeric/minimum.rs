@@ -1,4 +1,4 @@
-use crate::MinimumError;
+use crate::{traits::Numeric, MinimumError};
 
 /// Minimum validation of the number.
 ///
@@ -6,12 +6,14 @@ use crate::MinimumError;
 ///
 /// ```rust
 /// use serde_json::json;
-/// use serde_valid::{Validate, ValidateMinimum};
+/// use serde_valid::{traits::Numeric, Validate};
 /// struct MyType(i32);
 ///
-/// impl ValidateMinimum<i32> for MyType {
-///     fn validate_minimum(&self, minimum: i32) -> Result<(), serde_valid::MinimumError> {
-///         self.0.validate_minimum(minimum)
+/// impl Numeric for MyType {
+///     type Value = i32;
+///
+///     fn numeric(&self) -> Self::Value {
+///         self.0
 ///     }
 /// }
 ///
@@ -38,6 +40,20 @@ use crate::MinimumError;
 /// ```
 pub trait ValidateMinimum<T> {
     fn validate_minimum(&self, minimum: T) -> Result<(), MinimumError>;
+}
+
+impl<T> ValidateMinimum<T::Value> for T
+where
+    T: Numeric + ?Sized,
+    T::Value: PartialOrd + Into<crate::validation::Number>,
+{
+    fn validate_minimum(&self, minimum: T::Value) -> Result<(), MinimumError> {
+        if self.numeric() >= minimum {
+            Ok(())
+        } else {
+            Err(MinimumError::new(minimum))
+        }
+    }
 }
 
 macro_rules! impl_validate_numeric_minimum {
