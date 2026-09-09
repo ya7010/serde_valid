@@ -96,12 +96,12 @@ fn assert_invalid_item_count<T: ValidateMaxItems + ValidateMinItems>(value: T) {
 }
 
 #[test]
-fn mutable_references_forward_validation_traits() {
-    let mut child = Child {
+fn references_forward_validation_traits() {
+    let child = Child {
         value: "x".to_owned(),
     };
     assert_eq!(
-        serde_json::to_value(assert_invalid(&mut child)).unwrap(),
+        serde_json::to_value(assert_invalid(&child)).unwrap(),
         json!({
             "errors": [],
             "properties": {
@@ -110,7 +110,7 @@ fn mutable_references_forward_validation_traits() {
         })
     );
 
-    let mut values = [1, 1];
-    assert_not_unique(&mut values[..]);
-    assert_invalid_item_count(&mut values[..]);
+    let values = [1, 1];
+    assert_not_unique(&values[..]);
+    assert_invalid_item_count(&values[..]);
 }
