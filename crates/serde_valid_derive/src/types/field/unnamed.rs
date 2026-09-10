@@ -3,7 +3,7 @@ use quote::quote;
 use std::borrow::Cow;
 use std::convert::AsRef;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct UnnamedField<'a> {
     name: String,
     index: usize,

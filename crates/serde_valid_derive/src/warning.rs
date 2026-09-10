@@ -3,7 +3,7 @@ use std::hash::Hash;
 use proc_macro2::Span;
 use quote::{quote_spanned, ToTokens};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct WithWarnings<T> {
     pub data: T,
     pub warnings: Vec<Warning>,
@@ -49,7 +49,7 @@ impl<T> From<T> for WithWarnings<T> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Warning {
     Deprecated {
         ident: syn::Ident,
