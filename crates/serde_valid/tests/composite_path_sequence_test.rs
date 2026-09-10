@@ -230,3 +230,85 @@ fn sequence_wrappers_forward_to_inner_sequence_or_map() {
         })
     );
 }
+
+#[test]
+fn sequence_applies_enum_and_pattern_to_items() {
+    #[derive(Validate)]
+    struct Cases<'a> {
+        #[validate(r#enum = [1, 2])]
+        numbers: Vec<i32>,
+        #[validate(pattern = r"^\d+$")]
+        labels: &'a [&'a str],
+    }
+
+    assert_eq!(
+        serde_json::to_value(
+            Cases {
+                numbers: vec![3],
+                labels: &["x"],
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "numbers": {
+                    "errors": [],
+                    "items": {
+                        "0": {
+                            "errors": ["The value must be in [1, 2]."]
+                        }
+                    }
+                },
+                "labels": {
+                    "errors": [],
+                    "items": {
+                        "0": {
+                            "errors": ["The value must match the pattern of \"^\\d+$\"."]
+                        }
+                    }
+                }
+            }
+        })
+    );
+}
+
+#[test]
+fn sequence_nested_map_of_sequences_preserves_keys() {
+    #[derive(Validate)]
+    struct Cases {
+        #[validate(minimum = 1)]
+        values: BTreeMap<String, Vec<i32>>,
+    }
+
+    assert_eq!(
+        serde_json::to_value(
+            Cases {
+                values: BTreeMap::from([("actual-key".to_owned(), vec![0])]),
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "values": {
+                    "errors": [],
+                    "properties": {
+                        "actual-key": {
+                            "errors": [],
+                            "items": {
+                                "0": {
+                                    "errors": ["The number must be `>= 1`."]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+    );
+}

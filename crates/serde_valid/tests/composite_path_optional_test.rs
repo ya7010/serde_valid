@@ -217,3 +217,82 @@ fn nested_options_compose_on_scalar_and_sequence_paths() {
         })
     );
 }
+
+#[test]
+fn optional_covers_pattern_array_and_cow_borrow_shapes() {
+    use std::borrow::Cow;
+
+    #[derive(Validate)]
+    struct Cases<'a> {
+        #[validate(pattern = r"^\d+$")]
+        optional_pattern: Option<&'a str>,
+        #[validate(minimum = 1)]
+        optional_array: Option<[i32; 1]>,
+        #[validate(min_length = 1)]
+        optional_cow: Option<Cow<'a, str>>,
+        #[validate(minimum = 1)]
+        optional_cow_slice: Option<Cow<'a, [i32]>>,
+        #[validate(min_length = 1)]
+        optional_boxed_slice: Option<Box<[&'a str]>>,
+    }
+
+    assert!(Cases {
+        optional_pattern: None,
+        optional_array: None,
+        optional_cow: None,
+        optional_cow_slice: None,
+        optional_boxed_slice: None,
+    }
+    .validate()
+    .is_ok());
+
+    assert_eq!(
+        serde_json::to_value(
+            Cases {
+                optional_pattern: Some("x"),
+                optional_array: Some([0]),
+                optional_cow: Some(Cow::Borrowed("")),
+                optional_cow_slice: Some(Cow::Borrowed(&[0])),
+                optional_boxed_slice: Some(Box::new([""])),
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "optional_pattern": {
+                    "errors": ["The value must match the pattern of \"^\\d+$\"."]
+                },
+                "optional_array": {
+                    "errors": [],
+                    "items": {
+                        "0": {
+                            "errors": ["The number must be `>= 1`."]
+                        }
+                    }
+                },
+                "optional_cow": {
+                    "errors": ["The length of the value must be `>= 1`."]
+                },
+                "optional_cow_slice": {
+                    "errors": [],
+                    "items": {
+                        "0": {
+                            "errors": ["The number must be `>= 1`."]
+                        }
+                    }
+                },
+                "optional_boxed_slice": {
+                    "errors": [],
+                    "items": {
+                        "0": {
+                            "errors": ["The length of the value must be `>= 1`."]
+                        }
+                    }
+                }
+            }
+        })
+    );
+}

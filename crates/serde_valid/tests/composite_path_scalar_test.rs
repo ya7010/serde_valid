@@ -140,3 +140,55 @@ fn scalar_custom_validate_minimum_works_without_a_wrapper() {
         })
     );
 }
+
+#[test]
+fn scalar_covers_remaining_validator_families() {
+    #[derive(Validate)]
+    struct Cases {
+        #[validate(max_length = 1)]
+        text: String,
+        #[validate(exclusive_minimum = 0)]
+        number: i32,
+        #[validate(multiple_of = 2)]
+        even: i32,
+        #[validate(pattern = r"^\d+$")]
+        digits: String,
+        #[validate(max_properties = 0)]
+        object: std::collections::HashMap<String, u8>,
+    }
+
+    assert_eq!(
+        serde_json::to_value(
+            Cases {
+                text: "ab".to_owned(),
+                number: 0,
+                even: 3,
+                digits: "a".to_owned(),
+                object: std::collections::HashMap::from([("k".to_owned(), 1)]),
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
+        json!({
+            "errors": [],
+            "properties": {
+                "text": {
+                    "errors": ["The length of the value must be `<= 1`."]
+                },
+                "number": {
+                    "errors": ["The number must be `> 0`."]
+                },
+                "even": {
+                    "errors": ["The value must be multiple of `2`."]
+                },
+                "digits": {
+                    "errors": ["The value must match the pattern of \"^\\d+$\"."]
+                },
+                "object": {
+                    "errors": ["The size of the properties must be `<= 0`."]
+                }
+            }
+        })
+    );
+}
