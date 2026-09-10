@@ -984,17 +984,19 @@ mod issue125 {
 
     #[test]
     fn enum_wrappers_support_non_copy_candidate_types() {
+        use serde_valid::__private::ValidateCompositedEnum;
+
         let candidates = vec![NonCopyCandidate(1), NonCopyCandidate(2)];
 
         let value = CandidateValue(1);
         let borrowed = &value;
-        assert!(ValidateEnum::validate_enum(&borrowed, &candidates).is_ok());
+        assert!(ValidateCompositedEnum::validate_composited_enum(&borrowed, &candidates).is_ok());
 
         let boxed = Box::new(CandidateValue(1));
-        assert!(ValidateEnum::validate_enum(&boxed, &candidates).is_ok());
+        assert!(ValidateCompositedEnum::validate_composited_enum(&boxed, &candidates).is_ok());
 
         let cow: std::borrow::Cow<'_, CandidateValue> = std::borrow::Cow::Owned(CandidateValue(1));
-        assert!(ValidateEnum::validate_enum(&cow, &candidates).is_ok());
+        assert!(ValidateCompositedEnum::validate_composited_enum(&cow, &candidates).is_ok());
     }
 
     #[derive(Debug, Validate)]

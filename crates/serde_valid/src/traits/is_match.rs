@@ -30,33 +30,3 @@ pub trait IsMatch {
     /// [`ValidatePattern`](crate::ValidatePattern) treats a `false` result as a validation error.
     fn is_match(&self, pattern: &regex::Regex) -> bool;
 }
-
-#[allow(deprecated)]
-impl<T> IsMatch for Box<T>
-where
-    T: IsMatch + ?Sized,
-{
-    fn is_match(&self, pattern: &regex::Regex) -> bool {
-        self.as_ref().is_match(pattern)
-    }
-}
-
-#[allow(deprecated)]
-impl<T> IsMatch for std::rc::Rc<T>
-where
-    T: IsMatch + ?Sized,
-{
-    fn is_match(&self, pattern: &regex::Regex) -> bool {
-        self.as_ref().is_match(pattern)
-    }
-}
-
-#[allow(deprecated)]
-impl<T> IsMatch for std::sync::Arc<T>
-where
-    T: IsMatch + ?Sized,
-{
-    fn is_match(&self, pattern: &regex::Regex) -> bool {
-        self.as_ref().is_match(pattern)
-    }
-}

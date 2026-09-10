@@ -76,9 +76,7 @@ macro_rules! impl_validate_pattern_str {
 }
 
 impl_validate_pattern_str!(str);
-impl_validate_pattern_str!(&str);
 impl_validate_pattern_str!(String);
-impl_validate_pattern_str!(std::borrow::Cow<'_, str>);
 
 macro_rules! impl_validate_pattern_os_str {
     ($type:ty) => {
@@ -91,9 +89,7 @@ macro_rules! impl_validate_pattern_os_str {
 }
 
 impl_validate_pattern_os_str!(std::ffi::OsStr);
-impl_validate_pattern_os_str!(&std::ffi::OsStr);
 impl_validate_pattern_os_str!(std::ffi::OsString);
-impl_validate_pattern_os_str!(std::borrow::Cow<'_, std::ffi::OsStr>);
 
 macro_rules! impl_validate_pattern_path {
     ($type:ty) => {
@@ -106,44 +102,7 @@ macro_rules! impl_validate_pattern_path {
 }
 
 impl_validate_pattern_path!(std::path::Path);
-impl_validate_pattern_path!(&std::path::Path);
 impl_validate_pattern_path!(std::path::PathBuf);
-impl_validate_pattern_path!(std::borrow::Cow<'_, std::path::Path>);
-
-macro_rules! impl_validate_pattern_pointer {
-    ($type:ty) => {
-        impl ValidatePattern for $type {
-            fn validate_pattern(&self, pattern: &Regex) -> Result<(), PatternError> {
-                (**self).validate_pattern(pattern)
-            }
-        }
-    };
-}
-
-impl_validate_pattern_pointer!(Box<str>);
-impl_validate_pattern_pointer!(Box<String>);
-impl_validate_pattern_pointer!(Box<std::ffi::OsStr>);
-impl_validate_pattern_pointer!(Box<std::ffi::OsString>);
-impl_validate_pattern_pointer!(Box<std::path::Path>);
-impl_validate_pattern_pointer!(Box<std::path::PathBuf>);
-impl_validate_pattern_pointer!(std::rc::Rc<str>);
-impl_validate_pattern_pointer!(std::rc::Rc<String>);
-impl_validate_pattern_pointer!(std::rc::Rc<std::ffi::OsStr>);
-impl_validate_pattern_pointer!(std::rc::Rc<std::ffi::OsString>);
-impl_validate_pattern_pointer!(std::rc::Rc<std::path::Path>);
-impl_validate_pattern_pointer!(std::rc::Rc<std::path::PathBuf>);
-impl_validate_pattern_pointer!(std::sync::Arc<str>);
-impl_validate_pattern_pointer!(std::sync::Arc<String>);
-impl_validate_pattern_pointer!(std::sync::Arc<std::ffi::OsStr>);
-impl_validate_pattern_pointer!(std::sync::Arc<std::ffi::OsString>);
-impl_validate_pattern_pointer!(std::sync::Arc<std::path::Path>);
-impl_validate_pattern_pointer!(std::sync::Arc<std::path::PathBuf>);
-impl_validate_pattern_pointer!(std::pin::Pin<Box<str>>);
-impl_validate_pattern_pointer!(std::pin::Pin<Box<String>>);
-impl_validate_pattern_pointer!(std::pin::Pin<std::rc::Rc<str>>);
-impl_validate_pattern_pointer!(std::pin::Pin<std::rc::Rc<String>>);
-impl_validate_pattern_pointer!(std::pin::Pin<std::sync::Arc<str>>);
-impl_validate_pattern_pointer!(std::pin::Pin<std::sync::Arc<String>>);
 
 #[cfg(test)]
 mod tests {

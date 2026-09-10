@@ -47,43 +47,6 @@ pub trait Properties {
     }
 }
 
-impl<T> Properties for Box<T>
-where
-    T: Properties + ?Sized,
-{
-    fn properties(&self) -> usize {
-        self.as_ref().properties()
-    }
-}
-
-impl<T> Properties for std::rc::Rc<T>
-where
-    T: Properties + ?Sized,
-{
-    fn properties(&self) -> usize {
-        self.as_ref().properties()
-    }
-}
-
-impl<T> Properties for std::sync::Arc<T>
-where
-    T: Properties + ?Sized,
-{
-    fn properties(&self) -> usize {
-        self.as_ref().properties()
-    }
-}
-
-impl<P> Properties for std::pin::Pin<P>
-where
-    P: std::ops::Deref,
-    P::Target: Properties,
-{
-    fn properties(&self) -> usize {
-        self.as_ref().get_ref().properties()
-    }
-}
-
 impl<K, V> Properties for HashMap<K, V> {
     fn properties(&self) -> usize {
         self.len()
