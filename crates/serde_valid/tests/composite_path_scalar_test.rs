@@ -122,7 +122,14 @@ fn scalar_custom_validate_minimum_works_without_a_wrapper() {
     }
 
     assert_eq!(
-        serde_json::to_value(Cases { value: CustomNumber(0) }.validate().unwrap_err()).unwrap(),
+        serde_json::to_value(
+            Cases {
+                value: CustomNumber(0)
+            }
+            .validate()
+            .unwrap_err()
+        )
+        .unwrap(),
         json!({
             "errors": [],
             "properties": {
