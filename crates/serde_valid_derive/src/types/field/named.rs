@@ -2,7 +2,7 @@ use super::Field;
 use quote::quote;
 use std::borrow::Cow;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct NamedField<'a> {
     name: String,
     ident: syn::Ident,
