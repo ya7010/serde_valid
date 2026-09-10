@@ -52,6 +52,236 @@ where
     }
 }
 
+/// `Option` skips validation when `None` and otherwise follows the inner path `P`.
+///
+/// Uses [`composited_path::Optional`] so this does not overlap the scalar capability blanket.
+/// `Option<Vec<_>>`, `Option<&[_]>` and `Option<HashMap<_, _>>` all reuse the inner impls.
+macro_rules! impl_composited_option {
+    ($Trait:ident, $method:ident, $arg:ty, $Error:ty) => {
+        impl<T, P> $Trait<composited_path::Optional<P>> for Option<T>
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(value) => $Trait::$method(value, a),
+                    None => Ok(()),
+                }
+            }
+        }
+    };
+    ($Trait:ident, $method:ident, $Error:ty) => {
+        impl<C, T, P> $Trait<C, composited_path::Optional<P>> for Option<T>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(value) => $Trait::$method(value, a),
+                    None => Ok(()),
+                }
+            }
+        }
+    };
+    (slice $Trait:ident, $method:ident, $Error:ty) => {
+        impl<C, T, P> $Trait<C, composited_path::Optional<P>> for Option<T>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(value) => $Trait::$method(value, a),
+                    None => Ok(()),
+                }
+            }
+        }
+    };
+}
+
+/// Forward standard pointer wrappers through [`composited_path::Transparent`].
+///
+/// Uses `Transparent<P>` (not a generic `Box<T>: Trait<P>`) so this does not overlap the scalar
+/// capability blanket for types like `Box<str>`.
+macro_rules! impl_composited_wrappers {
+    ($Trait:ident, $method:ident, $arg:ty, $Error:ty) => {
+        impl<T: ?Sized, P> $Trait<composited_path::Transparent<P>> for &T
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                $Trait::$method(*self, a)
+            }
+        }
+        impl<T: ?Sized, P> $Trait<composited_path::Transparent<P>> for &mut T
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<T: ?Sized, P> $Trait<composited_path::Transparent<P>> for Box<T>
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<T: ?Sized, P> $Trait<composited_path::Transparent<P>> for std::rc::Rc<T>
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<T: ?Sized, P> $Trait<composited_path::Transparent<P>> for std::sync::Arc<T>
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<T: ?Sized, P> $Trait<composited_path::Transparent<P>> for std::borrow::Cow<'_, T>
+        where
+            T: std::borrow::ToOwned + $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                $Trait::$method(self.as_ref(), a)
+            }
+        }
+        impl<W, P> $Trait<composited_path::Transparent<P>> for std::pin::Pin<W>
+        where
+            W: std::ops::Deref,
+            W::Target: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                $Trait::$method(self.as_ref().get_ref(), a)
+            }
+        }
+    };
+    ($Trait:ident, $method:ident, $Error:ty) => {
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for &T
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                $Trait::$method(*self, a)
+            }
+        }
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for &mut T
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for Box<T>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for std::rc::Rc<T>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for std::sync::Arc<T>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for std::borrow::Cow<'_, T>
+        where
+            T: std::borrow::ToOwned + $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                $Trait::$method(self.as_ref(), a)
+            }
+        }
+        impl<C, W, P> $Trait<C, composited_path::Transparent<P>> for std::pin::Pin<W>
+        where
+            W: std::ops::Deref,
+            W::Target: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                $Trait::$method(self.as_ref().get_ref(), a)
+            }
+        }
+    };
+    (slice $Trait:ident, $method:ident, $Error:ty) => {
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for &T
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                $Trait::$method(*self, a)
+            }
+        }
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for &mut T
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for Box<T>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for std::rc::Rc<T>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for std::sync::Arc<T>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                $Trait::$method(&**self, a)
+            }
+        }
+        impl<C, T: ?Sized, P> $Trait<C, composited_path::Transparent<P>> for std::borrow::Cow<'_, T>
+        where
+            T: std::borrow::ToOwned + $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                $Trait::$method(self.as_ref(), a)
+            }
+        }
+        impl<C, W, P> $Trait<C, composited_path::Transparent<P>> for std::pin::Pin<W>
+        where
+            W: std::ops::Deref,
+            W::Target: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                $Trait::$method(self.as_ref().get_ref(), a)
+            }
+        }
+    };
+}
+
 macro_rules! define_copy {
     ($Trait:ident, $method:ident, $Base:ident::$base_method:ident, $name:ident: $arg:ty, $Error:ty) => {
         #[doc(hidden)]
@@ -63,9 +293,11 @@ macro_rules! define_copy {
                 $Base::$base_method(self, $name).map_err(Composited::Single)
             }
         }
+        impl_composited_option!($Trait, $method, $arg, $Error);
         define_copy!(@iter Vec<T>, $Trait, $method, $arg, $Error);
         define_copy!(@iter [T], $Trait, $method, $arg, $Error);
         define_copy!(@iter [T; N], $Trait, $method, $arg, $Error);
+        impl_composited_wrappers!($Trait, $method, $arg, $Error);
     };
     (@iter Vec<T>, $Trait:ident, $method:ident, $arg:ty, $Error:ty) => {
         impl<T, P> $Trait<composited_path::Sequence<P>> for Vec<T>
@@ -135,9 +367,11 @@ macro_rules! define_clone {
                 $Base::$base_method(self, a).map_err(Composited::Single)
             }
         }
+        impl_composited_option!($Trait, $method, $Error);
         define_clone!(@iter Vec<T>, $Trait, $method, $Error);
         define_clone!(@iter [T], $Trait, $method, $Error);
         define_clone!(@iter [T; N], $Trait, $method, $Error);
+        impl_composited_wrappers!($Trait, $method, $Error);
     };
     (@iter Vec<T>, $Trait:ident, $method:ident, $Error:ty) => {
         impl<C: Clone, T, P> $Trait<C, composited_path::Sequence<P>> for Vec<T>
@@ -211,12 +445,14 @@ macro_rules! define_enum {
                 $Base::$base_method(self, a).map_err(Composited::Single)
             }
         }
+        impl_composited_option!(slice $Trait, $method, $Error);
         define_enum!(@iter Vec<T>, $Trait, $method, $Error);
         define_enum!(@iter [T], $Trait, $method, $Error);
         define_enum!(@iter [T; N], $Trait, $method, $Error);
         define_enum!(@map (std::collections::HashMap<K, V>), $Trait, $method, $Error);
         define_enum!(@map (std::collections::BTreeMap<K, V>), $Trait, $method, $Error);
         define_enum!(@map (indexmap::IndexMap<K, V>), $Trait, $method, $Error);
+        impl_composited_wrappers!(slice $Trait, $method, $Error);
     };
     (@iter Vec<T>, $Trait:ident, $method:ident, $Error:ty) => {
         impl<C, T, P> $Trait<C, composited_path::Sequence<P>> for Vec<T>

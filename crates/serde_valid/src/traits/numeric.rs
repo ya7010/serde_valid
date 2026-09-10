@@ -7,6 +7,9 @@
 /// Built-in numeric types implement those validators directly. Implement this trait for a custom
 /// wrapper to get the same validators through their blanket implementations.
 ///
+/// Pointer wrappers (`Box`, `Rc`, …) are handled by composited [`Transparent`](crate::composited::path::Transparent)
+/// paths rather than capability forwarding, so they are not implemented here.
+///
 /// # Examples
 ///
 /// ```rust
@@ -37,49 +40,4 @@ pub trait Numeric {
 
     /// Returns the number compared by the derived validators.
     fn numeric(&self) -> Self::Value;
-}
-
-impl<T> Numeric for Box<T>
-where
-    T: Numeric + ?Sized,
-{
-    type Value = T::Value;
-
-    fn numeric(&self) -> Self::Value {
-        self.as_ref().numeric()
-    }
-}
-
-impl<T> Numeric for std::rc::Rc<T>
-where
-    T: Numeric + ?Sized,
-{
-    type Value = T::Value;
-
-    fn numeric(&self) -> Self::Value {
-        self.as_ref().numeric()
-    }
-}
-
-impl<T> Numeric for std::sync::Arc<T>
-where
-    T: Numeric + ?Sized,
-{
-    type Value = T::Value;
-
-    fn numeric(&self) -> Self::Value {
-        self.as_ref().numeric()
-    }
-}
-
-impl<P> Numeric for std::pin::Pin<P>
-where
-    P: std::ops::Deref,
-    P::Target: Numeric,
-{
-    type Value = <P::Target as Numeric>::Value;
-
-    fn numeric(&self) -> Self::Value {
-        self.as_ref().get_ref().numeric()
-    }
 }
