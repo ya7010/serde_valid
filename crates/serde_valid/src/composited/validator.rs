@@ -63,9 +63,18 @@ macro_rules! define_copy {
                 $Base::$base_method(self, $name).map_err(Composited::Single)
             }
         }
+        impl<T: $Base> $Trait<composited_path::Scalar> for Option<T> {
+            fn $method(&self, $name: $arg) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Base::$base_method(v, $name).map_err(Composited::Single),
+                    None => Ok(()),
+                }
+            }
+        }
         define_copy!(@iter Vec<T>, $Trait, $method, $arg, $Error);
         define_copy!(@iter [T], $Trait, $method, $arg, $Error);
         define_copy!(@iter [T; N], $Trait, $method, $arg, $Error);
+        define_copy!(@iter &[T], $Trait, $method, $arg, $Error);
     };
     (@iter Vec<T>, $Trait:ident, $method:ident, $arg:ty, $Error:ty) => {
         impl<T, P> $Trait<composited_path::Sequence<P>> for Vec<T>
@@ -74,6 +83,25 @@ macro_rules! define_copy {
         {
             fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
                 collect_items(self.iter(), |value| $Trait::$method(value, a))
+            }
+        }
+        impl<T, P> $Trait<composited_path::Sequence<P>> for Box<Vec<T>>
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                $Trait::<composited_path::Sequence<P>>::$method(&**self, a)
+            }
+        }
+        impl<T, P> $Trait<composited_path::Sequence<P>> for Option<Vec<T>>
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
             }
         }
     };
@@ -86,6 +114,25 @@ macro_rules! define_copy {
                 collect_items(self.iter(), |value| $Trait::$method(value, a))
             }
         }
+        impl<T, P> $Trait<composited_path::Sequence<P>> for Box<[T]>
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                $Trait::<composited_path::Sequence<P>>::$method(&**self, a)
+            }
+        }
+        impl<T, P> $Trait<composited_path::Sequence<P>> for Option<Box<[T]>>
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
+            }
+        }
     };
     (@iter [T; N], $Trait:ident, $method:ident, $arg:ty, $Error:ty) => {
         impl<T, const N: usize, P> $Trait<composited_path::Sequence<P>> for [T; N]
@@ -94,6 +141,46 @@ macro_rules! define_copy {
         {
             fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
                 collect_items(self.iter(), |value| $Trait::$method(value, a))
+            }
+        }
+        impl<T, const N: usize, P> $Trait<composited_path::Sequence<P>> for Box<[T; N]>
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                $Trait::<composited_path::Sequence<P>>::$method(&**self, a)
+            }
+        }
+        impl<T, const N: usize, P> $Trait<composited_path::Sequence<P>> for Option<[T; N]>
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
+            }
+        }
+    };
+    (@iter &[T], $Trait:ident, $method:ident, $arg:ty, $Error:ty) => {
+        impl<T, P> $Trait<composited_path::Sequence<P>> for &[T]
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                collect_items(self.iter(), |value| $Trait::$method(value, a))
+            }
+        }
+        impl<T, P> $Trait<composited_path::Sequence<P>> for Option<&[T]>
+        where
+            T: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
             }
         }
     };
@@ -121,6 +208,17 @@ macro_rules! define_copy_map {
                 collect_properties(self.iter(), |value| $Trait::$method(value, a))
             }
         }
+        impl<K: ToString, V, P> $Trait<composited_path::Sequence<P>> for Option<$Map>
+        where
+            V: $Trait<P>,
+        {
+            fn $method(&self, a: $arg) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
+            }
+        }
     };
 }
 
@@ -138,6 +236,7 @@ macro_rules! define_clone {
         define_clone!(@iter Vec<T>, $Trait, $method, $Error);
         define_clone!(@iter [T], $Trait, $method, $Error);
         define_clone!(@iter [T; N], $Trait, $method, $Error);
+        define_clone!(@iter &[T], $Trait, $method, $Error);
     };
     (@iter Vec<T>, $Trait:ident, $method:ident, $Error:ty) => {
         impl<C: Clone, T, P> $Trait<C, composited_path::Sequence<P>> for Vec<T>
@@ -146,6 +245,25 @@ macro_rules! define_clone {
         {
             fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
                 collect_items(self.iter(), |value| $Trait::$method(value, a.clone()))
+            }
+        }
+        impl<C: Clone, T, P> $Trait<C, composited_path::Sequence<P>> for Box<Vec<T>>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                $Trait::<C, composited_path::Sequence<P>>::$method(&**self, a)
+            }
+        }
+        impl<C: Clone, T, P> $Trait<C, composited_path::Sequence<P>> for Option<Vec<T>>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<C, composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
             }
         }
     };
@@ -158,6 +276,25 @@ macro_rules! define_clone {
                 collect_items(self.iter(), |value| $Trait::$method(value, a.clone()))
             }
         }
+        impl<C: Clone, T, P> $Trait<C, composited_path::Sequence<P>> for Box<[T]>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                $Trait::<C, composited_path::Sequence<P>>::$method(&**self, a)
+            }
+        }
+        impl<C: Clone, T, P> $Trait<C, composited_path::Sequence<P>> for Option<Box<[T]>>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<C, composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
+            }
+        }
     };
     (@iter [T; N], $Trait:ident, $method:ident, $Error:ty) => {
         impl<C: Clone, T, const N: usize, P> $Trait<C, composited_path::Sequence<P>> for [T; N]
@@ -166,6 +303,47 @@ macro_rules! define_clone {
         {
             fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
                 collect_items(self.iter(), |value| $Trait::$method(value, a.clone()))
+            }
+        }
+        impl<C: Clone, T, const N: usize, P> $Trait<C, composited_path::Sequence<P>> for Box<[T; N]>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                $Trait::<C, composited_path::Sequence<P>>::$method(&**self, a)
+            }
+        }
+        impl<C: Clone, T, const N: usize, P> $Trait<C, composited_path::Sequence<P>> for Option<[T; N]>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<C, composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
+            }
+        }
+    };
+    (@iter &[T], $Trait:ident, $method:ident, $Error:ty) => {
+        impl<C: Clone, T, P> $Trait<C, composited_path::Sequence<P>> for &[T]
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                collect_items(self.iter(), |value| $Trait::$method(value, a.clone()))
+            }
+        }
+
+        impl<C: Clone, T, P> $Trait<C, composited_path::Sequence<P>> for Option<&[T]>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<C, composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
             }
         }
     };
@@ -187,6 +365,17 @@ macro_rules! define_clone_map {
                 collect_properties(self.iter(), |value| $Trait::$method(value, a.clone()))
             }
         }
+        impl<C: Clone, K: ToString, V, P> $Trait<C, composited_path::Sequence<P>> for Option<$Map>
+        where
+            V: $Trait<C, P>,
+        {
+            fn $method(&self, a: C) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<C, composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
+            }
+        }
     };
 }
 
@@ -198,6 +387,17 @@ macro_rules! define_enum {
         {
             fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
                 collect_properties(self.iter(), |value| $Trait::$method(value, a))
+            }
+        }
+        impl<C, K: ToString, V, P> $Trait<C, composited_path::Sequence<P>> for Option<$Map>
+        where
+            V: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<C, composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
             }
         }
     };
@@ -214,6 +414,7 @@ macro_rules! define_enum {
         define_enum!(@iter Vec<T>, $Trait, $method, $Error);
         define_enum!(@iter [T], $Trait, $method, $Error);
         define_enum!(@iter [T; N], $Trait, $method, $Error);
+        define_enum!(@iter &[T], $Trait, $method, $Error);
         define_enum!(@map (std::collections::HashMap<K, V>), $Trait, $method, $Error);
         define_enum!(@map (std::collections::BTreeMap<K, V>), $Trait, $method, $Error);
         define_enum!(@map (indexmap::IndexMap<K, V>), $Trait, $method, $Error);
@@ -227,6 +428,25 @@ macro_rules! define_enum {
                 collect_items(self.iter(), |value| $Trait::$method(value, a))
             }
         }
+        impl<C, T, P> $Trait<C, composited_path::Sequence<P>> for Box<Vec<T>>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                $Trait::<C, composited_path::Sequence<P>>::$method(&**self, a)
+            }
+        }
+        impl<C, T, P> $Trait<C, composited_path::Sequence<P>> for Option<Vec<T>>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<C, composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
+            }
+        }
     };
     (@iter [T], $Trait:ident, $method:ident, $Error:ty) => {
         impl<C, T, P> $Trait<C, composited_path::Sequence<P>> for [T]
@@ -237,6 +457,25 @@ macro_rules! define_enum {
                 collect_items(self.iter(), |value| $Trait::$method(value, a))
             }
         }
+        impl<C, T, P> $Trait<C, composited_path::Sequence<P>> for Box<[T]>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                $Trait::<C, composited_path::Sequence<P>>::$method(&**self, a)
+            }
+        }
+        impl<C, T, P> $Trait<C, composited_path::Sequence<P>> for Option<Box<[T]>>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<C, composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
+            }
+        }
     };
     (@iter [T; N], $Trait:ident, $method:ident, $Error:ty) => {
         impl<C, T, const N: usize, P> $Trait<C, composited_path::Sequence<P>> for [T; N]
@@ -245,6 +484,46 @@ macro_rules! define_enum {
         {
             fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
                 collect_items(self.iter(), |value| $Trait::$method(value, a))
+            }
+        }
+        impl<C, T, const N: usize, P> $Trait<C, composited_path::Sequence<P>> for Box<[T; N]>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                $Trait::<C, composited_path::Sequence<P>>::$method(&**self, a)
+            }
+        }
+        impl<C, T, const N: usize, P> $Trait<C, composited_path::Sequence<P>> for Option<[T; N]>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<C, composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
+            }
+        }
+    };
+    (@iter &[T], $Trait:ident, $method:ident, $Error:ty) => {
+        impl<C, T, P> $Trait<C, composited_path::Sequence<P>> for &[T]
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                collect_items(self.iter(), |value| $Trait::$method(value, a))
+            }
+        }
+        impl<C, T, P> $Trait<C, composited_path::Sequence<P>> for Option<&[T]>
+        where
+            T: $Trait<C, P>,
+        {
+            fn $method(&self, a: &[C]) -> Result<(), Composited<$Error>> {
+                match self {
+                    Some(v) => $Trait::<C, composited_path::Sequence<P>>::$method(v, a),
+                    None => Ok(())
+                }
             }
         }
     };
