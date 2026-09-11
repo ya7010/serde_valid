@@ -251,6 +251,38 @@ let s = Data { val: 1 };
 assert!(s.validate().is_ok());
 ```
 
+In a field custom closure, you can use `self` to access other fields through the struct.
+
+```rust
+use serde_valid::Validate;
+
+fn food_validation(kind: &str, food: &str) -> Result<(), serde_valid::validation::Error> {
+    match kind {
+        "Cat" if food != "CatFood" => Err(serde_valid::validation::Error::Custom(
+            "Cat should eat CatFood.".to_string(),
+        )),
+        "Dog" if food != "DogFood" => Err(serde_valid::validation::Error::Custom(
+            "Dog should eat DogFood.".to_string(),
+        )),
+        _ => Ok(()),
+    }
+}
+
+#[derive(Validate)]
+struct Pet {
+    kind: String,
+    #[validate(custom = |food| food_validation(&self.kind, food))]
+    food: String,
+}
+
+let s = Pet {
+    kind: "Cat".to_string(),
+    food: "CatFood".to_string(),
+};
+
+assert!(s.validate().is_ok());
+```
+
 Custom validation is suitable for handling convenience validations not defined in JSON Schema.
 `serde_valid::utils::*` provides convenience functions for specific types.
 
@@ -324,7 +356,7 @@ assert!(s.validate().is_ok());
 
 ## Validate Traits
 
-By implementing the validation trait, Your original type can uses Serde Valid validations.
+By implementing the validation trait, your original type can use Serde Valid validations.
 
 ```rust
 use serde_valid::Validate;
@@ -339,6 +371,45 @@ impl serde_valid::ValidateMaxLength for MyType {
 
 #[derive(Validate)]
 struct Data {
+    #[validate(max_length = 5)]
+    val: MyType,
+}
+
+let s = Data {
+    val: MyType(String::from("😍👺🙋🏽👨‍🎤👨‍👩‍👧‍👦")),
+};
+
+assert!(s.validate().is_ok());
+```
+
+### Helper Traits
+
+Instead of implementing each validation trait separately, you can implement a helper trait
+in [`serde_valid::traits`] once. Related validators become available through blanket
+implementations.
+
+| Helper trait                                | Available Validate traits                                                                                                          |
+| :-----------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------- |
+| [`Length`][`crate::traits::Length`]         | [`ValidateMinLength`], [`ValidateMaxLength`]                                                                                       |
+| [`Properties`][`crate::traits::Properties`] | [`ValidateMinProperties`], [`ValidateMaxProperties`]                                                                               |
+| [`Items`][`crate::traits::Items`]           | [`ValidateMinItems`], [`ValidateMaxItems`]                                                                                         |
+| [`Numeric`][`crate::traits::Numeric`]       | [`ValidateMinimum`], [`ValidateMaximum`], [`ValidateExclusiveMinimum`], [`ValidateExclusiveMaximum`], [`ValidateMultipleOf`]       |
+
+```rust
+use serde_valid::traits::Length;
+use serde_valid::Validate;
+
+struct MyType(String);
+
+impl Length for MyType {
+    fn length(&self) -> usize {
+        self.0.chars().count()
+    }
+}
+
+#[derive(Validate)]
+struct Data {
+    #[validate(min_length = 1)]
     #[validate(max_length = 5)]
     val: MyType,
 }
