@@ -2,7 +2,7 @@ use serde::ser::SerializeStruct;
 
 use super::{PropertyErrorsMap, VecErrors};
 
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub struct ObjectErrors<E = crate::validation::Error> {
     pub errors: VecErrors<E>,
     pub properties: PropertyErrorsMap<E>,

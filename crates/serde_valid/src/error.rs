@@ -51,13 +51,13 @@ where
 
 macro_rules! struct_error_params {
     (
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, PartialEq)]
         #[default_message=$default_message:literal]
         pub struct $Error:ident {
             pub $limit:ident: Vec<$type:ty>,
         }
     ) => {
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, PartialEq)]
         pub struct $Error {
             pub $limit: Vec<$type>,
         }
@@ -85,13 +85,13 @@ macro_rules! struct_error_params {
     };
 
     (
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, PartialEq)]
         #[default_message=$default_message:literal]
         pub struct $Error:ident {
             pub $limit:ident: $type:ty,
         }
     ) => {
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, PartialEq)]
         pub struct $Error {
             pub $limit: $type,
         }
@@ -113,11 +113,11 @@ macro_rules! struct_error_params {
     };
 
     (
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, PartialEq)]
         #[default_message=$default_message:literal]
         pub struct $Error:ident;
     ) => {
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, PartialEq)]
         pub struct $Error;
 
         impl FormatDefault for $Error {
@@ -131,7 +131,7 @@ macro_rules! struct_error_params {
 
 // Number
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The number must be `>= {}`."]
     pub struct MinimumError {
         pub minimum: Number,
@@ -139,7 +139,7 @@ struct_error_params!(
 );
 
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The number must be `<= {}`."]
     pub struct MaximumError {
         pub maximum: Number,
@@ -147,7 +147,7 @@ struct_error_params!(
 );
 
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The number must be `> {}`."]
     pub struct ExclusiveMinimumError {
         pub exclusive_minimum: Number,
@@ -155,7 +155,7 @@ struct_error_params!(
 );
 
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The number must be `< {}`."]
     pub struct ExclusiveMaximumError {
         pub exclusive_maximum: Number,
@@ -163,7 +163,7 @@ struct_error_params!(
 );
 
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The value must be multiple of `{}`."]
     pub struct MultipleOfError {
         pub multiple_of: Number,
@@ -172,7 +172,7 @@ struct_error_params!(
 
 // String
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The length of the value must be `>= {}`."]
     pub struct MinLengthError {
         pub min_length: usize,
@@ -180,7 +180,7 @@ struct_error_params!(
 );
 
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The length of the value must be `<= {}`."]
     pub struct MaxLengthError {
         pub max_length: usize,
@@ -188,7 +188,7 @@ struct_error_params!(
 );
 
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The value must match the pattern of \"{0}\"."]
     pub struct PatternError {
         pub pattern: String,
@@ -197,7 +197,7 @@ struct_error_params!(
 
 // Array
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The length of the items must be `<= {}`."]
     pub struct MaxItemsError {
         pub max_items: usize,
@@ -205,7 +205,7 @@ struct_error_params!(
 );
 
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The length of the items must be `>= {}`."]
     pub struct MinItemsError {
         pub min_items: usize,
@@ -213,14 +213,14 @@ struct_error_params!(
 );
 
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The items must be unique."]
     pub struct UniqueItemsError;
 );
 
 // Object
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The size of the properties must be `<= {}`."]
     pub struct MaxPropertiesError {
         pub max_properties: usize,
@@ -228,7 +228,7 @@ struct_error_params!(
 );
 
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The size of the properties must be `>= {}`."]
     pub struct MinPropertiesError {
         pub min_properties: usize,
@@ -237,7 +237,7 @@ struct_error_params!(
 
 // Generic
 struct_error_params!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[default_message = "The value must be in [{:}]."]
     pub struct EnumError {
         pub candidates: Vec<Literal>,

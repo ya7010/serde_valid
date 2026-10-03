@@ -20,7 +20,7 @@ pub use into_error::IntoError;
 pub use message::Message;
 pub use object_errors::ObjectErrors;
 
-#[derive(Debug, Clone, serde::Serialize, thiserror::Error)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, thiserror::Error)]
 #[serde(untagged)]
 pub enum Error {
     #[error("{0}")]
