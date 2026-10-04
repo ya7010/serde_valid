@@ -1,6 +1,6 @@
 use super::{ArrayErrors, ObjectErrors, VecErrors};
 
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum Errors<E = crate::validation::Error> {
     Array(ArrayErrors<E>),
     Object(ObjectErrors<E>),

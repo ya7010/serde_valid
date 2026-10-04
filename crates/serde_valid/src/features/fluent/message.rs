@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Message {
     pub id: &'static str,
     pub args: Vec<(&'static str, fluent::FluentValue<'static>)>,

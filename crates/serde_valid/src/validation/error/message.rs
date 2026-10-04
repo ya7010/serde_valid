@@ -1,6 +1,6 @@
 use super::{Format, FormatDefault};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Message<E> {
     error: E,
     format: Format<E>,
