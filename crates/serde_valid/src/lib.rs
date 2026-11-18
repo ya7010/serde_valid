@@ -40,6 +40,8 @@
 //! - `toml` - provide serialization/deserialization in `toml` format.
 //! - `yaml` - provide serialization/deserialization in `yaml` format.
 //! - `i128` - support `i128`/`u128` type (default).
+//! - `chrono` - support `chrono::TimeDelta` (`chrono::Duration`) in duration validators.
+//! - `jiff` - support `jiff::SignedDuration` in duration validators.
 //! - `fluent` - provide localization using [fluent](https://projectfluent.org/).
 //!
 //! ## Collection validation
@@ -82,6 +84,22 @@
 //! | [Duration](https://doc.rust-lang.org/core/time/struct.Duration.html) | `#[validate(custom = duration_minimum(ZERO))]`             | [duration_minimum][`crate::utils::duration_minimum`]                     |
 //! | [Duration](https://doc.rust-lang.org/core/time/struct.Duration.html) | `#[validate(custom = duration_exclusive_maximum(SECOND))]` | [duration_exclusive_maximum][`crate::utils::duration_exclusive_maximum`] |
 //! | [Duration](https://doc.rust-lang.org/core/time/struct.Duration.html) | `#[validate(custom = duration_exclusive_minimum(ZERO))]`   | [duration_exclusive_minimum][`crate::utils::duration_exclusive_minimum`] |
+//!
+//! The four `utils::duration_*` helpers always support `std::time::Duration`.
+//! Enable the optional `chrono` or `jiff` feature to use the same helpers with
+//! `chrono::TimeDelta` or `jiff::SignedDuration`. Both features can be enabled together,
+//! and neither is enabled by default. Values and bounds must use the same duration type.
+//! Signed durations retain their sign and nanosecond precision during comparison.
+//! `jiff::Span` is not supported because calendar units require a relative date for comparison.
+//!
+//! ```toml
+//! [dependencies]
+//! serde_valid = { version = "3", features = ["chrono"] }
+//! ```
+//!
+//! For example, use `duration_minimum(chrono::TimeDelta::zero())` in a custom validator
+//! to reject negative Chrono durations. For Jiff, enable `features = ["jiff"]` and use
+//! `duration_minimum(jiff::SignedDuration::ZERO)`.
 //!
 //! ## Complete Constructor (Deserialization)
 //!

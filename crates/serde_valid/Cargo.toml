@@ -11,9 +11,11 @@ categories = ["encoding"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
+chrono = { workspace = true, optional = true }
 fluent = { package = "fluent", version = "^0.16.0", optional = true }
 indexmap = { workspace = true, features = ["serde"] }
 itertools.workspace = true
+jiff = { workspace = true, optional = true }
 num-traits.workspace = true
 regex.workspace = true
 serde = { workspace = true, features = ["derive"] }
@@ -31,7 +33,9 @@ unic-langid.workspace = true
 
 [features]
 default = ["i128"]
+chrono = ["dep:chrono"]
 fluent = ["dep:fluent", "serde_valid_derive/fluent"]
 i128 = ["indexmap/std", "num-traits/i128", "serde_valid_literal/i128"]
+jiff = ["dep:jiff"]
 toml = ["serde_toml"]
 yaml = ["serde_yaml"]

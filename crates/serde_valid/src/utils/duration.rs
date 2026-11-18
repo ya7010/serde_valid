@@ -1,4 +1,23 @@
-use std::time::Duration;
+use std::fmt::Debug;
+
+/// A duration supported by the duration validation helpers.
+///
+/// `std::time::Duration` is always supported. Enable `chrono` for
+/// `chrono::TimeDelta` (also called `chrono::Duration`), or `jiff` for
+/// `jiff::SignedDuration`. Both features can be enabled together.
+/// Comparisons use the duration type's native ordering without conversion.
+///
+/// `jiff::Span` is not supported because calendar units need a relative date
+/// before they can be compared.
+pub trait DurationValue: PartialOrd + Debug {}
+
+impl DurationValue for std::time::Duration {}
+
+#[cfg(feature = "chrono")]
+impl DurationValue for chrono::TimeDelta {}
+
+#[cfg(feature = "jiff")]
+impl DurationValue for jiff::SignedDuration {}
 
 /// Validate that the duration is less than or equal to the maximum.
 ///
@@ -23,10 +42,10 @@ use std::time::Duration;
 /// assert!(s.validate().is_ok());
 /// ```
 #[allow(dead_code)]
-pub fn duration_maximum(
-    maximum: Duration,
-) -> impl FnOnce(&Duration) -> Result<(), crate::validation::Error> {
-    move |val: &Duration| {
+pub fn duration_maximum<T: DurationValue>(
+    maximum: T,
+) -> impl FnOnce(&T) -> Result<(), crate::validation::Error> {
+    move |val: &T| {
         if *val <= maximum {
             Ok(())
         } else {
@@ -60,10 +79,10 @@ pub fn duration_maximum(
 /// assert!(s.validate().is_ok());
 /// ```
 #[allow(dead_code)]
-pub fn duration_minimum(
-    minimum: Duration,
-) -> impl FnOnce(&Duration) -> Result<(), crate::validation::Error> {
-    move |val: &Duration| {
+pub fn duration_minimum<T: DurationValue>(
+    minimum: T,
+) -> impl FnOnce(&T) -> Result<(), crate::validation::Error> {
+    move |val: &T| {
         if *val >= minimum {
             Ok(())
         } else {
@@ -97,10 +116,10 @@ pub fn duration_minimum(
 /// assert!(s.validate().is_ok());
 /// ```
 #[allow(dead_code)]
-pub fn duration_exclusive_maximum(
-    maximum: Duration,
-) -> impl FnOnce(&Duration) -> Result<(), crate::validation::Error> {
-    move |val: &Duration| {
+pub fn duration_exclusive_maximum<T: DurationValue>(
+    maximum: T,
+) -> impl FnOnce(&T) -> Result<(), crate::validation::Error> {
+    move |val: &T| {
         if *val < maximum {
             Ok(())
         } else {
@@ -134,10 +153,10 @@ pub fn duration_exclusive_maximum(
 /// assert!(s.validate().is_ok());
 /// ```
 #[allow(dead_code)]
-pub fn duration_exclusive_minimum(
-    minimum: Duration,
-) -> impl FnOnce(&Duration) -> Result<(), crate::validation::Error> {
-    move |val: &Duration| {
+pub fn duration_exclusive_minimum<T: DurationValue>(
+    minimum: T,
+) -> impl FnOnce(&T) -> Result<(), crate::validation::Error> {
+    move |val: &T| {
         if *val > minimum {
             Ok(())
         } else {

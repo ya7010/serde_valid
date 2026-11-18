@@ -12,9 +12,11 @@ license = "MIT"
 keywords = ["json_schema", "serde", "validation"]
 
 [workspace.dependencies]
+chrono = { version = "0.4.35", default-features = false, features = ["std"] }
 indexmap = { version = "^2.0", features = ["serde"] }
 intl-memoizer = "0.5"
 itertools = "^0.14.0"
+jiff = { version = "0.2", default-features = false, features = ["std"] }
 num-traits = "^0.2"
 proc-macro2 = "^1.0"
 quote = "^1.0"
