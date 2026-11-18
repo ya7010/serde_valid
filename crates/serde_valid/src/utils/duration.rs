@@ -9,15 +9,15 @@ use std::fmt::Debug;
 ///
 /// `jiff::Span` is not supported because calendar units need a relative date
 /// before they can be compared.
-pub trait DurationValue: PartialOrd + Debug {}
+pub trait Duration: PartialOrd + Debug {}
 
-impl DurationValue for std::time::Duration {}
+impl Duration for std::time::Duration {}
 
 #[cfg(feature = "chrono")]
-impl DurationValue for chrono::TimeDelta {}
+impl Duration for chrono::TimeDelta {}
 
 #[cfg(feature = "jiff")]
-impl DurationValue for jiff::SignedDuration {}
+impl Duration for jiff::SignedDuration {}
 
 /// Validate that the duration is less than or equal to the maximum.
 ///
@@ -42,7 +42,7 @@ impl DurationValue for jiff::SignedDuration {}
 /// assert!(s.validate().is_ok());
 /// ```
 #[allow(dead_code)]
-pub fn duration_maximum<T: DurationValue>(
+pub fn duration_maximum<T: Duration>(
     maximum: T,
 ) -> impl FnOnce(&T) -> Result<(), crate::validation::Error> {
     move |val: &T| {
@@ -79,7 +79,7 @@ pub fn duration_maximum<T: DurationValue>(
 /// assert!(s.validate().is_ok());
 /// ```
 #[allow(dead_code)]
-pub fn duration_minimum<T: DurationValue>(
+pub fn duration_minimum<T: Duration>(
     minimum: T,
 ) -> impl FnOnce(&T) -> Result<(), crate::validation::Error> {
     move |val: &T| {
@@ -116,7 +116,7 @@ pub fn duration_minimum<T: DurationValue>(
 /// assert!(s.validate().is_ok());
 /// ```
 #[allow(dead_code)]
-pub fn duration_exclusive_maximum<T: DurationValue>(
+pub fn duration_exclusive_maximum<T: Duration>(
     maximum: T,
 ) -> impl FnOnce(&T) -> Result<(), crate::validation::Error> {
     move |val: &T| {
@@ -153,7 +153,7 @@ pub fn duration_exclusive_maximum<T: DurationValue>(
 /// assert!(s.validate().is_ok());
 /// ```
 #[allow(dead_code)]
-pub fn duration_exclusive_minimum<T: DurationValue>(
+pub fn duration_exclusive_minimum<T: Duration>(
     minimum: T,
 ) -> impl FnOnce(&T) -> Result<(), crate::validation::Error> {
     move |val: &T| {

@@ -1,11 +1,11 @@
 #[cfg(any(feature = "chrono", feature = "jiff"))]
 use serde_valid::utils::{
     duration_exclusive_maximum, duration_exclusive_minimum, duration_maximum, duration_minimum,
-    DurationValue,
+    Duration,
 };
 
 #[cfg(any(feature = "chrono", feature = "jiff"))]
-fn check_boundaries<T: DurationValue + Clone>(before: T, boundary: T, after: T) {
+fn check_boundaries<T: Duration + Clone>(before: T, boundary: T, after: T) {
     assert!(duration_minimum(boundary.clone())(&before).is_err());
     assert!(duration_minimum(boundary.clone())(&boundary).is_ok());
     assert!(duration_minimum(boundary.clone())(&after).is_ok());
